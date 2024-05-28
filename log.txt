@@ -1,0 +1,1758 @@
+       Fresh unicode-ident v1.0.12
+       Fresh glob v0.3.1
+       Fresh proc-macro2 v1.0.79
+       Fresh regex-syntax v0.8.3
+       Fresh memchr v2.7.2
+       Fresh cfg-if v1.0.0
+       Fresh minimal-lexical v0.2.1
+       Fresh bitflags v2.5.0
+       Fresh either v1.10.0
+       Fresh linux-raw-sys v0.4.13
+       Fresh quote v1.0.36
+       Fresh regex-automata v0.4.6
+       Fresh libloading v0.8.3
+       Fresh nom v7.1.3
+       Fresh home v0.5.9
+       Fresh same-file v1.0.6
+       Fresh itertools v0.12.1
+       Fresh libc v0.2.153
+       Fresh syn v2.0.58
+       Fresh rustix v0.38.32
+       Fresh cexpr v0.6.0
+       Fresh walkdir v2.5.0
+       Fresh regex v1.10.4
+       Fresh lazy_static v1.4.0
+       Fresh shlex v1.3.0
+       Fresh lazycell v1.3.0
+       Fresh log v0.4.21
+       Fresh rustc-hash v1.1.0
+       Fresh which v4.4.2
+       Fresh clang-sys v1.7.0
+       Fresh prettyplease v0.2.17
+       Fresh copy_dir v0.1.3
+       Fresh pkg-config v0.3.30
+       Fresh bindgen v0.69.4
+       Dirty bindgen-autobitwuzla v0.1.0 (/home/misha/rust_projects/bindgen-autobitwuzla): the file `build.rs` has changed (1714577315.781609458s, 40s after last build at 1714577275.591610167s)
+   Compiling bindgen-autobitwuzla v0.1.0 (/home/misha/rust_projects/bindgen-autobitwuzla)
+     Running `CARGO=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo CARGO_CRATE_NAME=build_script_build CARGO_MANIFEST_DIR=/home/misha/rust_projects/bindgen-autobitwuzla CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=bindgen-autobitwuzla CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.1.0 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=1 CARGO_PKG_VERSION_PATCH=0 CARGO_PKG_VERSION_PRE='' CARGO_PRIMARY_PACKAGE=1 LD_LIBRARY_PATH='/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib' /home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C metadata=c63e5489d418d3b3 -C extra-filename=-c63e5489d418d3b3 --out-dir /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-c63e5489d418d3b3 -C incremental=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/incremental -L dependency=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps --extern bindgen=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/libbindgen-2d209f916795095e.rlib --extern copy_dir=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/libcopy_dir-4e3ab2b8f3db3932.rlib --extern pkg_config=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/libpkg_config-4d98326561769645.rlib`
+warning: unused import: `std::fs`
+ --> build.rs:2:5
+  |
+2 | use std::fs;
+  |     ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Path`
+ --> build.rs:3:17
+  |
+3 | use std::path::{Path, PathBuf};
+  |                 ^^^^
+
+warning: unused variable: `my_command`
+  --> build.rs:11:17
+   |
+11 |         let mut my_command = Command::new("git")
+   |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_my_command`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `my_command`
+  --> build.rs:17:17
+   |
+17 |         let mut my_command = Command::new("./configure.py")
+   |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_my_command`
+
+warning: unused variable: `my_command`
+  --> build.rs:24:17
+   |
+24 |         let mut my_command = Command::new("ninja")
+   |                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_my_command`
+
+warning: variable does not need to be mutable
+  --> build.rs:11:13
+   |
+11 |         let mut my_command = Command::new("git")
+   |             ----^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+  --> build.rs:17:13
+   |
+17 |         let mut my_command = Command::new("./configure.py")
+   |             ----^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> build.rs:24:13
+   |
+24 |         let mut my_command = Command::new("ninja")
+   |             ----^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: `bindgen-autobitwuzla` (build script) generated 8 warnings
+     Running `CARGO=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo CARGO_CFG_PANIC=unwind CARGO_CFG_TARGET_ARCH=x86_64 CARGO_CFG_TARGET_ENDIAN=little CARGO_CFG_TARGET_ENV=gnu CARGO_CFG_TARGET_FAMILY=unix CARGO_CFG_TARGET_FEATURE=fxsr,sse,sse2 CARGO_CFG_TARGET_HAS_ATOMIC=16,32,64,8,ptr CARGO_CFG_TARGET_OS=linux CARGO_CFG_TARGET_POINTER_WIDTH=64 CARGO_CFG_TARGET_VENDOR=unknown CARGO_CFG_UNIX='' CARGO_ENCODED_RUSTFLAGS='' CARGO_MANIFEST_DIR=/home/misha/rust_projects/bindgen-autobitwuzla CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=bindgen-autobitwuzla CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.1.0 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=1 CARGO_PKG_VERSION_PATCH=0 CARGO_PKG_VERSION_PRE='' DEBUG=true HOST=x86_64-unknown-linux-gnu LD_LIBRARY_PATH='/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps:/home/misha/rust_projects/bindgen-autobitwuzla/target/debug:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib' NUM_JOBS=12 OPT_LEVEL=0 OUT_DIR=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out PROFILE=debug RUSTC=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc RUSTDOC=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustdoc TARGET=x86_64-unknown-linux-gnu /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-c63e5489d418d3b3/build-script-build`
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: -lbitwuzla: 'linker' input unused [-Wunused-command-line-argument]
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: -lbitwuzlals: 'linker' input unused [-Wunused-command-line-argument]
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: -lbitwuzlabv: 'linker' input unused [-Wunused-command-line-argument]
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: -lbitwuzlabb: 'linker' input unused [-Wunused-command-line-argument]
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: -lgmp: 'linker' input unused [-Wunused-command-line-argument]
+[bindgen-autobitwuzla 0.1.0] clang diag: warning: argument unused during compilation: '-L/usr/local/lib/x86_64-linux-gnu' [-Wunused-command-line-argument]
+     Running `CARGO=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo CARGO_CRATE_NAME=mylib CARGO_MANIFEST_DIR=/home/misha/rust_projects/bindgen-autobitwuzla CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=bindgen-autobitwuzla CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.1.0 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=1 CARGO_PKG_VERSION_PATCH=0 CARGO_PKG_VERSION_PRE='' CARGO_PRIMARY_PACKAGE=1 LD_LIBRARY_PATH='/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib' OUT_DIR=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out /home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name mylib --edition=2021 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C metadata=4fb54fb5b0fa75d3 -C extra-filename=-4fb54fb5b0fa75d3 --out-dir /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps -C incremental=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/incremental -L dependency=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps`
+     Running `CARGO=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo CARGO_BIN_NAME=mybin CARGO_CRATE_NAME=mybin CARGO_MANIFEST_DIR=/home/misha/rust_projects/bindgen-autobitwuzla CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=bindgen-autobitwuzla CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.1.0 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=1 CARGO_PKG_VERSION_PATCH=0 CARGO_PKG_VERSION_PRE='' CARGO_PRIMARY_PACKAGE=1 LD_LIBRARY_PATH='/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib' OUT_DIR=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out /home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name mybin --edition=2021 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C metadata=abd48863b0e9bfe1 -C extra-filename=-abd48863b0e9bfe1 --out-dir /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps -C incremental=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/incremental -L dependency=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps --extern mylib=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/libmylib-4fb54fb5b0fa75d3.rlib`
+warning: unused import: `c_char`
+ --> src/main.rs:1:16
+  |
+1 | use std::ffi::{c_char, CStr, CString};
+  |                ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: type `__u_char` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:143:10
+    |
+143 | pub type __u_char = ::std::os::raw::c_uchar;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `UChar`
+    |
+    = note: `#[warn(non_camel_case_types)]` on by default
+
+warning: type `__u_short` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:144:10
+    |
+144 | pub type __u_short = ::std::os::raw::c_ushort;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `UShort`
+
+warning: type `__u_int` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:145:10
+    |
+145 | pub type __u_int = ::std::os::raw::c_uint;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `UInt`
+
+warning: type `__u_long` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:146:10
+    |
+146 | pub type __u_long = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `ULong`
+
+warning: type `__int8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:147:10
+    |
+147 | pub type __int8_t = ::std::os::raw::c_schar;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `Int8T`
+
+warning: type `__uint8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:148:10
+    |
+148 | pub type __uint8_t = ::std::os::raw::c_uchar;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Uint8T`
+
+warning: type `__int16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:149:10
+    |
+149 | pub type __int16_t = ::std::os::raw::c_short;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Int16T`
+
+warning: type `__uint16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:150:10
+    |
+150 | pub type __uint16_t = ::std::os::raw::c_ushort;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `Uint16T`
+
+warning: type `__int32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:151:10
+    |
+151 | pub type __int32_t = ::std::os::raw::c_int;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Int32T`
+
+warning: type `__uint32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:152:10
+    |
+152 | pub type __uint32_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `Uint32T`
+
+warning: type `__int64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:153:10
+    |
+153 | pub type __int64_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Int64T`
+
+warning: type `__uint64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:154:10
+    |
+154 | pub type __uint64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `Uint64T`
+
+warning: type `__int_least8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:155:10
+    |
+155 | pub type __int_least8_t = __int8_t;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast8T`
+
+warning: type `__uint_least8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:156:10
+    |
+156 | pub type __uint_least8_t = __uint8_t;
+    |          ^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast8T`
+
+warning: type `__int_least16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:157:10
+    |
+157 | pub type __int_least16_t = __int16_t;
+    |          ^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast16T`
+
+warning: type `__uint_least16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:158:10
+    |
+158 | pub type __uint_least16_t = __uint16_t;
+    |          ^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast16T`
+
+warning: type `__int_least32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:159:10
+    |
+159 | pub type __int_least32_t = __int32_t;
+    |          ^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast32T`
+
+warning: type `__uint_least32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:160:10
+    |
+160 | pub type __uint_least32_t = __uint32_t;
+    |          ^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast32T`
+
+warning: type `__int_least64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:161:10
+    |
+161 | pub type __int_least64_t = __int64_t;
+    |          ^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast64T`
+
+warning: type `__uint_least64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:162:10
+    |
+162 | pub type __uint_least64_t = __uint64_t;
+    |          ^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast64T`
+
+warning: type `__quad_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:163:10
+    |
+163 | pub type __quad_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `QuadT`
+
+warning: type `__u_quad_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:164:10
+    |
+164 | pub type __u_quad_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `UQuadT`
+
+warning: type `__intmax_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:165:10
+    |
+165 | pub type __intmax_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `IntmaxT`
+
+warning: type `__uintmax_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:166:10
+    |
+166 | pub type __uintmax_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintmaxT`
+
+warning: type `__dev_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:167:10
+    |
+167 | pub type __dev_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `DevT`
+
+warning: type `__uid_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:168:10
+    |
+168 | pub type __uid_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `UidT`
+
+warning: type `__gid_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:169:10
+    |
+169 | pub type __gid_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `GidT`
+
+warning: type `__ino_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:170:10
+    |
+170 | pub type __ino_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `InoT`
+
+warning: type `__ino64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:171:10
+    |
+171 | pub type __ino64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Ino64T`
+
+warning: type `__mode_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:172:10
+    |
+172 | pub type __mode_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `ModeT`
+
+warning: type `__nlink_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:173:10
+    |
+173 | pub type __nlink_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `NlinkT`
+
+warning: type `__off_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:174:10
+    |
+174 | pub type __off_t = ::std::os::raw::c_long;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `OffT`
+
+warning: type `__off64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:175:10
+    |
+175 | pub type __off64_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `Off64T`
+
+warning: type `__pid_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:176:10
+    |
+176 | pub type __pid_t = ::std::os::raw::c_int;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `PidT`
+
+warning: type `__clock_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:207:10
+    |
+207 | pub type __clock_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `ClockT`
+
+warning: type `__rlim_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:208:10
+    |
+208 | pub type __rlim_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `RlimT`
+
+warning: type `__rlim64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:209:10
+    |
+209 | pub type __rlim64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `Rlim64T`
+
+warning: type `__id_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:210:10
+    |
+210 | pub type __id_t = ::std::os::raw::c_uint;
+    |          ^^^^^^ help: convert the identifier to upper camel case: `IdT`
+
+warning: type `__time_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:211:10
+    |
+211 | pub type __time_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `TimeT`
+
+warning: type `__useconds_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:212:10
+    |
+212 | pub type __useconds_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UsecondsT`
+
+warning: type `__suseconds_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:213:10
+    |
+213 | pub type __suseconds_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `SusecondsT`
+
+warning: type `__suseconds64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:214:10
+    |
+214 | pub type __suseconds64_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `Suseconds64T`
+
+warning: type `__daddr_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:215:10
+    |
+215 | pub type __daddr_t = ::std::os::raw::c_int;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `DaddrT`
+
+warning: type `__key_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:216:10
+    |
+216 | pub type __key_t = ::std::os::raw::c_int;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `KeyT`
+
+warning: type `__clockid_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:217:10
+    |
+217 | pub type __clockid_t = ::std::os::raw::c_int;
+    |          ^^^^^^^^^^^ help: convert the identifier to upper camel case: `ClockidT`
+
+warning: type `__timer_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:218:10
+    |
+218 | pub type __timer_t = *mut ::std::os::raw::c_void;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `TimerT`
+
+warning: type `__blksize_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:219:10
+    |
+219 | pub type __blksize_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^ help: convert the identifier to upper camel case: `BlksizeT`
+
+warning: type `__blkcnt_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:220:10
+    |
+220 | pub type __blkcnt_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `BlkcntT`
+
+warning: type `__blkcnt64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:221:10
+    |
+221 | pub type __blkcnt64_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `Blkcnt64T`
+
+warning: type `__fsblkcnt_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:222:10
+    |
+222 | pub type __fsblkcnt_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `FsblkcntT`
+
+warning: type `__fsblkcnt64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:223:10
+    |
+223 | pub type __fsblkcnt64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `Fsblkcnt64T`
+
+warning: type `__fsfilcnt_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:224:10
+    |
+224 | pub type __fsfilcnt_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `FsfilcntT`
+
+warning: type `__fsfilcnt64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:225:10
+    |
+225 | pub type __fsfilcnt64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `Fsfilcnt64T`
+
+warning: type `__fsword_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:226:10
+    |
+226 | pub type __fsword_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `FswordT`
+
+warning: type `__ssize_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:227:10
+    |
+227 | pub type __ssize_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `SsizeT`
+
+warning: type `__syscall_slong_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:228:10
+    |
+228 | pub type __syscall_slong_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `SyscallSlongT`
+
+warning: type `__syscall_ulong_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:229:10
+    |
+229 | pub type __syscall_ulong_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `SyscallUlongT`
+
+warning: type `__loff_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:230:10
+    |
+230 | pub type __loff_t = __off64_t;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `LoffT`
+
+warning: type `__caddr_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:231:10
+    |
+231 | pub type __caddr_t = *mut ::std::os::raw::c_char;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `CaddrT`
+
+warning: type `__intptr_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:232:10
+    |
+232 | pub type __intptr_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `IntptrT`
+
+warning: type `__socklen_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:233:10
+    |
+233 | pub type __socklen_t = ::std::os::raw::c_uint;
+    |          ^^^^^^^^^^^ help: convert the identifier to upper camel case: `SocklenT`
+
+warning: type `__sig_atomic_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:234:10
+    |
+234 | pub type __sig_atomic_t = ::std::os::raw::c_int;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `SigAtomicT`
+
+warning: type `int_least8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:235:10
+    |
+235 | pub type int_least8_t = __int_least8_t;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast8T`
+
+warning: type `int_least16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:236:10
+    |
+236 | pub type int_least16_t = __int_least16_t;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast16T`
+
+warning: type `int_least32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:237:10
+    |
+237 | pub type int_least32_t = __int_least32_t;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast32T`
+
+warning: type `int_least64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:238:10
+    |
+238 | pub type int_least64_t = __int_least64_t;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntLeast64T`
+
+warning: type `uint_least8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:239:10
+    |
+239 | pub type uint_least8_t = __uint_least8_t;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast8T`
+
+warning: type `uint_least16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:240:10
+    |
+240 | pub type uint_least16_t = __uint_least16_t;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast16T`
+
+warning: type `uint_least32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:241:10
+    |
+241 | pub type uint_least32_t = __uint_least32_t;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast32T`
+
+warning: type `uint_least64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:242:10
+    |
+242 | pub type uint_least64_t = __uint_least64_t;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintLeast64T`
+
+warning: type `int_fast8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:243:10
+    |
+243 | pub type int_fast8_t = ::std::os::raw::c_schar;
+    |          ^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntFast8T`
+
+warning: type `int_fast16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:244:10
+    |
+244 | pub type int_fast16_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntFast16T`
+
+warning: type `int_fast32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:245:10
+    |
+245 | pub type int_fast32_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntFast32T`
+
+warning: type `int_fast64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:246:10
+    |
+246 | pub type int_fast64_t = ::std::os::raw::c_long;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `IntFast64T`
+
+warning: type `uint_fast8_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:247:10
+    |
+247 | pub type uint_fast8_t = ::std::os::raw::c_uchar;
+    |          ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintFast8T`
+
+warning: type `uint_fast16_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:248:10
+    |
+248 | pub type uint_fast16_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintFast16T`
+
+warning: type `uint_fast32_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:249:10
+    |
+249 | pub type uint_fast32_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintFast32T`
+
+warning: type `uint_fast64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:250:10
+    |
+250 | pub type uint_fast64_t = ::std::os::raw::c_ulong;
+    |          ^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `UintFast64T`
+
+warning: type `intmax_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:251:10
+    |
+251 | pub type intmax_t = __intmax_t;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `IntmaxT`
+
+warning: type `uintmax_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:252:10
+    |
+252 | pub type uintmax_t = __uintmax_t;
+    |          ^^^^^^^^^ help: convert the identifier to upper camel case: `UintmaxT`
+
+warning: type `va_list` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:253:10
+    |
+253 | pub type va_list = __builtin_va_list;
+    |          ^^^^^^^ help: convert the identifier to upper camel case: `VaList`
+
+warning: type `__gnuc_va_list` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:254:10
+    |
+254 | pub type __gnuc_va_list = __builtin_va_list;
+    |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `GnucVaList`
+
+warning: type `__fpos_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:379:10
+    |
+379 | pub type __fpos_t = _G_fpos_t;
+    |          ^^^^^^^^ help: convert the identifier to upper camel case: `FposT`
+
+warning: type `__fpos64_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:421:10
+    |
+421 | pub type __fpos64_t = _G_fpos64_t;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `Fpos64T`
+
+warning: type `_IO_lock_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:439:10
+    |
+439 | pub type _IO_lock_t = ::std::os::raw::c_void;
+    |          ^^^^^^^^^^ help: convert the identifier to upper camel case: `IoLockT`
+
+warning: type `off_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:778:10
+    |
+778 | pub type off_t = __off_t;
+    |          ^^^^^ help: convert the identifier to upper camel case: `OffT`
+
+warning: type `fpos_t` should have an upper camel case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:779:10
+    |
+779 | pub type fpos_t = __fpos_t;
+    |          ^^^^^^ help: convert the identifier to upper camel case: `FposT`
+
+warning: type `__builtin_va_list` should have an upper camel case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:2297:10
+     |
+2297 | pub type __builtin_va_list = [__va_list_tag; 1usize];
+     |          ^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `BuiltinVaList`
+
+warning: variable does not need to be mutable
+ --> src/main.rs:8:13
+  |
+8 |         let mut tm = bitwuzla_term_manager_new();
+  |             ----^^
+  |             |
+  |             help: remove this `mut`
+  |
+  = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+ --> src/main.rs:9:13
+  |
+9 |         let mut options = bitwuzla_options_new();
+  |             ----^^^^^^^
+  |             |
+  |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/main.rs:19:13
+   |
+19 |         let mut bitwuzla = bitwuzla_new(tm, options);
+   |             ----^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/main.rs:23:13
+   |
+23 |         let mut sortbv4 = bitwuzla_mk_bv_sort(tm, 4);
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/main.rs:24:13
+   |
+24 |         let mut x = bitwuzla_mk_const(tm, sortbv4, x_cstr.as_ptr() as *const i8);
+   |             ----^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/main.rs:35:13
+   |
+35 |         let mut result = bitwuzla_check_sat(bitwuzla);
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: constant `true_` should have an upper case name
+ --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:3:11
+  |
+3 | pub const true_: u32 = 1;
+  |           ^^^^^ help: convert the identifier to upper case: `TRUE`
+  |
+  = note: `#[warn(non_upper_case_globals)]` on by default
+
+warning: constant `false_` should have an upper case name
+ --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:4:11
+  |
+4 | pub const false_: u32 = 0;
+  |           ^^^^^^ help: convert the identifier to upper case: `FALSE`
+
+warning: constant `__bool_true_false_are_defined` should have an upper case name
+ --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:5:11
+  |
+5 | pub const __bool_true_false_are_defined: u32 = 1;
+  |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `__BOOL_TRUE_FALSE_ARE_DEFINED`
+
+warning: constant `__glibc_c99_flexarr_available` should have an upper case name
+  --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:42:11
+   |
+42 | pub const __glibc_c99_flexarr_available: u32 = 1;
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `__GLIBC_C99_FLEXARR_AVAILABLE`
+
+warning: constant `_____fpos_t_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:103:11
+    |
+103 | pub const _____fpos_t_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `_____FPOS_T_DEFINED`
+
+warning: constant `____mbstate_t_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:104:11
+    |
+104 | pub const ____mbstate_t_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `____MBSTATE_T_DEFINED`
+
+warning: constant `_____fpos64_t_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:105:11
+    |
+105 | pub const _____fpos64_t_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `_____FPOS64_T_DEFINED`
+
+warning: constant `____FILE_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:106:11
+    |
+106 | pub const ____FILE_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `____FILE_DEFINED`
+
+warning: constant `__FILE_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:107:11
+    |
+107 | pub const __FILE_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^ help: convert the identifier to upper case: `__FILE_DEFINED`
+
+warning: constant `__struct_FILE_defined` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:108:11
+    |
+108 | pub const __struct_FILE_defined: u32 = 1;
+    |           ^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `__STRUCT_FILE_DEFINED`
+
+warning: constant `P_tmpdir` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:120:11
+    |
+120 | pub const P_tmpdir: &[u8; 5] = b"/tmp\0";
+    |           ^^^^^^^^ help: convert the identifier to upper case: `P_TMPDIR`
+
+warning: constant `L_tmpnam` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:122:11
+    |
+122 | pub const L_tmpnam: u32 = 20;
+    |           ^^^^^^^^ help: convert the identifier to upper case: `L_TMPNAM`
+
+warning: constant `L_ctermid` should have an upper case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:125:11
+    |
+125 | pub const L_ctermid: u32 = 9;
+    |           ^^^^^^^^^ help: convert the identifier to upper case: `L_CTERMID`
+
+warning: structure field `_IO_read_ptr` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:444:9
+    |
+444 |     pub _IO_read_ptr: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_read_ptr`
+    |
+    = note: `#[warn(non_snake_case)]` on by default
+
+warning: structure field `_IO_read_end` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:445:9
+    |
+445 |     pub _IO_read_end: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_read_end`
+
+warning: structure field `_IO_read_base` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:446:9
+    |
+446 |     pub _IO_read_base: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_read_base`
+
+warning: structure field `_IO_write_base` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:447:9
+    |
+447 |     pub _IO_write_base: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_write_base`
+
+warning: structure field `_IO_write_ptr` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:448:9
+    |
+448 |     pub _IO_write_ptr: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_write_ptr`
+
+warning: structure field `_IO_write_end` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:449:9
+    |
+449 |     pub _IO_write_end: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_write_end`
+
+warning: structure field `_IO_buf_base` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:450:9
+    |
+450 |     pub _IO_buf_base: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_buf_base`
+
+warning: structure field `_IO_buf_end` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:451:9
+    |
+451 |     pub _IO_buf_end: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_buf_end`
+
+warning: structure field `_IO_save_base` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:452:9
+    |
+452 |     pub _IO_save_base: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_save_base`
+
+warning: structure field `_IO_backup_base` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:453:9
+    |
+453 |     pub _IO_backup_base: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_backup_base`
+
+warning: structure field `_IO_save_end` should have a snake case name
+   --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:454:9
+    |
+454 |     pub _IO_save_end: *mut ::std::os::raw::c_char,
+    |         ^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `_io_save_end`
+
+warning: constant `BitwuzlaResult_BITWUZLA_SAT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1225:11
+     |
+1225 | pub const BitwuzlaResult_BITWUZLA_SAT: BitwuzlaResult = 10;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_RESULT_BITWUZLA_SAT`
+
+warning: constant `BitwuzlaResult_BITWUZLA_UNSAT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1226:11
+     |
+1226 | pub const BitwuzlaResult_BITWUZLA_UNSAT: BitwuzlaResult = 20;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_RESULT_BITWUZLA_UNSAT`
+
+warning: constant `BitwuzlaResult_BITWUZLA_UNKNOWN` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1227:11
+     |
+1227 | pub const BitwuzlaResult_BITWUZLA_UNKNOWN: BitwuzlaResult = 0;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_RESULT_BITWUZLA_UNKNOWN`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_RNE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1229:11
+     |
+1229 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_RNE: BitwuzlaRoundingMode = 0;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_RNE`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_RNA` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1230:11
+     |
+1230 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_RNA: BitwuzlaRoundingMode = 1;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_RNA`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_RTN` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1231:11
+     |
+1231 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_RTN: BitwuzlaRoundingMode = 2;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_RTN`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_RTP` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1232:11
+     |
+1232 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_RTP: BitwuzlaRoundingMode = 3;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_RTP`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_RTZ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1233:11
+     |
+1233 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_RTZ: BitwuzlaRoundingMode = 4;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_RTZ`
+
+warning: constant `BitwuzlaRoundingMode_BITWUZLA_RM_MAX` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1234:11
+     |
+1234 | pub const BitwuzlaRoundingMode_BITWUZLA_RM_MAX: BitwuzlaRoundingMode = 5;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_ROUNDING_MODE_BITWUZLA_RM_MAX`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_CONSTANT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1236:11
+     |
+1236 | pub const BitwuzlaKind_BITWUZLA_KIND_CONSTANT: BitwuzlaKind = 0;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_CONSTANT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_CONST_ARRAY` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1237:11
+     |
+1237 | pub const BitwuzlaKind_BITWUZLA_KIND_CONST_ARRAY: BitwuzlaKind = 1;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_CONST_ARRAY`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_VALUE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1238:11
+     |
+1238 | pub const BitwuzlaKind_BITWUZLA_KIND_VALUE: BitwuzlaKind = 2;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_VALUE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_VARIABLE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1239:11
+     |
+1239 | pub const BitwuzlaKind_BITWUZLA_KIND_VARIABLE: BitwuzlaKind = 3;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_VARIABLE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_AND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1240:11
+     |
+1240 | pub const BitwuzlaKind_BITWUZLA_KIND_AND: BitwuzlaKind = 4;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_AND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_DISTINCT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1241:11
+     |
+1241 | pub const BitwuzlaKind_BITWUZLA_KIND_DISTINCT: BitwuzlaKind = 5;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_DISTINCT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_EQUAL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1242:11
+     |
+1242 | pub const BitwuzlaKind_BITWUZLA_KIND_EQUAL: BitwuzlaKind = 6;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_EQUAL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_IFF` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1243:11
+     |
+1243 | pub const BitwuzlaKind_BITWUZLA_KIND_IFF: BitwuzlaKind = 7;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_IFF`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_IMPLIES` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1244:11
+     |
+1244 | pub const BitwuzlaKind_BITWUZLA_KIND_IMPLIES: BitwuzlaKind = 8;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_IMPLIES`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_NOT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1245:11
+     |
+1245 | pub const BitwuzlaKind_BITWUZLA_KIND_NOT: BitwuzlaKind = 9;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_NOT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_OR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1246:11
+     |
+1246 | pub const BitwuzlaKind_BITWUZLA_KIND_OR: BitwuzlaKind = 10;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_OR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_XOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1247:11
+     |
+1247 | pub const BitwuzlaKind_BITWUZLA_KIND_XOR: BitwuzlaKind = 11;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_XOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_ITE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1248:11
+     |
+1248 | pub const BitwuzlaKind_BITWUZLA_KIND_ITE: BitwuzlaKind = 12;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_ITE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_EXISTS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1249:11
+     |
+1249 | pub const BitwuzlaKind_BITWUZLA_KIND_EXISTS: BitwuzlaKind = 13;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_EXISTS`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FORALL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1250:11
+     |
+1250 | pub const BitwuzlaKind_BITWUZLA_KIND_FORALL: BitwuzlaKind = 14;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FORALL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_APPLY` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1251:11
+     |
+1251 | pub const BitwuzlaKind_BITWUZLA_KIND_APPLY: BitwuzlaKind = 15;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_APPLY`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_LAMBDA` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1252:11
+     |
+1252 | pub const BitwuzlaKind_BITWUZLA_KIND_LAMBDA: BitwuzlaKind = 16;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_LAMBDA`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_ARRAY_SELECT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1253:11
+     |
+1253 | pub const BitwuzlaKind_BITWUZLA_KIND_ARRAY_SELECT: BitwuzlaKind = 17;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_ARRAY_SELECT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_ARRAY_STORE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1254:11
+     |
+1254 | pub const BitwuzlaKind_BITWUZLA_KIND_ARRAY_STORE: BitwuzlaKind = 18;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_ARRAY_STORE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ADD` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1255:11
+     |
+1255 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ADD: BitwuzlaKind = 19;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ADD`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_AND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1256:11
+     |
+1256 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_AND: BitwuzlaKind = 20;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_AND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ASHR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1257:11
+     |
+1257 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ASHR: BitwuzlaKind = 21;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ASHR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_COMP` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1258:11
+     |
+1258 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_COMP: BitwuzlaKind = 22;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_COMP`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_CONCAT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1259:11
+     |
+1259 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_CONCAT: BitwuzlaKind = 23;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_CONCAT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_DEC` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1260:11
+     |
+1260 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_DEC: BitwuzlaKind = 24;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_DEC`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_INC` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1261:11
+     |
+1261 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_INC: BitwuzlaKind = 25;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_INC`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_MUL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1262:11
+     |
+1262 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_MUL: BitwuzlaKind = 26;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_MUL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_NAND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1263:11
+     |
+1263 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_NAND: BitwuzlaKind = 27;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_NAND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_NEG` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1264:11
+     |
+1264 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_NEG: BitwuzlaKind = 28;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_NEG`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_NEG_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1265:11
+     |
+1265 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_NEG_OVERFLOW: BitwuzlaKind = 29;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_NEG_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_NOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1266:11
+     |
+1266 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_NOR: BitwuzlaKind = 30;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_NOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_NOT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1267:11
+     |
+1267 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_NOT: BitwuzlaKind = 31;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_NOT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_OR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1268:11
+     |
+1268 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_OR: BitwuzlaKind = 32;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_OR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_REDAND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1269:11
+     |
+1269 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_REDAND: BitwuzlaKind = 33;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_REDAND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_REDOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1270:11
+     |
+1270 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_REDOR: BitwuzlaKind = 34;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_REDOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_REDXOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1271:11
+     |
+1271 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_REDXOR: BitwuzlaKind = 35;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_REDXOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ROL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1272:11
+     |
+1272 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ROL: BitwuzlaKind = 36;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ROL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ROR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1273:11
+     |
+1273 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ROR: BitwuzlaKind = 37;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ROR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SADD_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1274:11
+     |
+1274 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SADD_OVERFLOW: BitwuzlaKind = 38;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SADD_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SDIV_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1275:11
+     |
+1275 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SDIV_OVERFLOW: BitwuzlaKind = 39;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SDIV_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SDIV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1276:11
+     |
+1276 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SDIV: BitwuzlaKind = 40;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SDIV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SGE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1277:11
+     |
+1277 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SGE: BitwuzlaKind = 41;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SGE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SGT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1278:11
+     |
+1278 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SGT: BitwuzlaKind = 42;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SGT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SHL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1279:11
+     |
+1279 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SHL: BitwuzlaKind = 43;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SHL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SHR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1280:11
+     |
+1280 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SHR: BitwuzlaKind = 44;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SHR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SLE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1281:11
+     |
+1281 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SLE: BitwuzlaKind = 45;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SLE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SLT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1282:11
+     |
+1282 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SLT: BitwuzlaKind = 46;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SLT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SMOD` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1283:11
+     |
+1283 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SMOD: BitwuzlaKind = 47;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SMOD`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SMUL_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1284:11
+     |
+1284 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SMUL_OVERFLOW: BitwuzlaKind = 48;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SMUL_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SREM` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1285:11
+     |
+1285 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SREM: BitwuzlaKind = 49;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SREM`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SSUB_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1286:11
+     |
+1286 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SSUB_OVERFLOW: BitwuzlaKind = 50;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SSUB_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SUB` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1287:11
+     |
+1287 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SUB: BitwuzlaKind = 51;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SUB`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UADD_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1288:11
+     |
+1288 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UADD_OVERFLOW: BitwuzlaKind = 52;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UADD_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UDIV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1289:11
+     |
+1289 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UDIV: BitwuzlaKind = 53;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UDIV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UGE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1290:11
+     |
+1290 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UGE: BitwuzlaKind = 54;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UGE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UGT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1291:11
+     |
+1291 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UGT: BitwuzlaKind = 55;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UGT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ULE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1292:11
+     |
+1292 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ULE: BitwuzlaKind = 56;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ULE`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ULT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1293:11
+     |
+1293 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ULT: BitwuzlaKind = 57;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ULT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UMUL_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1294:11
+     |
+1294 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UMUL_OVERFLOW: BitwuzlaKind = 58;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UMUL_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_UREM` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1295:11
+     |
+1295 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_UREM: BitwuzlaKind = 59;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_UREM`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_USUB_OVERFLOW` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1296:11
+     |
+1296 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_USUB_OVERFLOW: BitwuzlaKind = 60;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_USUB_OVERFLOW`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_XNOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1297:11
+     |
+1297 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_XNOR: BitwuzlaKind = 61;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_XNOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_XOR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1298:11
+     |
+1298 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_XOR: BitwuzlaKind = 62;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_XOR`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_EXTRACT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1299:11
+     |
+1299 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_EXTRACT: BitwuzlaKind = 63;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_EXTRACT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_REPEAT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1300:11
+     |
+1300 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_REPEAT: BitwuzlaKind = 64;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_REPEAT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ROLI` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1301:11
+     |
+1301 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ROLI: BitwuzlaKind = 65;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ROLI`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_RORI` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1302:11
+     |
+1302 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_RORI: BitwuzlaKind = 66;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_RORI`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_SIGN_EXTEND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1303:11
+     |
+1303 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_SIGN_EXTEND: BitwuzlaKind = 67;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_SIGN_EXTEND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_BV_ZERO_EXTEND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1304:11
+     |
+1304 | pub const BitwuzlaKind_BITWUZLA_KIND_BV_ZERO_EXTEND: BitwuzlaKind = 68;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_BV_ZERO_EXTEND`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_ABS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1305:11
+     |
+1305 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_ABS: BitwuzlaKind = 69;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_ABS`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_ADD` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1306:11
+     |
+1306 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_ADD: BitwuzlaKind = 70;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_ADD`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_DIV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1307:11
+     |
+1307 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_DIV: BitwuzlaKind = 71;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_DIV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_EQUAL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1308:11
+     |
+1308 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_EQUAL: BitwuzlaKind = 72;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_EQUAL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_FMA` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1309:11
+     |
+1309 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_FMA: BitwuzlaKind = 73;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_FMA`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_FP` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1310:11
+     |
+1310 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_FP: BitwuzlaKind = 74;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_FP`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_GEQ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1311:11
+     |
+1311 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_GEQ: BitwuzlaKind = 75;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_GEQ`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_GT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1312:11
+     |
+1312 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_GT: BitwuzlaKind = 76;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_GT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_INF` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1313:11
+     |
+1313 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_INF: BitwuzlaKind = 77;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_INF`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_NAN` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1314:11
+     |
+1314 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_NAN: BitwuzlaKind = 78;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_NAN`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_NEG` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1315:11
+     |
+1315 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_NEG: BitwuzlaKind = 79;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_NEG`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_NORMAL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1316:11
+     |
+1316 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_NORMAL: BitwuzlaKind = 80;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_NORMAL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_POS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1317:11
+     |
+1317 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_POS: BitwuzlaKind = 81;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_POS`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_SUBNORMAL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1318:11
+     |
+1318 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_SUBNORMAL: BitwuzlaKind = 82;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_SUBNORMAL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_IS_ZERO` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1319:11
+     |
+1319 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_IS_ZERO: BitwuzlaKind = 83;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_IS_ZERO`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_LEQ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1320:11
+     |
+1320 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_LEQ: BitwuzlaKind = 84;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_LEQ`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_LT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1321:11
+     |
+1321 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_LT: BitwuzlaKind = 85;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_LT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_MAX` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1322:11
+     |
+1322 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_MAX: BitwuzlaKind = 86;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_MAX`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_MIN` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1323:11
+     |
+1323 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_MIN: BitwuzlaKind = 87;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_MIN`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_MUL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1324:11
+     |
+1324 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_MUL: BitwuzlaKind = 88;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_MUL`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_NEG` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1325:11
+     |
+1325 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_NEG: BitwuzlaKind = 89;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_NEG`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_REM` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1326:11
+     |
+1326 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_REM: BitwuzlaKind = 90;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_REM`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_RTI` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1327:11
+     |
+1327 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_RTI: BitwuzlaKind = 91;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_RTI`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_SQRT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1328:11
+     |
+1328 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_SQRT: BitwuzlaKind = 92;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_SQRT`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_SUB` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1329:11
+     |
+1329 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_SUB: BitwuzlaKind = 93;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_SUB`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_BV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1330:11
+     |
+1330 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_BV: BitwuzlaKind = 94;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_FP_FROM_BV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_FP` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1331:11
+     |
+1331 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_FP: BitwuzlaKind = 95;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_FP_FROM_FP`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_SBV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1332:11
+     |
+1332 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_SBV: BitwuzlaKind = 96;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_FP_FROM_SBV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_UBV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1333:11
+     |
+1333 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_FP_FROM_UBV: BitwuzlaKind = 97;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_FP_FROM_UBV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_SBV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1334:11
+     |
+1334 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_SBV: BitwuzlaKind = 98;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_SBV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_FP_TO_UBV` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1335:11
+     |
+1335 | pub const BitwuzlaKind_BITWUZLA_KIND_FP_TO_UBV: BitwuzlaKind = 99;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_FP_TO_UBV`
+
+warning: constant `BitwuzlaKind_BITWUZLA_KIND_NUM_KINDS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1336:11
+     |
+1336 | pub const BitwuzlaKind_BITWUZLA_KIND_NUM_KINDS: BitwuzlaKind = 100;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_KIND_BITWUZLA_KIND_NUM_KINDS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_LOGLEVEL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1338:11
+     |
+1338 | pub const BitwuzlaOption_BITWUZLA_OPT_LOGLEVEL: BitwuzlaOption = 0;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_LOGLEVEL`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PRODUCE_MODELS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1339:11
+     |
+1339 | pub const BitwuzlaOption_BITWUZLA_OPT_PRODUCE_MODELS: BitwuzlaOption = 1;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PRODUCE_MODELS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PRODUCE_UNSAT_ASSUMPTIONS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1340:11
+     |
+1340 | pub const BitwuzlaOption_BITWUZLA_OPT_PRODUCE_UNSAT_ASSUMPTIONS: BitwuzlaOption = 2;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PRODUCE_UNSAT_ASSUMPTIONS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PRODUCE_UNSAT_CORES` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1341:11
+     |
+1341 | pub const BitwuzlaOption_BITWUZLA_OPT_PRODUCE_UNSAT_CORES: BitwuzlaOption = 3;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PRODUCE_UNSAT_CORES`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_SEED` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1342:11
+     |
+1342 | pub const BitwuzlaOption_BITWUZLA_OPT_SEED: BitwuzlaOption = 4;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_SEED`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_VERBOSITY` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1343:11
+     |
+1343 | pub const BitwuzlaOption_BITWUZLA_OPT_VERBOSITY: BitwuzlaOption = 5;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_VERBOSITY`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_TIME_LIMIT_PER` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1344:11
+     |
+1344 | pub const BitwuzlaOption_BITWUZLA_OPT_TIME_LIMIT_PER: BitwuzlaOption = 6;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_TIME_LIMIT_PER`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_MEMORY_LIMIT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1345:11
+     |
+1345 | pub const BitwuzlaOption_BITWUZLA_OPT_MEMORY_LIMIT: BitwuzlaOption = 7;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_MEMORY_LIMIT`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_BV_SOLVER` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1346:11
+     |
+1346 | pub const BitwuzlaOption_BITWUZLA_OPT_BV_SOLVER: BitwuzlaOption = 8;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_BV_SOLVER`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_REWRITE_LEVEL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1347:11
+     |
+1347 | pub const BitwuzlaOption_BITWUZLA_OPT_REWRITE_LEVEL: BitwuzlaOption = 9;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_REWRITE_LEVEL`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_SAT_SOLVER` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1348:11
+     |
+1348 | pub const BitwuzlaOption_BITWUZLA_OPT_SAT_SOLVER: BitwuzlaOption = 10;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_SAT_SOLVER`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_CONST_BITS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1349:11
+     |
+1349 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_CONST_BITS: BitwuzlaOption = 11;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_CONST_BITS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_INFER_INEQ_BOUNDS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1350:11
+     |
+1350 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_INFER_INEQ_BOUNDS: BitwuzlaOption = 12;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_INFER_INEQ_BOUNDS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_NPROPS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1351:11
+     |
+1351 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_NPROPS: BitwuzlaOption = 13;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_NPROPS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_NUPDATES` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1352:11
+     |
+1352 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_NUPDATES: BitwuzlaOption = 14;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_NUPDATES`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_OPT_LT_CONCAT_SEXT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1353:11
+     |
+1353 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_OPT_LT_CONCAT_SEXT: BitwuzlaOption = 15;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_OPT_LT_CONCAT_SEXT`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_PATH_SEL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1354:11
+     |
+1354 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_PATH_SEL: BitwuzlaOption = 16;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_PATH_SEL`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_PROB_RANDOM_INPUT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1355:11
+     |
+1355 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_PROB_RANDOM_INPUT: BitwuzlaOption = 17;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_PROB_RANDOM_INPUT`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_PROB_USE_INV_VALUE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1356:11
+     |
+1356 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_PROB_USE_INV_VALUE: BitwuzlaOption = 18;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_PROB_USE_INV_VALUE`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_SEXT` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1357:11
+     |
+1357 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_SEXT: BitwuzlaOption = 19;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_SEXT`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PROP_NORMALIZE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1358:11
+     |
+1358 | pub const BitwuzlaOption_BITWUZLA_OPT_PROP_NORMALIZE: BitwuzlaOption = 20;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PROP_NORMALIZE`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PREPROCESS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1359:11
+     |
+1359 | pub const BitwuzlaOption_BITWUZLA_OPT_PREPROCESS: BitwuzlaOption = 21;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PREPROCESS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_CONTRADICTING_ANDS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1360:11
+     |
+1360 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_CONTRADICTING_ANDS: BitwuzlaOption = 22;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_CONTRADICTING_ANDS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_ELIM_BV_EXTRACTS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1361:11
+     |
+1361 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_ELIM_BV_EXTRACTS: BitwuzlaOption = 23;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_ELIM_BV_EXTRACTS`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_EMBEDDED_CONSTR` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1362:11
+     |
+1362 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_EMBEDDED_CONSTR: BitwuzlaOption = 24;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_EMBEDDED_CONSTR`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_FLATTEN_AND` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1363:11
+     |
+1363 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_FLATTEN_AND: BitwuzlaOption = 25;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_FLATTEN_AND`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_NORMALIZE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1364:11
+     |
+1364 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_NORMALIZE: BitwuzlaOption = 26;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_NORMALIZE`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_NORMALIZE_SHARE_AWARE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1365:11
+     |
+1365 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_NORMALIZE_SHARE_AWARE: BitwuzlaOption = 27;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_NORMALIZE_SHARE_AWARE`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_SKELETON_PREPROC` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1366:11
+     |
+1366 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_SKELETON_PREPROC: BitwuzlaOption = 28;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_SKELETON_PREPROC`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1367:11
+     |
+1367 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST: BitwuzlaOption = 29;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_VARIABLE_SUBST`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_EQ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1368:11
+     |
+1368 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_EQ: BitwuzlaOption = 30;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_EQ`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_DISEQ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1369:11
+     |
+1369 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_DISEQ: BitwuzlaOption = 31;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_DISEQ`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_BV_INEQ` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1370:11
+     |
+1370 | pub const BitwuzlaOption_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_BV_INEQ: BitwuzlaOption = 32;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_PP_VARIABLE_SUBST_NORM_BV_INEQ`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_DBG_RW_NODE_THRESH` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1371:11
+     |
+1371 | pub const BitwuzlaOption_BITWUZLA_OPT_DBG_RW_NODE_THRESH: BitwuzlaOption = 33;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_DBG_RW_NODE_THRESH`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_DBG_PP_NODE_THRESH` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1372:11
+     |
+1372 | pub const BitwuzlaOption_BITWUZLA_OPT_DBG_PP_NODE_THRESH: BitwuzlaOption = 34;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_DBG_PP_NODE_THRESH`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_DBG_CHECK_MODEL` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1373:11
+     |
+1373 | pub const BitwuzlaOption_BITWUZLA_OPT_DBG_CHECK_MODEL: BitwuzlaOption = 35;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_DBG_CHECK_MODEL`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_DBG_CHECK_UNSAT_CORE` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1374:11
+     |
+1374 | pub const BitwuzlaOption_BITWUZLA_OPT_DBG_CHECK_UNSAT_CORE: BitwuzlaOption = 36;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_DBG_CHECK_UNSAT_CORE`
+
+warning: constant `BitwuzlaOption_BITWUZLA_OPT_NUM_OPTS` should have an upper case name
+    --> /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out/bindings.rs:1375:11
+     |
+1375 | pub const BitwuzlaOption_BITWUZLA_OPT_NUM_OPTS: BitwuzlaOption = 37;
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper case: `BITWUZLA_OPTION_BITWUZLA_OPT_NUM_OPTS`
+
+error: linking with `cc` failed: exit status: 1
+  |
+  = note: LC_ALL="C" PATH="/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin:/home/misha/.local/bin:/home/misha/.cargo/bin:/home/misha/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Windows/system32:/mnt/c/Windows:/mnt/c/Windows/System32/Wbem:/mnt/c/Windows/System32/WindowsPowerShell/v1.0/:/mnt/c/Windows/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/Program Files/WireGuard/:/mnt/c/Program Files/Git/cmd:/mnt/c/Users/user/.cargo/bin:/mnt/c/Users/user/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/user/AppData/Local/Programs/Microsoft VS Code/bin:/snap/bin" VSLANG="1033" "cc" "-m64" "/tmp/rustcSptot0/symbols.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.1450juiysvmdyacm.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.147v9h0q7rrxvz3p.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.17aec47mm6y21ws1.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.1js3zoor32dbnasy.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.231mgi6snbvw8v8l.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.2qcxtzmrt9rkh4pu.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.3ssj7j3f0r010hlg.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.3ubdazvhthwaxugc.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.4grlxcsr6662btvv.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.4qbhafdxtcl80m8b.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.4vnuop7pcevp7n7x.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.4vsx8bj5zro8tvdu.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.4ylrofbu45twvrnj.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.58vnrmalk0ggmgml.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.lpslecupcr32bjy.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.vbhmhez3j3wvuxi.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.wn6pkly61ukphj8.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.xmrr81e2remz2il.rcgu.o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.3aw2eok3vp26t5yw.rcgu.o" "-Wl,--as-needed" "-L" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps" "-L" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib" "-Wl,-Bstatic" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-6e3078511c661ac3.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libpanic_unwind-252c22ad03c975c9.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libobject-d80cad399a4d0390.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libmemchr-27491650d14ec48b.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libaddr2line-97d68acfa4555965.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libgimli-c70b304f6ac84900.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/librustc_demangle-d55f2ec1b1801f29.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd_detect-0b96f850bca44a32.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libhashbrown-ee200428a02d516d.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/librustc_std_workspace_alloc-53d84a0642c19f2b.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libminiz_oxide-217c01f7aaf0f8d4.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libadler-2b97858586af9abb.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libunwind-cc333506f95be41d.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libcfg_if-690e7438295ce0c8.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/liblibc-c9c6c96eccfdab53.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/liballoc-cb895a9d9d73a7fa.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/librustc_std_workspace_core-433bd1aab5f6d647.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libcore-5f8e0208f8278cbc.rlib" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libcompiler_builtins-1088ecd7666b60f4.rlib" "-Wl,-Bdynamic" "-lgcc_s" "-lutil" "-lrt" "-lpthread" "-lm" "-ldl" "-lc" "-Wl,--eh-frame-hdr" "-Wl,-z,noexecstack" "-L" "/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib" "-o" "/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1" "-Wl,--gc-sections" "-pie" "-Wl,-z,relro,-z,now" "-nodefaultlibs"
+  = note: /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/mybin-abd48863b0e9bfe1.2qcxtzmrt9rkh4pu.rcgu.o: in function `mybin::main':
+          /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:8: undefined reference to `bitwuzla_term_manager_new'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:9: undefined reference to `bitwuzla_options_new'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:13: undefined reference to `bitwuzla_set_option'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:14: undefined reference to `bitwuzla_set_option_mode'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:19: undefined reference to `bitwuzla_new'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:23: undefined reference to `bitwuzla_mk_bv_sort'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:24: undefined reference to `bitwuzla_mk_const'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:32: undefined reference to `bitwuzla_mk_bv_value_uint64'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:28: undefined reference to `bitwuzla_mk_term2'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:26: undefined reference to `bitwuzla_assert'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:35: undefined reference to `bitwuzla_check_sat'
+          /usr/bin/ld: /home/misha/rust_projects/bindgen-autobitwuzla/src/main.rs:38: undefined reference to `bitwuzla_result_to_string'
+          collect2: error: ld returned 1 exit status
+          
+  = note: some `extern` functions couldn't be found; some native libraries may need to be installed or have their path specified
+  = note: use the `-l` flag to specify native libraries to link
+  = note: use the `cargo:rustc-link-lib` directive to specify the native libraries to link with Cargo (see https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-link-lib)
+
+warning: `bindgen-autobitwuzla` (bin "mybin") generated 267 warnings
+error: could not compile `bindgen-autobitwuzla` (bin "mybin") due to 1 previous error; 267 warnings emitted
+
+Caused by:
+  process didn't exit successfully: `CARGO=/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo CARGO_BIN_NAME=mybin CARGO_CRATE_NAME=mybin CARGO_MANIFEST_DIR=/home/misha/rust_projects/bindgen-autobitwuzla CARGO_PKG_AUTHORS='' CARGO_PKG_DESCRIPTION='' CARGO_PKG_HOMEPAGE='' CARGO_PKG_LICENSE='' CARGO_PKG_LICENSE_FILE='' CARGO_PKG_NAME=bindgen-autobitwuzla CARGO_PKG_README='' CARGO_PKG_REPOSITORY='' CARGO_PKG_RUST_VERSION='' CARGO_PKG_VERSION=0.1.0 CARGO_PKG_VERSION_MAJOR=0 CARGO_PKG_VERSION_MINOR=1 CARGO_PKG_VERSION_PATCH=0 CARGO_PKG_VERSION_PRE='' CARGO_PRIMARY_PACKAGE=1 LD_LIBRARY_PATH='/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib:/home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib' OUT_DIR=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/build/bindgen-autobitwuzla-dc370280b0601a5e/out /home/misha/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name mybin --edition=2021 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C metadata=abd48863b0e9bfe1 -C extra-filename=-abd48863b0e9bfe1 --out-dir /home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps -C incremental=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/incremental -L dependency=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps --extern mylib=/home/misha/rust_projects/bindgen-autobitwuzla/target/debug/deps/libmylib-4fb54fb5b0fa75d3.rlib` (exit status: 1)
