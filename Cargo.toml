@@ -1,0 +1,4 @@
+[workspace]
+
+members = ["smitril-bitwuzla-sys", "smitril-lib"]
+resolver = "2"
