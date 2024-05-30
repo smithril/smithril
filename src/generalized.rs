@@ -52,7 +52,7 @@ pub trait GeneralConvertor<S: GeneralSort, T: GeneralTerm> {
     fn mk_term1(&self, arg0: &T) -> T;
     fn mk_term2(&self, arg0: &T, arg1: &T) -> T;
     fn mk_term3(&self, arg0: &T, arg1: &T, arg2: &T) -> T;
-    fn mk_term(&self, argc: &u32, args: *mut T) -> T;
+    // fn mk_term(&self, argc: &u32, args: *mut T) -> T;
     // fn convert(&self, term: &Term, sort: &Sort) -> T;
 }
 
@@ -73,12 +73,12 @@ impl BitwuzlaConvertor {
         unsafe {
             bitwuzla_sys::bitwuzla_set_option(
                 options,
-                bitwuzla_sys::BitwuzlaOption_BITWUZLA_OPT_PRODUCE_MODELS,
+                bitwuzla_sys::BITWUZLA_OPT_PRODUCE_MODELS,
                 1,
             );
             bitwuzla_sys::bitwuzla_set_option_mode(
                 options,
-                bitwuzla_sys::BitwuzlaOption_BITWUZLA_OPT_SAT_SOLVER,
+                bitwuzla_sys::BITWUZLA_OPT_SAT_SOLVER,
                 cadical_cstr.as_ptr() as *const i8,
             )
         };
@@ -129,7 +129,7 @@ impl GeneralConvertor<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
             term: unsafe {
                 bitwuzla_sys::bitwuzla_mk_term2(
                     self.term_manager,
-                    bitwuzla_sys::BitwuzlaKind_BITWUZLA_KIND_EQUAL,
+                    bitwuzla_sys::BITWUZLA_KIND_EQUAL,
                     term1.term,
                     term2.term,
                 )
@@ -141,8 +141,8 @@ impl GeneralConvertor<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
     fn check_sat(&self) -> SolverResult {
         let res = unsafe { bitwuzla_sys::bitwuzla_check_sat(self.solver) };
         match res {
-            bitwuzla_sys::BitwuzlaResult_BITWUZLA_SAT => SolverResult::Sat,
-            bitwuzla_sys::BitwuzlaResult_BITWUZLA_UNSAT => SolverResult::Unsat,
+            bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
+            bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
             _ => SolverResult::Unknown,
         }
     }
@@ -230,18 +230,6 @@ impl GeneralConvertor<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
                     arg2.term,
                 )
             },
-        };
-        res
-    }
-
-    fn mk_term(&self, argc: u32, args: *mut BitwuzlaTerm) -> BitwuzlaTerm {
-        let cur_args: *mut BitwuzlaTerm;
-        for i in 0..argc - 1 {
-            unsafe { cur_args.add(args[i].term) };
-            cur_args.
-        }
-        let res = BitwuzlaTerm {
-            term: unsafe { bitwuzla_sys::bitwuzla_mk_term(self.term_manager, 1, argc, cur_args) },
         };
         res
     }

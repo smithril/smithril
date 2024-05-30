@@ -1,3 +1,4 @@
 /target
 /bitwuzla
 /.vscode
+Cargo.lock

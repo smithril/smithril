@@ -13,19 +13,39 @@ fn main() {
             .arg("https://github.com/bitwuzla/bitwuzla")
             .status()
             .unwrap();
+        let mut _my_command = Command::new("git")
+            .arg("checkout")
+            .arg("tags/0.4.0")
+            .arg("-b")
+            .arg("branch-0.4.0")
+            .current_dir(&dir_bitwuzla)
+            .status()
+            .unwrap();
     }
     if !dir_bitwuzla.join("build").exists() {
-        let mut _my_command = Command::new("./configure.py --prefix==/home/misha/rust_projects/bitwuzla-sys/bitwuzla") // --prefix
+        let mut _my_command = Command::new("./configure.py")
+            .arg(format!(
+                "--prefix={}",
+                dir_bitwuzla
+                    .join("build/install")
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()
+            ))
             .current_dir(&dir_bitwuzla)
             .status()
             .unwrap();
 
         let dir_tmp = env::current_dir().unwrap().join("bitwuzla/build");
-        let mut _my_command = Command::new("ninja").current_dir(dir_tmp).status().unwrap();
+        let mut _my_command = Command::new("ninja")
+            .arg("install")
+            .current_dir(dir_tmp)
+            .status()
+            .unwrap();
     }
 
     let old = env::var("PKG_CONFIG_PATH");
-    let pkg_config_dir: PathBuf = dir_bitwuzla.join("/home/misha/rust_projects/bitwuzla-sys/bitwuzla"); // --prefix path
+    let pkg_config_dir: PathBuf = dir_bitwuzla.join("build/install/lib/x86_64-linux-gnu/pkgconfig");
 
     match old {
         Ok(ref s) => {
@@ -43,7 +63,7 @@ fn main() {
 
     println!("cargo:rustc-link-lib=stdc++");
 
-    let bindings = bindgen::Builder::default()
+    let bindings = bindgen::builder()
         .header("wrapper.h")
         .clang_args(
             library
@@ -51,13 +71,7 @@ fn main() {
                 .iter()
                 .map(|path| format!("-I{}", path.to_string_lossy())),
         )
-        .clang_args(
-            library
-                .link_paths
-                .iter()
-                .map(|path| format!("-L{}", path.to_string_lossy())),
-        )
-        .clang_args(library.libs.iter().map(|name| format!("-l{}", name)))
+        .prepend_enum_name(false)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings");
