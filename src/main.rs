@@ -14,7 +14,7 @@ fn main() {
 
     //let bsortbv4 = sortbv4; //BitwuzlaSort { sort: sortbv4.sort };
 
-    let x = bc.mk_smt_symbol("x", &sortbv4);
+    let x = bc.mk_smt_symbol("x", &sortbv3);
 
     let y = bc.mk_bv_value_uint64(&sortbv3, 2);
 
