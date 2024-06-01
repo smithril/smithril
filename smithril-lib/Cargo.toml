@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 smithril-bitwuzla-sys = { path = "../smithril-bitwuzla-sys" }
+smithril-z3-sys = { path = "../smithril-z3-sys" }

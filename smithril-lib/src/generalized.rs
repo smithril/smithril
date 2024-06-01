@@ -29,9 +29,5 @@ pub trait GeneralConvertor<S: GeneralSort, T: GeneralTerm> {
     fn check_sat(&self) -> SolverResult;
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bv_value_uint64(&self, sort: &S, val: u64) -> T;
-    fn mk_bv_zero(&self, sort: &S) -> T;
-    fn mk_bv_one(&self, sort: &S) -> T;
-    fn mk_bv_ones(&self, sort: &S) -> T;
-    fn mk_true(&self) -> T;
-    fn mk_false(&self) -> T;
+    fn mk_smt_bool(&self, val: bool) -> T;
 }

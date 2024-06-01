@@ -124,39 +124,14 @@ impl GeneralConvertor<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
         }
     }
 
-    fn mk_bv_zero(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_bv_zero(self.term_manager, sort.sort)
-            },
-        }
-    }
-
-    fn mk_bv_one(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_bv_one(self.term_manager, sort.sort)
-            },
-        }
-    }
-
-    fn mk_bv_ones(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_bv_ones(self.term_manager, sort.sort)
-            },
-        }
-    }
-
-    fn mk_true(&self) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager) },
-        }
-    }
-
-    fn mk_false(&self) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager) },
-        }
+    fn mk_smt_bool(&self, val: bool) -> BitwuzlaTerm {
+        let term = unsafe {
+            if val {
+                smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager)
+            } else {
+                smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager)
+            }
+        };
+        BitwuzlaTerm { term }
     }
 }
