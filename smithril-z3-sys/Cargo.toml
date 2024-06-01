@@ -1,0 +1,11 @@
+[package]
+name = "smithril-z3-sys"
+build = "build.rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+pkg-config = "0.3.30"
+bindgen = "0.69.4"
