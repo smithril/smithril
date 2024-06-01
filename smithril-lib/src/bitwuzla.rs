@@ -67,7 +67,7 @@ impl Drop for BitwuzlaConvertor {
 
 impl BitwuzlaConvertor {}
 
-impl GeneralConvertor<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
+impl<'tm> GeneralConvertor<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConvertor {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         let name_cstr = CString::new(name).unwrap();
         let term = unsafe {
