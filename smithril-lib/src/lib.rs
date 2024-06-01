@@ -1,13 +1,15 @@
 mod bitwuzla;
 pub mod generalized;
+mod z3;
 
 #[cfg(test)]
 mod tests {
     use crate::bitwuzla::BitwuzlaConvertor;
     use crate::generalized::{GeneralConvertor, SolverResult};
+    use crate::z3::Z3Convertor;
 
     #[test]
-    fn it_works() {
+    fn bitwuzla_sat_works() {
         let bc = BitwuzlaConvertor::new();
 
         let sortbv3 = bc.mk_bv_sort(3);
@@ -22,9 +24,23 @@ mod tests {
 
         let result = bc.check_sat();
         assert_eq!(SolverResult::Sat, result);
+    }
 
-        println!("Expect: sat");
+    #[test]
+    fn z3_sat_works() {
+        let zc = Z3Convertor::new();
 
-        println!("Bitwuzla: {}", result);
+        let sortbv3 = zc.mk_bv_sort(3);
+
+        let x = zc.mk_smt_symbol("x", &sortbv3);
+
+        let y = zc.mk_bv_value_uint64(&sortbv3, 2);
+
+        let t = zc.mk_eq(&x, &y);
+
+        zc.assert(&t);
+
+        let result = zc.check_sat();
+        assert_eq!(SolverResult::Sat, result);
     }
 }
