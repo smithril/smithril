@@ -9,7 +9,7 @@ fn main() {
     if !dir_bitwuzla.exists() {
         let mut _my_command = Command::new("git")
             .arg("clone")
-            .arg("https://github.com/bitwuzla/bitwuzla")
+            .arg("https://github.com/bitwuzla/bitwuzla.git")
             .status()
             .unwrap();
         let mut _my_command = Command::new("git")
