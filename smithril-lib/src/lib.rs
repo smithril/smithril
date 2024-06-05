@@ -4,13 +4,13 @@ mod z3;
 
 #[cfg(test)]
 mod tests {
-    use crate::bitwuzla::BitwuzlaConvertor;
-    use crate::generalized::{GeneralConvertor, SolverResult};
-    use crate::z3::Z3Convertor;
+    use crate::bitwuzla::BitwuzlaConverter;
+    use crate::generalized::{GeneralConverter, SolverResult};
+    use crate::z3::Z3Converter;
 
     #[test]
     fn bitwuzla_sat_works() {
-        let bc = BitwuzlaConvertor::new();
+        let bc = BitwuzlaConverter::new();
 
         let sortbv3 = bc.mk_bv_sort(3);
 
@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn z3_sat_works() {
-        let zc = Z3Convertor::new();
+        let zc = Z3Converter::new();
 
         let sortbv3 = zc.mk_bv_sort(3);
 
