@@ -2,11 +2,33 @@ mod bitwuzla;
 pub mod generalized;
 mod z3;
 
+pub mod converters {
+    use crate::{
+        bitwuzla::BitwuzlaConverter,
+        z3::{Z3ContextInner, Z3Converter},
+    };
+
+    pub fn mk_bitwulza() -> BitwuzlaConverter {
+        BitwuzlaConverter::default()
+    }
+
+    pub fn mk_z3_context() -> Z3ContextInner {
+        Z3ContextInner::default()
+    }
+
+    pub fn mk_z3() -> Z3Converter<'static> {
+        Z3Converter::default()
+    }
+
+    pub fn mk_z3_with_context(context: &Z3ContextInner) -> Z3Converter<'_> {
+        Z3Converter::new(context)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::bitwuzla::BitwuzlaConverter;
+    use crate::converters;
     use crate::generalized::{GeneralConverter, GeneralSort, GeneralTerm, SolverResult};
-    use crate::z3::Z3Converter;
 
     fn generalized_sat_works<'a, C, S, T>(converter: &'a C)
     where
@@ -50,25 +72,34 @@ mod tests {
 
     #[test]
     fn bitwuzla_sat_works() {
-        let bc = BitwuzlaConverter::new();
+        let bc = converters::mk_bitwulza();
         generalized_sat_works(&bc);
     }
 
     #[test]
     fn z3_sat_works() {
-        let zc = Z3Converter::new();
+        let zc = converters::mk_z3();
         generalized_sat_works(&zc);
     }
 
     #[test]
     fn bitwuzla_unsat_works() {
-        let bc = BitwuzlaConverter::new();
+        let bc = converters::mk_bitwulza();
         generalized_unsat_works(&bc);
     }
 
     #[test]
     fn z3_unsat_works() {
-        let zc = Z3Converter::new();
+        let zc = converters::mk_z3();
         generalized_unsat_works(&zc);
+    }
+
+    #[test]
+    fn z3_shared_context() {
+        let ct = converters::mk_z3_context();
+        let zc = converters::mk_z3_with_context(&ct);
+        generalized_unsat_works(&zc);
+        let zc = converters::mk_z3_with_context(&ct);
+        generalized_sat_works(&zc);
     }
 }
