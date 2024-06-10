@@ -130,7 +130,9 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
 
     fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
         BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager, size) },
+            sort: unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager, size as u64)
+            },
         }
     }
 
@@ -154,10 +156,9 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
 
     fn mk_smt_bool(&self, val: bool) -> BitwuzlaTerm {
         let term = unsafe {
-            if val {
-                smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager)
-            } else {
-                smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager)
+            match val {
+                true => smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager),
+                false => smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager),
             }
         };
         BitwuzlaTerm { term }

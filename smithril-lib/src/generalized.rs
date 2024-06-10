@@ -5,6 +5,24 @@ pub trait GeneralSort {}
 pub trait GeneralTerm {}
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum GenConstant {
+    Numeral(u64),
+    Boolean(bool),
+    Symbol(String),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum GenOperationDuo<T1,T2> {
+    Eq(T1, T2),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Term {
+    Constant(GenConstant),
+    OperationDuo(Box<GenOperationDuo<Term,Term>>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum SolverResult {
     Sat,
     Unsat,
@@ -69,4 +87,17 @@ where
     fn mk_smt_bool(&'a self, val: bool) -> T;
     fn mk_smt_symbol(&'a self, name: &str, sort: &S) -> T;
     fn mk_xor(&'a self, term1: &T, term2: &T) -> T;
+    fn convert(&'a self, term: &Term, sort: &S) -> T {
+        match term {
+            Term::Constant(const_term) => match const_term {
+                GenConstant::Numeral(x) => self.mk_bv_value_uint64(sort, *x),
+                GenConstant::Boolean(x) => self.mk_smt_bool(*x),
+                GenConstant::Symbol(x) => self.mk_smt_symbol(&x, sort),
+            },
+            Term::OperationDuo(operation) => match operation.as_ref() {
+                // GenOperationDuo::Eq(_, _) => todo!(),
+                GenOperationDuo::Eq(term1,term2) => self.mk_eq(&self.convert(term1, sort), &self.convert(term2, sort)),
+            }
+        }
+    }
 }
