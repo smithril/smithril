@@ -3,6 +3,13 @@ pub mod generalized;
 mod z3;
 
 pub mod converters {
+    use serde::{Deserialize, Serialize};
+    #[derive(Serialize, Deserialize, Debug)]
+    pub enum Converter {
+        Bitwuzla,
+        Z3,
+    }
+
     use crate::{
         bitwuzla::BitwuzlaConverter,
         z3::{Z3ContextInner, Z3Converter},
