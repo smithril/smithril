@@ -4,28 +4,10 @@ mod z3;
 
 pub mod converters {
     use serde::{Deserialize, Serialize};
-    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
-    pub enum ClientMessageType {
-        Converter(ConverterType),
-        Assert(SolverQuery),
-        CheckSat(),
-    }
-
-    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
-    pub enum ServerMessageType {
-        Result(SolverResult),
-        Txt(String),
-    }
-
-    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-    pub enum ConverterType {
+    #[derive(Serialize, Deserialize, Debug)]
+    pub enum Converter {
         Bitwuzla,
         Z3,
-    }
-
-    #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
-    pub struct SolverQuery {
-        pub query: Term,
     }
 
     use crate::{

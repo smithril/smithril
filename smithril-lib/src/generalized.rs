@@ -1,5 +1,6 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub trait GeneralSort {}
 
@@ -84,7 +85,12 @@ pub struct Term {
     pub sort: Sort,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
+pub struct SolverQuery {
+    pub query: String,
+}
+
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub enum SolverResult {
     Sat,
     Unsat,
