@@ -1,4 +1,6 @@
 use crate::generalized::GenConstant;
+use termination_callback::termination_callback;
+
 use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
@@ -14,6 +16,8 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BitwuzlaTerm {
@@ -28,12 +32,50 @@ impl GeneralSort for BitwuzlaSort {}
 
 impl GeneralTerm for BitwuzlaTerm {}
 
+pub struct BitwuzlaTerminationState {
+    termination_state: AtomicBool,
+}
+
+impl Default for BitwuzlaTerminationState {
+    fn default() -> Self {
+        Self {
+            termination_state: AtomicBool::new(false),
+        }
+    }
+}
+
+impl BitwuzlaTerminationState {
+    pub fn terminated(&self) -> bool {
+        self.termination_state.load(Ordering::Relaxed)
+    }
+
+    pub fn terminate(&self) {
+        self.termination_state.store(true, Ordering::Relaxed)
+    }
+}
+
+mod termination_callback {
+    use super::BitwuzlaTerminationState;
+
+    #[no_mangle]
+    pub extern "C" fn termination_callback(state: *mut ::std::os::raw::c_void) -> i32 {
+        unsafe {
+            let state = state as *mut BitwuzlaTerminationState;
+            if (*state).terminated() {
+                1
+            } else {
+                0
+            }
+        }
+    }
+}
+
 pub struct BitwuzlaConverter {
     pub term_manager: *mut smithril_bitwuzla_sys::BitwuzlaTermManager,
     pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
     pub solver: *mut smithril_bitwuzla_sys::Bitwuzla,
-    pub sym_map: Cell<HashMap<String, BitwuzlaTerm>>,
     pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
+    pub symbol_cache: Cell<HashMap<String, BitwuzlaTerm>>,
 }
 
 impl BitwuzlaConverter {
@@ -60,12 +102,20 @@ impl BitwuzlaConverter {
             );
         };
         let solver = unsafe { smithril_bitwuzla_sys::bitwuzla_new(term_manager, options) };
+        let termination_state = BitwuzlaTerminationState::default();
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
+                solver,
+                Some(termination_callback),
+                Box::into_raw(Box::new(termination_state)) as *mut ::std::os::raw::c_void,
+            )
+        }
         Self {
             term_manager,
             options,
             solver,
-            sym_map: Cell::new(HashMap::new()),
             asserted_terms_map: Cell::new(HashMap::new()),
+            symbol_cache: Cell::new(HashMap::new()),
         }
     }
 }
@@ -160,8 +210,8 @@ impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
 
 impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        let mut cur_sym_table = self.sym_map.take();
-        let term = if let Some(term2) = cur_sym_table.get(name) {
+        let mut sym_table = self.symbol_cache.take();
+        let term = if let Some(term2) = sym_table.get(name) {
             term2.term
         } else {
             let name_cstr = CString::new(name).unwrap();
@@ -172,16 +222,27 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
                     name_cstr.as_ptr(),
                 )
             };
-            let old_term = cur_sym_table.insert(name.to_string(), BitwuzlaTerm { term });
+            let old_term = sym_table.insert(name.to_string(), BitwuzlaTerm { term });
             assert!(old_term.is_none());
             term
         };
-        self.sym_map.set(cur_sym_table);
+        self.symbol_cache.set(sym_table);
         BitwuzlaTerm { term }
     }
 
     fn assert(&self, term: &BitwuzlaTerm) {
         unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver, term.term) }
+    }
+
+    fn reset(&mut self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_delete(self.solver);
+            self.solver = smithril_bitwuzla_sys::bitwuzla_new(self.term_manager, self.options);
+        }
+    }
+
+    fn interrupt(&mut self) {
+        todo!()
     }
 
     create_converter_binary_function_bitwuzla!(mk_eq, BITWUZLA_KIND_EQUAL);
@@ -356,5 +417,13 @@ impl GeneralSolver for BitwuzlaConverter {
 
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
         }
+    }
+
+    fn reset(&mut self) {
+        GeneralConverter::reset(self)
+    }
+
+    fn interrupt(&mut self) {
+        GeneralConverter::interrupt(self)
     }
 }

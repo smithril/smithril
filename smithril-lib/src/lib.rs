@@ -1,5 +1,6 @@
 mod bitwuzla;
 pub mod generalized;
+pub mod solver;
 mod utils;
 mod z3;
 
@@ -9,7 +10,7 @@ pub mod converters {
     use serde::{Deserialize, Serialize};
     #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
     pub enum ClientMessageType {
-        Converter(ConverterType),
+        Converter(Converter),
         Assert(SolverQuery),
         CheckSat(),
     }
@@ -22,7 +23,7 @@ pub mod converters {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-    pub enum ConverterType {
+    pub enum Converter {
         Bitwuzla,
         Z3,
     }

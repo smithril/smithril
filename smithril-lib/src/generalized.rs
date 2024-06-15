@@ -109,6 +109,7 @@ where
 {
     fn unsat_core(&self) -> Vec<T>;
 }
+
 pub trait GeneralConverter<S, T>
 where
     S: GeneralSort,
@@ -117,6 +118,8 @@ where
     fn assert(&self, term: &T);
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term1: &T) -> Option<T>;
+    fn reset(&mut self);
+    fn interrupt(&mut self);
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bool_sort(&self) -> S;
     fn mk_and(&self, term1: &T, term2: &T) -> T;
@@ -238,8 +241,11 @@ where
 pub trait GeneralUnsatCoreSolver {
     fn unsat_core(&self) -> Vec<Term>;
 }
+
 pub trait GeneralSolver {
     fn assert(&self, term: &Term);
+    fn reset(&mut self);
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
+    fn interrupt(&mut self);
 }

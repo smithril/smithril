@@ -338,6 +338,20 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
+    fn reset(&mut self) {
+        unsafe {
+            smithril_z3_sys::Z3_solver_reset(self.context.context(), self.solver);
+            self.context.check_error();
+        }
+    }
+
+    fn interrupt(&mut self) {
+        unsafe {
+            smithril_z3_sys::Z3_solver_interrupt(self.context.context(), self.solver);
+            self.context.check_error();
+        }
+    }
+
     fn check_sat(&self) -> SolverResult {
         let res = unsafe { smithril_z3_sys::Z3_solver_check(self.context.context(), self.solver) };
         self.context.check_error();
@@ -533,5 +547,13 @@ impl GeneralSolver for Z3Converter {
             }
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
         }
+    }
+
+    fn reset(&mut self) {
+        GeneralConverter::reset(self)
+    }
+
+    fn interrupt(&mut self) {
+        GeneralConverter::interrupt(self)
     }
 }
