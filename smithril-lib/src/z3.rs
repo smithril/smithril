@@ -315,6 +315,18 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
         Z3Term::new(&self.context, term).check_error()
     }
 
+    fn mk_array_sort(
+        &'ctx self,
+        index: &Z3Sort,
+        element: &Z3Sort,
+    ) -> Z3Sort<'ctx> {
+        todo!()
+    }
+
+    fn mk_const_array(&'ctx self, sort: &Z3Sort<'ctx>, value: &Z3Term<'ctx>) -> Z3Term<'ctx> {
+        todo!()
+    }
+
     create_converter_binary_function_z3!(mk_eq, Z3_mk_eq);
     create_converter_binary_function_z3!(mk_bvadd, Z3_mk_bvadd);
     create_converter_binary_function_z3!(mk_bvand, Z3_mk_bvand);
@@ -347,4 +359,8 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
     create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
     create_converter_unary_function_z3!(mk_not, Z3_mk_not);
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
+    
+    fn mk_select(&'ctx self, term1: &Z3Term<'ctx>, term2: &Z3Term<'ctx>)  -> Z3Term<'ctx> {
+        todo!()
+    }
 }
