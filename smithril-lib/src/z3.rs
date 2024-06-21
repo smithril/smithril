@@ -229,6 +229,17 @@ macro_rules! create_converter_binary_function_z3_narg {
     };
 }
 
+macro_rules! create_converter_unary_function_z3 {
+    ($func_name:ident, $z3_sys_func_name:ident) => {
+        fn $func_name(&self, term: &Z3Term) -> Z3Term {
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term.term)
+            })
+            .check_error()
+        }
+    };
+}
+
 macro_rules! create_converter_binary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
@@ -240,11 +251,11 @@ macro_rules! create_converter_binary_function_z3 {
     };
 }
 
-macro_rules! create_converter_unary_function_z3 {
+macro_rules! create_converter_ternary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
-        fn $func_name(&self, term: &Z3Term) -> Z3Term {
+        fn $func_name(&self, term1: &Z3Term, term2: &Z3Term, term3: &Z3Term) -> Z3Term {
             Z3Term::new(&self.context, unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term.term)
+                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term1.term, term2.term, term3.term)
             })
             .check_error()
         }
@@ -315,16 +326,12 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
         Z3Term::new(&self.context, term).check_error()
     }
 
-    fn mk_array_sort(
-        &'ctx self,
-        index: &Z3Sort,
-        element: &Z3Sort,
-    ) -> Z3Sort<'ctx> {
-        todo!()
-    }
-
-    fn mk_const_array(&'ctx self, sort: &Z3Sort<'ctx>, value: &Z3Term<'ctx>) -> Z3Term<'ctx> {
-        todo!()
+    fn mk_array_sort(&'ctx self, index: &Z3Sort, element: &Z3Sort) -> Z3Sort<'ctx> {
+        let i = index.sort;
+        let e = element.sort;
+        Z3Sort::new(&self.context,unsafe {
+            smithril_z3_sys::Z3_mk_array_sort(self.context.context(), i, e)
+        }).check_error()
     }
 
     create_converter_binary_function_z3!(mk_eq, Z3_mk_eq);
@@ -359,8 +366,6 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
     create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
     create_converter_unary_function_z3!(mk_not, Z3_mk_not);
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
-    
-    fn mk_select(&'ctx self, term1: &Z3Term<'ctx>, term2: &Z3Term<'ctx>)  -> Z3Term<'ctx> {
-        todo!()
-    }
+    create_converter_binary_function_z3!(mk_select, Z3_mk_select);
+    create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
 }

@@ -71,6 +71,29 @@ impl Drop for BitwuzlaConverter {
 
 impl BitwuzlaConverter {}
 
+macro_rules! create_converter_ternary_function_bitwuzla {
+    ($func_name:ident, $bitwuzla_sys_kind_name:ident) => {
+        fn $func_name(
+            &self,
+            term1: &BitwuzlaTerm,
+            term2: &BitwuzlaTerm,
+            term3: &BitwuzlaTerm,
+        ) -> BitwuzlaTerm {
+            BitwuzlaTerm {
+                term: unsafe {
+                    smithril_bitwuzla_sys::bitwuzla_mk_term3(
+                        self.term_manager,
+                        smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
+                        term1.term,
+                        term2.term,
+                        term3.term,
+                    )
+                },
+            }
+        }
+    };
+}
+
 macro_rules! create_converter_binary_function_bitwuzla {
     ($func_name:ident, $bitwuzla_sys_kind_name:ident) => {
         fn $func_name(&self, term1: &BitwuzlaTerm, term2: &BitwuzlaTerm) -> BitwuzlaTerm {
@@ -106,7 +129,6 @@ macro_rules! create_converter_unary_function_bitwuzla {
 
 impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&'tm self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        // let name_cstr = CString::new(name).unwrap();
         let mut sym_table = self.tmp.take();
         let term = if let Some(term2) = sym_table.get(name) {
             term2.term
@@ -156,27 +178,11 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
         }
     }
 
-    fn mk_array_sort(
-        &'tm self,
-        index: &BitwuzlaSort,
-        element: &BitwuzlaSort,
-    ) -> BitwuzlaSort {
+    fn mk_array_sort(&'tm self, index: &BitwuzlaSort, element: &BitwuzlaSort) -> BitwuzlaSort {
         let i = index.sort;
         let e = element.sort;
         BitwuzlaSort {
             sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_array_sort(self.term_manager, i, e) },
-        }
-    }
-
-    fn mk_const_array(&'tm self, sort: &BitwuzlaSort, val: &BitwuzlaTerm) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_const_array(
-                    self.term_manager,
-                    sort.sort,
-                    val.term,
-                )
-            },
         }
     }
 
@@ -235,4 +241,5 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
     create_converter_binary_function_bitwuzla!(mk_xor, BITWUZLA_KIND_XOR);
     create_converter_binary_function_bitwuzla!(mk_bvmul, BITWUZLA_KIND_BV_MUL);
     create_converter_binary_function_bitwuzla!(mk_select, BITWUZLA_KIND_ARRAY_SELECT);
+    create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
