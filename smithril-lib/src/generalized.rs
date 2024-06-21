@@ -158,7 +158,7 @@ where
                     self.mk_bv_value_uint64(&self.convert_sort(&term.sort), *x)
                 }
                 GenConstant::Boolean(x) => self.mk_smt_bool(*x),
-                GenConstant::Symbol(x) => self.mk_smt_symbol(&x, &self.convert_sort(&term.sort)),
+                GenConstant::Symbol(x) => self.mk_smt_symbol(x, &self.convert_sort(&term.sort)),
             },
             UnsortedTerm::Operation(operation) => match operation.as_ref() {
                 GenOperation::Uno(kind, term1) => {
