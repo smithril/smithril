@@ -255,7 +255,12 @@ macro_rules! create_converter_ternary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term1: &Z3Term, term2: &Z3Term, term3: &Z3Term) -> Z3Term {
             Z3Term::new(&self.context, unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term1.term, term2.term, term3.term)
+                smithril_z3_sys::$z3_sys_func_name(
+                    self.context.context(),
+                    term1.term,
+                    term2.term,
+                    term3.term,
+                )
             })
             .check_error()
         }
@@ -329,9 +334,10 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
     fn mk_array_sort(&'ctx self, index: &Z3Sort, element: &Z3Sort) -> Z3Sort<'ctx> {
         let i = index.sort;
         let e = element.sort;
-        Z3Sort::new(&self.context,unsafe {
+        Z3Sort::new(&self.context, unsafe {
             smithril_z3_sys::Z3_mk_array_sort(self.context.context(), i, e)
-        }).check_error()
+        })
+        .check_error()
     }
 
     create_converter_binary_function_z3!(mk_eq, Z3_mk_eq);

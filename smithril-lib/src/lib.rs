@@ -153,9 +153,9 @@ mod tests {
             ))),
             sort: Sort::BoolSort(),
         };
-        
+
         converter.assert(&converter.convert_term(&eq));
-        
+
         let result = converter.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
