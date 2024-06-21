@@ -166,9 +166,7 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
 
     fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
         BitwuzlaSort {
-            sort: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager, size)
-            },
+            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager, size) },
         }
     }
 
