@@ -1,15 +1,19 @@
-use std::env;
+use std::{env, fs};
 
 use std::path::PathBuf;
 use std::process::Command;
+extern crate dirs;
 extern crate pkg_config;
 
 fn main() {
-    let dir_bitwuzla: PathBuf = env::current_dir().unwrap().join("bitwuzla");
+    let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(".smithril");
+    fs::create_dir_all(&dir_smithril).unwrap();
+    let dir_bitwuzla: PathBuf = dir_smithril.join("bitwuzla");
     if !dir_bitwuzla.exists() {
         let mut _my_command = Command::new("git")
             .arg("clone")
             .arg("https://github.com/bitwuzla/bitwuzla.git")
+            .current_dir(&dir_smithril)
             .status()
             .unwrap();
         let mut _my_command = Command::new("git")
@@ -35,7 +39,7 @@ fn main() {
             .status()
             .unwrap();
 
-        let dir_tmp = env::current_dir().unwrap().join("bitwuzla/build");
+        let dir_tmp = dir_bitwuzla.join("build");
         let mut _my_command = Command::new("ninja")
             .arg("install")
             .current_dir(dir_tmp)
