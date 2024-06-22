@@ -4,7 +4,7 @@ mod z3;
 
 pub mod converters {
     use serde::{Deserialize, Serialize};
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub enum Converter {
         Bitwuzla,
         Z3,

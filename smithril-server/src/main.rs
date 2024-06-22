@@ -1,6 +1,6 @@
 use smithril_lib::{
-    converters::Converter,
-    generalized::{SolverQuery, SolverResult},
+    converters::{self, Converter},
+    generalized::{GeneralConverter, GeneralSort, GeneralTerm, SolverQuery, SolverResult},
 };
 use std::io::{self, BufRead, Write};
 
@@ -31,17 +31,30 @@ fn main() {
 
     for line in stdin.lock().lines() {
         let input: SolverQuery = serde_json::from_str(&line.unwrap()).unwrap();
-        let output = solve_problem(input);
+        let output = match converter {
+            Converter::Bitwuzla => {
+                let bc = converters::mk_bitwulza();
+                solve_problem(&bc, input)
+            }
+            Converter::Z3 => {
+                let bc = converters::mk_z3();
+                solve_problem(&bc, input)
+            }
+        };
         let output_json = serde_json::to_string(&output).unwrap();
         writeln!(stdout, "{}", output_json).unwrap();
         stdout.flush().unwrap();
     }
 }
 
-fn solve_problem(input: SolverQuery) -> SolverResult {
-    match input.query.as_str() {
-        "sat" => SolverResult::Sat,
-        "unsat" => SolverResult::Unsat,
-        _ => SolverResult::Unknown,
-    }
+fn solve_problem<'a, C, S, T>(converter: &'a C, input: SolverQuery) -> SolverResult
+where
+    C: GeneralConverter<'a, S, T>,
+    S: GeneralSort,
+    S: 'a,
+    T: GeneralTerm,
+    T: 'a,
+{
+    converter.assert(&converter.convert_term(&input.query));
+    converter.check_sat()
 }
