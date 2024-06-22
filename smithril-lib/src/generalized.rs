@@ -87,7 +87,7 @@ pub struct Term {
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub struct SolverQuery {
-    pub query: String,
+    pub query: Term,
 }
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
