@@ -1,59 +1,30 @@
 use core::panic;
 use std::path::PathBuf;
-use std::process::Stdio;
 
+use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
 use smithril_lib::converters::Converter;
 use smithril_lib::generalized::{self, SolverQuery, SolverResult, Sort, Term, UnsortedTerm};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::mpsc::{self, Receiver, Sender};
 
 struct SolverProcess {
     process: Child,
-    stdin: Sender<String>,
-    stdout: Receiver<String>,
+    sender: IpcSender<String>,
+    receiver: IpcReceiver<String>,
 }
 
 impl SolverProcess {
     async fn new(solver_path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let mut process = Command::new(solver_path)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
+        let (one_shot_server, one_shot_server_name) = IpcOneShotServer::new().unwrap();
+
+        let process = Command::new(solver_path)
+            .arg(one_shot_server_name)
             .spawn()?;
-
-        let stdin = process.stdin.take().expect("Failed to open stdin");
-        let stdout = process.stdout.take().expect("Failed to open stdout");
-
-        let (stdin_tx, mut stdin_rx): (Sender<String>, Receiver<String>) = mpsc::channel(1);
-        let (stdout_tx, stdout_rx): (Sender<String>, Receiver<String>) = mpsc::channel(1);
-
-        tokio::spawn(async move {
-            let mut stdin = stdin;
-            while let Some(input) = stdin_rx.recv().await {
-                if stdin.write_all(input.as_bytes()).await.is_err() {
-                    break;
-                }
-                if stdin.flush().await.is_err() {
-                    break;
-                }
-            }
-        });
-
-        tokio::spawn(async move {
-            let mut reader = BufReader::new(stdout);
-            let mut buffer = String::new();
-            while reader.read_line(&mut buffer).await.is_ok() {
-                if stdout_tx.send(buffer.clone()).await.is_err() {
-                    break;
-                }
-                buffer.clear();
-            }
-        });
+        let (_, (sender, receiver)) = one_shot_server.accept().unwrap();
 
         Ok(SolverProcess {
             process,
-            stdin: stdin_tx,
-            stdout: stdout_rx,
+            sender,
+            receiver,
         })
     }
 
@@ -65,14 +36,10 @@ impl SolverProcess {
         let input_json = serde_json::to_string(&converter)? + "\n";
 
         // Send input to the solver's stdin
-        self.stdin.send(input_json).await?;
+        self.sender.send(input_json)?;
 
         // Receive output from the solver's stdout
-        let output_response = self
-            .stdout
-            .recv()
-            .await
-            .ok_or("Failed to read from stdout")?;
+        let output_response = self.receiver.recv()?;
 
         println!("{}", output_response);
         Ok(())
@@ -86,14 +53,10 @@ impl SolverProcess {
         let input_json = serde_json::to_string(input)? + "\n";
 
         // Send input to the solver's stdin
-        self.stdin.send(input_json).await?;
+        self.sender.send(input_json)?;
 
         // Receive output from the solver's stdout
-        let output_json = self
-            .stdout
-            .recv()
-            .await
-            .ok_or("Failed to read from stdout")?;
+        let output_json = self.receiver.recv()?;
 
         // Deserialize output from JSON
         let solver_output: SolverResult = serde_json::from_str(&output_json)?;

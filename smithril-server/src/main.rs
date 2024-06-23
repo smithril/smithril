@@ -1,36 +1,44 @@
+use ipc_channel::ipc::{IpcReceiver, IpcSender};
 use smithril_lib::{
     converters::{self, Converter},
     generalized::{GeneralConverter, GeneralSort, GeneralTerm, SolverQuery, SolverResult},
 };
-use std::io::{self, BufRead, Write};
+use std::env;
 
 fn main() {
-    let stdin = io::stdin();
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
+    let args: Vec<String> = env::args().collect();
 
-    let converter_line = stdin
-        .lock()
-        .lines()
-        .next()
-        .expect("Failed to read converter")
-        .unwrap();
+    let one_shot_server_name = &args[1];
+    let tx = IpcSender::connect(one_shot_server_name.to_string()).unwrap();
+
+    let (server_tx, server_rx) = ipc_channel::ipc::channel::<String>().unwrap();
+    let (client_tx, client_rx) = ipc_channel::ipc::channel::<String>().unwrap();
+
+    tx.send((server_tx, client_rx)).unwrap();
+
+    let receiver: IpcReceiver<String> = server_rx;
+    let sender: IpcSender<String> = client_tx;
+
+    // Receive the converter setup message
+    let converter_line = receiver.recv().expect("Failed to receive converter");
     let converter: Converter =
         serde_json::from_str(&converter_line).expect("Failed to parse converter");
 
+    // Send confirmation of converter setup
     match converter {
         Converter::Bitwuzla => {
-            writeln!(stdout, "Bitwuzla converter has set up").unwrap();
-            stdout.flush().unwrap();
+            sender
+                .send("Bitwuzla converter has set up".to_string())
+                .unwrap();
         }
         Converter::Z3 => {
-            writeln!(stdout, "Z3 converter has set up").unwrap();
-            stdout.flush().unwrap();
+            sender.send("Z3 converter has set up".to_string()).unwrap();
         }
     }
 
-    for line in stdin.lock().lines() {
-        let input: SolverQuery = serde_json::from_str(&line.unwrap()).unwrap();
+    // Process each subsequent message
+    while let Ok(input_line) = receiver.recv() {
+        let input: SolverQuery = serde_json::from_str(&input_line).unwrap();
         let output = match converter {
             Converter::Bitwuzla => {
                 let bc = converters::mk_bitwulza();
@@ -42,8 +50,7 @@ fn main() {
             }
         };
         let output_json = serde_json::to_string(&output).unwrap();
-        writeln!(stdout, "{}", output_json).unwrap();
-        stdout.flush().unwrap();
+        sender.send(output_json).unwrap();
     }
 }
 
