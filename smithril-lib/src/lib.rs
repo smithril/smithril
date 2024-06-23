@@ -28,7 +28,9 @@ pub mod converters {
 #[cfg(test)]
 mod tests {
     use crate::converters;
-    use crate::generalized::{GeneralConverter, GeneralSort, GeneralTerm, SolverResult};
+    use crate::generalized::{
+        GeneralConverter, GeneralSort, GeneralTerm, SolverResult, Sort, Term, UnsortedTerm,
+    };
 
     fn generalized_sat_works<'a, C, S, T>(converter: &'a C)
     where
@@ -38,13 +40,23 @@ mod tests {
         T: GeneralTerm,
         T: 'a,
     {
-        let sortbv3 = converter.mk_bv_sort(3);
-        let x = converter.mk_smt_symbol("x", &sortbv3);
-        let y = converter.mk_bv_value_uint64(&sortbv3, 2);
-        let t = converter.mk_eq(&x, &y);
-
-        converter.assert(&t);
-
+        let x = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
+            sort: Sort::BvSort(3),
+        };
+        let y = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(3),
+        };
+        let t = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                x,
+                y,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        converter.assert(&converter.convert_term(&t));
         let result = converter.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
@@ -57,17 +69,216 @@ mod tests {
         T: GeneralTerm,
         T: 'a,
     {
-        let sortbv3 = converter.mk_bv_sort(3);
-        let x = converter.mk_smt_symbol("x", &sortbv3);
-        let y = converter.mk_bv_value_uint64(&sortbv3, 2);
-        let t = converter.mk_eq(&x, &y);
-        let n = converter.mk_not(&t);
-        let u = converter.mk_and(&t, &n);
-
-        converter.assert(&u);
-
+        let x = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
+            sort: Sort::BvSort(3),
+        };
+        let y = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(3),
+        };
+        let eq = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                x,
+                y,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let n = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Uno(
+                crate::generalized::UnoOperationKind::Not,
+                eq.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let u = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::And,
+                eq,
+                n,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        converter.assert(&converter.convert_term(&u));
         let result = converter.check_sat();
         assert_eq!(SolverResult::Unsat, result);
+    }
+
+    fn generalized_array_sat_works<'a, C, S, T>(converter: &'a C)
+    where
+        C: GeneralConverter<'a, S, T>,
+        S: GeneralSort,
+        S: 'a,
+        T: GeneralTerm,
+        T: 'a,
+    {
+        let s = Sort::BvSort(3);
+        let boxs = Box::new(s.clone());
+        let arr = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol(
+                "arr".to_string(),
+            )),
+            sort: Sort::ArraySort(boxs.clone(), boxs.clone()),
+        };
+        let i = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("i".to_string())),
+            sort: s.clone(),
+        };
+        let j = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("j".to_string())),
+            sort: s.clone(),
+        };
+        let select_i = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Select,
+                arr.clone(),
+                i,
+            ))),
+            sort: s.clone(),
+        };
+        let select_j = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Select,
+                arr.clone(),
+                j,
+            ))),
+            sort: s.clone(),
+        };
+        let eq = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                select_i,
+                select_j,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+
+        converter.assert(&converter.convert_term(&eq));
+
+        let result = converter.check_sat();
+        assert_eq!(SolverResult::Sat, result);
+    }
+
+    fn generalized_array_unsat_works<'a, C, S, T>(converter: &'a C)
+    where
+        C: GeneralConverter<'a, S, T>,
+        S: GeneralSort,
+        S: 'a,
+        T: GeneralTerm,
+        T: 'a,
+    {
+        let s = Sort::BvSort(3);
+        let boxs = Box::new(s.clone());
+        let arr = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol(
+                "arr".to_string(),
+            )),
+            sort: Sort::ArraySort(boxs.clone(), boxs.clone()),
+        };
+        let i = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("i".to_string())),
+            sort: s.clone(),
+        };
+        let j = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("j".to_string())),
+            sort: s.clone(),
+        };
+        let select_i = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Select,
+                arr.clone(),
+                i.clone(),
+            ))),
+            sort: s.clone(),
+        };
+        let select_j = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Select,
+                arr.clone(),
+                j.clone(),
+            ))),
+            sort: s.clone(),
+        };
+        let eq_select = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                select_i,
+                select_j,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let eq_indexes = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                i,
+                j,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let n_eq_select = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Uno(
+                crate::generalized::UnoOperationKind::Not,
+                eq_select.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let res = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::And,
+                eq_indexes,
+                n_eq_select,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        converter.assert(&converter.convert_term(&res));
+        let result = converter.check_sat();
+        assert_eq!(SolverResult::Unsat, result);
+    }
+
+    fn bv_test<'a, C, S, T>(converter: &'a C)
+    where
+        C: GeneralConverter<'a, S, T>,
+        S: GeneralSort,
+        S: 'a,
+        T: GeneralTerm,
+        T: 'a,
+    {
+        let x = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
+            sort: Sort::BvSort(3),
+        };
+        let y = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(3),
+        };
+        let bvor1 = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::BvOr,
+                x.clone(),
+                y.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let bvor2 = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::BvOr,
+                y,
+                x,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let eq = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                bvor1,
+                bvor2,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        converter.assert(&converter.convert_term(&eq));
+        let result = converter.check_sat();
+        assert_eq!(SolverResult::Sat, result);
     }
 
     #[test]
@@ -101,5 +312,35 @@ mod tests {
         generalized_unsat_works(&zc);
         let zc = converters::mk_z3_with_context(&ct);
         generalized_sat_works(&zc);
+    }
+
+    #[test]
+    fn bitwuzla_array_sat_works() {
+        let bc = converters::mk_bitwulza();
+        generalized_array_sat_works(&bc);
+    }
+
+    #[test]
+    fn bitwuzla_array_unsat_works() {
+        let bc = converters::mk_bitwulza();
+        generalized_array_unsat_works(&bc);
+    }
+
+    #[test]
+    fn bitwuzla_bv_test() {
+        let bc = converters::mk_bitwulza();
+        bv_test(&bc);
+    }
+
+    #[test]
+    fn z3_array_sat_works() {
+        let zc = converters::mk_z3();
+        generalized_array_sat_works(&zc);
+    }
+
+    #[test]
+    fn z3_array_unsat_works() {
+        let zc = converters::mk_z3();
+        generalized_array_unsat_works(&zc);
     }
 }
