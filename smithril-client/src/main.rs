@@ -1,10 +1,14 @@
 use core::panic;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use std::path::PathBuf;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
 use smithril_lib::converters::Converter;
 use smithril_lib::generalized::{self, SolverQuery, SolverResult, Sort, Term, UnsortedTerm};
 use tokio::process::{Child, Command};
+use tokio::select;
+use tokio_util::sync::CancellationToken;
 
 struct SolverProcess {
     process: Child,
@@ -80,37 +84,59 @@ fn get_solver_path(solver_name: &str) -> PathBuf {
     get_converters_dir().join(solver_name)
 }
 
+async fn run_solver(
+    solver_path_string: String,
+    converter: Converter,
+    input_clone: SolverQuery,
+    token: CancellationToken,
+) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+    let mut solver_process = SolverProcess::new(&solver_path_string).await?;
+    let result = select! {
+        res = query_solver(&mut solver_process, converter, &input_clone) => { res }
+        _ = token.cancelled() => {
+            solver_process.terminate().await?;
+            let custom_error = tokio::io::Error::new(tokio::io::ErrorKind::Other, "oh no!");
+            return Result::Err(custom_error.into_inner().unwrap())
+        }
+    };
+    solver_process.terminate().await?;
+    result
+}
+
+async fn query_solver(
+    solver_process: &mut SolverProcess,
+    converter: Converter,
+    input_clone: &SolverQuery,
+) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+    solver_process.setup(converter).await?;
+    solver_process.query(input_clone).await
+}
+
 async fn run_portfolio(
     converters: Vec<Converter>,
     input: SolverQuery,
-) -> Result<Vec<SolverResult>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut handles = Vec::new();
 
     let solver_path = get_solver_path("smithril-server");
     let solver_path_string = solver_path.to_string_lossy().into_owned();
+    let token = CancellationToken::new();
+
     // Spawn a process for each solver
     for converter in converters {
         let input_clone = input.clone();
         let solver_path_string = solver_path_string.clone();
+        let cloned_token = token.clone();
         let handle = tokio::spawn(async move {
-            let mut solver_process = SolverProcess::new(&solver_path_string).await?;
-            solver_process.setup(converter).await?;
-            let result = solver_process.query(&input_clone).await;
-            solver_process.terminate().await?;
-            result
+            run_solver(solver_path_string, converter, input_clone, cloned_token).await
         });
         handles.push(handle);
     }
+    let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
 
-    // Collect results from all solvers
-    let mut results = Vec::new();
-    for handle in handles {
-        if let Ok(result) = handle.await {
-            results.push(result?);
-        }
-    }
-
-    Ok(results)
+    let result = futs.next().await.unwrap();
+    token.cancel();
+    result.unwrap()
 }
 
 fn sat_works() -> Term {
@@ -174,10 +200,8 @@ async fn main() {
     let input = SolverQuery { query: t };
 
     match run_portfolio(converters.clone(), input).await {
-        Ok(results) => {
-            for (i, result) in results.iter().enumerate() {
-                println!("Solver {}: {:?}", i + 1, result);
-            }
+        Ok(result) => {
+            println!("Solver: {:?}", result);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
@@ -186,10 +210,8 @@ async fn main() {
     let input = SolverQuery { query: t };
 
     match run_portfolio(converters, input).await {
-        Ok(results) => {
-            for (i, result) in results.iter().enumerate() {
-                println!("Solver {}: {:?}", i + 1, result);
-            }
+        Ok(result) => {
+            println!("Solver: {:?}", result);
         }
         Err(e) => eprintln!("Error: {}", e),
     }
