@@ -1,4 +1,5 @@
 use crate::generalized::GeneralConverter;
+use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
 use crate::generalized::SolverResult;
@@ -240,4 +241,14 @@ impl<'tm> GeneralConverter<'tm, BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverte
     create_converter_binary_function_bitwuzla!(mk_bvmul, BITWUZLA_KIND_BV_MUL);
     create_converter_binary_function_bitwuzla!(mk_select, BITWUZLA_KIND_ARRAY_SELECT);
     create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
+}
+
+impl GeneralSolver for BitwuzlaConverter {
+    fn assert(&self, term: &crate::generalized::Term) {
+        GeneralConverter::assert(self, &self.convert_term(term));
+    }
+
+    fn check_sat(&self) -> SolverResult {
+        GeneralConverter::check_sat(self)
+    }
 }
