@@ -4,16 +4,15 @@ use futures::StreamExt;
 use std::path::PathBuf;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
-use smithril_lib::converters::Converter;
-use smithril_lib::generalized::{self, SolverQuery, SolverResult, Sort, Term, UnsortedTerm};
+use smithril_lib::converters::{ClientMessageType, ConverterType, ServerMessageType, SolverQuery};
+use smithril_lib::generalized::{self, SolverResult, Sort, Term, UnsortedTerm};
 use tokio::process::{Child, Command};
 use tokio::select;
 use tokio_util::sync::CancellationToken;
-
 struct SolverProcess {
     process: Child,
-    sender: IpcSender<String>,
-    receiver: IpcReceiver<String>,
+    sender: IpcSender<ClientMessageType>,
+    receiver: IpcReceiver<ServerMessageType>,
 }
 
 impl SolverProcess {
@@ -34,38 +33,62 @@ impl SolverProcess {
 
     async fn setup(
         &mut self,
-        converter: Converter,
+        converter: ConverterType,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Serialize input to JSON
-        let input_json = serde_json::to_string(&converter)? + "\n";
-
         // Send input to the solver's stdin
-        self.sender.send(input_json)?;
+        self.sender.send(ClientMessageType::Converter(converter))?;
 
         // Receive output from the solver's stdout
         let output_response = self.receiver.recv()?;
 
-        println!("{}", output_response);
+        match output_response {
+            ServerMessageType::Result(res) => match res {
+                SolverResult::Sat => {
+                    println!("Sat");
+                    Ok(())
+                }
+                SolverResult::Unsat => {
+                    println!("Unsat");
+                    Ok(())
+                }
+                SolverResult::Unknown => {
+                    println!("Unknown");
+                    Ok(())
+                }
+            },
+            ServerMessageType::Txt(s) => {
+                println!("{}", s);
+                Ok(())
+            }
+        }
+    }
+
+    async fn assert(&mut self, input: &SolverQuery) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        //Send to solver
+        self.sender.send(ClientMessageType::Assert(input.clone()))?;
+        //Recieve from solver
+        let solver_output = self.receiver.recv()?;
+        match solver_output {
+            ServerMessageType::Result(res) => println!("{}", res),
+            ServerMessageType::Txt(s) => println!("{}", s),
+        }
         Ok(())
     }
 
-    async fn query(
+    async fn check_sat(
         &mut self,
-        input: &SolverQuery,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        // Serialize input to JSON
-        let input_json = serde_json::to_string(input)? + "\n";
-
-        // Send input to the solver's stdin
-        self.sender.send(input_json)?;
-
-        // Receive output from the solver's stdout
-        let output_json = self.receiver.recv()?;
-
-        // Deserialize output from JSON
-        let solver_output: SolverResult = serde_json::from_str(&output_json)?;
-
-        Ok(solver_output)
+        //Send to solver
+        self.sender.send(ClientMessageType::CheckSat())?;
+        //Recieve from solver
+        let solver_output = self.receiver.recv()?;
+        match solver_output {
+            ServerMessageType::Result(res) => Ok(res),
+            ServerMessageType::Txt(s) => Err(Box::new(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                s,
+            ))),
+        }
     }
 
     async fn terminate(mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -74,6 +97,7 @@ impl SolverProcess {
     }
 }
 
+// terminal: export SMITHRIL_CONVERTERS_DIR=~/rust_projects/smithril/target/debug/
 fn get_converters_dir() -> PathBuf {
     std::env::var("SMITHRIL_CONVERTERS_DIR")
         .map(PathBuf::from)
@@ -86,7 +110,7 @@ fn get_solver_path(solver_name: &str) -> PathBuf {
 
 async fn run_solver(
     solver_path_string: String,
-    converter: Converter,
+    converter: ConverterType,
     input_clone: SolverQuery,
     token: CancellationToken,
 ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
@@ -105,15 +129,16 @@ async fn run_solver(
 
 async fn query_solver(
     solver_process: &mut SolverProcess,
-    converter: Converter,
+    converter: ConverterType,
     input_clone: &SolverQuery,
 ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
     solver_process.setup(converter).await?;
-    solver_process.query(input_clone).await
+    solver_process.assert(input_clone).await;
+    return solver_process.check_sat().await;
 }
 
 async fn run_portfolio(
-    converters: Vec<Converter>,
+    converters: Vec<ConverterType>,
     input: SolverQuery,
 ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut handles = Vec::new();
@@ -195,7 +220,7 @@ fn unsat_works() -> Term {
 #[tokio::main]
 async fn main() {
     println!("The client has started");
-    let converters = vec![Converter::Bitwuzla, Converter::Z3];
+    let converters = vec![ConverterType::Bitwuzla, ConverterType::Z3];
     let t = sat_works();
     let input = SolverQuery { query: t };
 

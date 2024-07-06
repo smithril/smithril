@@ -1,4 +1,5 @@
 use crate::generalized::GeneralConverter;
+use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
 use crate::generalized::SolverResult;
@@ -374,4 +375,14 @@ impl<'ctx> GeneralConverter<'ctx, Z3Sort<'ctx>, Z3Term<'ctx>> for Z3Converter<'c
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
     create_converter_binary_function_z3!(mk_select, Z3_mk_select);
     create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
+}
+
+impl<'ctx> GeneralSolver for Z3Converter<'ctx> {
+    fn assert(&self, term: &crate::generalized::Term) {
+        GeneralConverter::assert(self, &self.convert_term(term));
+    }
+
+    fn check_sat(&self) -> SolverResult {
+        GeneralConverter::check_sat(self)
+    }
 }
