@@ -229,6 +229,6 @@ where
 }
 
 pub trait GeneralSolver {
-    fn assert(& self , term: &Term);
-    fn check_sat(& self) -> SolverResult;
+    fn assert(&self, term: &Term);
+    fn check_sat(&self) -> SolverResult;
 }
