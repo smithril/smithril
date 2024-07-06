@@ -86,11 +86,6 @@ pub struct Term {
 }
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
-pub struct SolverQuery {
-    pub query: Term,
-}
-
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub enum SolverResult {
     Sat,
     Unsat,
@@ -236,6 +231,22 @@ where
 }
 
 pub trait GeneralSolver {
-    fn assert(&self, term: &Term);
-    fn check_sat(&self) -> SolverResult;
+    fn assert(& self , term: &Term);
+    fn check_sat(& self) -> SolverResult;
 }
+
+// impl<'a, S, T> GeneralSolver<'a> for dyn GeneralConverter<'a, S, T>
+// where
+//     S: GeneralSort,
+//     S: 'a,
+//     T: GeneralTerm,
+//     T: 'a,
+// {
+//     fn assert(&'a self, term: &crate::generalized::Term) {
+//         GeneralConverter::assert(self, &self.convert_term(term));
+//     }
+
+//     fn check_sat(&'a self) -> SolverResult {
+//         GeneralConverter::check_sat(self)
+//     }
+// }

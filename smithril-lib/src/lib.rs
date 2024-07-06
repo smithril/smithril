@@ -4,14 +4,34 @@ mod z3;
 
 pub mod converters {
     use serde::{Deserialize, Serialize};
-    #[derive(Serialize, Deserialize, Debug, Clone)]
-    pub enum Converter {
+    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
+    pub enum ClientMessageType {
+        Converter(ConverterType),
+        Assert(SolverQuery),
+        CheckSat(),
+    }
+
+    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
+    pub enum ServerMessageType {
+        Result(SolverResult),
+        Txt(String),
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+    pub enum ConverterType {
         Bitwuzla,
         Z3,
+        // Uninitialized,
+    }
+
+    #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
+    pub struct SolverQuery {
+        pub query: Term,
     }
 
     use crate::{
         bitwuzla::BitwuzlaConverter,
+        generalized::{SolverResult, Term},
         generalized::{SolverResult, Term},
         z3::{Z3ContextInner, Z3Converter},
     };
@@ -39,9 +59,12 @@ mod tests {
     use crate::generalized::{
         GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, SolverResult, Sort, Term,
         UnsortedTerm,
+        GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, SolverResult, Sort, Term,
+        UnsortedTerm,
     };
 
-    fn generalized_solvers_sat(solver: &dyn GeneralSolver) {
+    fn generalized_solvers_sat(solver: &dyn GeneralSolver)
+    {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
             sort: Sort::BvSort(3),
@@ -60,7 +83,7 @@ mod tests {
         };
         solver.assert(&t);
         let result = solver.check_sat();
-        assert_eq!(SolverResult::Sat, result);
+        assert_eq!(SolverResult::Sat, result);  
     }
 
     fn generalized_sat_works<'a, C, S, T>(converter: &'a C)
@@ -373,6 +396,14 @@ mod tests {
     fn z3_array_unsat_works() {
         let zc = converters::mk_z3();
         generalized_array_unsat_works(&zc);
+    }
+
+    #[test]
+    fn general_solver_checksat_test() {
+        let mut solver: Box<dyn GeneralSolver> = Box::new(converters::mk_bitwulza());
+        generalized_solvers_sat(solver.as_ref());
+        solver = Box::new(converters::mk_z3());
+        generalized_solvers_sat(solver.as_ref());
     }
 
     #[test]
