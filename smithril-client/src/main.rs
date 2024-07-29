@@ -60,10 +60,14 @@ impl SolverProcess {
                 println!("{}", s);
                 Ok(())
             }
+            ServerMessageType::Term(_) => todo!(),
         }
     }
 
-    async fn assert(&mut self, input: &SolverQuery) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn assert(
+        &mut self,
+        input: &SolverQuery,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         //Send to solver
         self.sender.send(ClientMessageType::Assert(input.clone()))?;
         //Recieve from solver
@@ -71,6 +75,7 @@ impl SolverProcess {
         match solver_output {
             ServerMessageType::Result(res) => println!("{}", res),
             ServerMessageType::Txt(s) => println!("{}", s),
+            ServerMessageType::Term(_) => todo!(),
         }
         Ok(())
     }
@@ -88,6 +93,22 @@ impl SolverProcess {
                 tokio::io::ErrorKind::Other,
                 s,
             ))),
+            ServerMessageType::Term(_) => todo!(),
+        }
+    }
+
+    async fn evaluate(
+        &mut self,
+        input: &SolverQuery,
+    ) -> Result<Term, Box<dyn std::error::Error + Send + Sync>>  {
+        //Send to solver
+        self.sender.send(ClientMessageType::Evaluate(input.clone()))?;
+        //Recieve from solver
+        let solver_output = self.receiver.recv()?;
+        match solver_output {
+            ServerMessageType::Result(res) => todo!(),
+            ServerMessageType::Txt(s) => todo!(),
+            ServerMessageType::Term(t) => Ok(t),
         }
     }
 
