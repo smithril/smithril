@@ -6,21 +6,21 @@ pub trait GeneralSort {}
 
 pub trait GeneralTerm {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum GenConstant {
     Numeral(u64),
     Boolean(bool),
     Symbol(String),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum UnoOperationKind {
     Not,
     BvNeg,
     BvNot,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum DuoOperationKind {
     Eq,
     And,
@@ -55,31 +55,31 @@ pub enum DuoOperationKind {
     BvXor,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum TrioOperationKind {
     Store,
 }
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum GenOperation {
     Uno(UnoOperationKind, Term),
     Duo(DuoOperationKind, Term, Term),
     Trio(TrioOperationKind, Term, Term, Term),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum UnsortedTerm {
     Constant(GenConstant),
     Operation(Box<GenOperation>),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Sort {
     BvSort(u64),
     BoolSort(),
     ArraySort(Box<Sort>, Box<Sort>),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Term {
     pub term: UnsortedTerm,
     pub sort: Sort,
@@ -103,6 +103,15 @@ impl fmt::Display for SolverResult {
     }
 }
 
+pub trait GeneralUnsatCoreConverter<'a, S, T>
+where
+    S: GeneralSort,
+    S: 'a,
+    T: GeneralTerm,
+    T: 'a,
+{
+    fn unsat_core(&'a self) -> Vec<T>;
+}
 pub trait GeneralConverter<'a, S, T>
 where
     S: GeneralSort,
@@ -112,6 +121,8 @@ where
 {
     fn assert(&'a self, term: &T);
     fn check_sat(&'a self) -> SolverResult;
+    fn eval(&'a self, term1: &T) -> Option<T>;
+    // fn unsat_core(&self) -> Vec<T>;
     fn mk_bv_sort(&'a self, size: u64) -> S;
     fn mk_bool_sort(&'a self) -> S;
     fn mk_and(&'a self, term1: &T, term2: &T) -> T;
@@ -230,23 +241,13 @@ where
     }
 }
 
-pub trait GeneralSolver {
-    fn assert(& self , term: &Term);
-    fn check_sat(& self) -> SolverResult;
+pub trait GeneralUnsatCoreSolver<'a>{
+    fn unsat_core(&'a self) -> Vec<Term>;
+}
+pub trait GeneralSolver<'a>{
+    fn assert(&'a self, term: &Term);
+    fn check_sat(&'a self) -> SolverResult;
+    fn eval(&'a self, term: &Term) -> Option<Term>;
 }
 
-// impl<'a, S, T> GeneralSolver<'a> for dyn GeneralConverter<'a, S, T>
-// where
-//     S: GeneralSort,
-//     S: 'a,
-//     T: GeneralTerm,
-//     T: 'a,
-// {
-//     fn assert(&'a self, term: &crate::generalized::Term) {
-//         GeneralConverter::assert(self, &self.convert_term(term));
-//     }
-
-//     fn check_sat(&'a self) -> SolverResult {
-//         GeneralConverter::check_sat(self)
-//     }
-// }
+// mixa117 Z3_solver_assert_and_track ADD (used in klee) + same for bituzla - probably not needed???

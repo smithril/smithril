@@ -41,15 +41,8 @@ fn main() {
                     conv = Some(Box::new(converters::mk_z3()));
                 }
             },
-            // ClientMessageType::Query(input_query) => {
-            //     let output: SolverResult = match conv.as_ref() {
-            //         Some(conv) => solve_problem(conv.as_ref(), input_query),
-            //         None => SolverResult::Unknown,
-            //     };
-            //     sender.send(ServerMessageType::Result(output)).unwrap();
-            // }
             ClientMessageType::Assert(input_query) => {
-                match conv.as_ref() {
+                match conv.as_mut() {
                     Some(conv) => {
                         conv.assert(&input_query.query);
                         sender
@@ -75,7 +68,24 @@ fn main() {
                         ))
                         .unwrap(),
                 };
-            } //mixa117 assert and check
+            }
+            ClientMessageType::Evaluate(q) => {
+                match conv.as_ref() {
+                    Some(conv) => {
+                        let output = conv.eval(&q.query);
+                        sender.send(ServerMessageType::Term(output.unwrap())).unwrap();
+                    }
+                    None => sender
+                        .send(ServerMessageType::Txt(
+                            "Converter is not set up".to_string(),
+                        ))
+                        .unwrap(),
+                };
+                
+            }
+            
+
+              //mixa117 assert and check
               //mixa117 test for GeneralSolver in lib.rs
               //mixa117 evaluate (term) get_model
               //mixa117 unsat_core
