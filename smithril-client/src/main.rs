@@ -97,20 +97,20 @@ impl SolverProcess {
         }
     }
 
-    async fn evaluate(
-        &mut self,
-        input: &SolverQuery,
-    ) -> Result<Term, Box<dyn std::error::Error + Send + Sync>>  {
-        //Send to solver
-        self.sender.send(ClientMessageType::Evaluate(input.clone()))?;
-        //Recieve from solver
-        let solver_output = self.receiver.recv()?;
-        match solver_output {
-            ServerMessageType::Result(res) => todo!(),
-            ServerMessageType::Txt(s) => todo!(),
-            ServerMessageType::Term(t) => Ok(t),
-        }
-    }
+    // async fn evaluate(
+    //     &mut self,
+    //     input: &SolverQuery,
+    // ) -> Result<Term, Box<dyn std::error::Error + Send + Sync>>  {
+    //     //Send to solver
+    //     self.sender.send(ClientMessageType::Evaluate(input.clone()))?;
+    //     //Recieve from solver
+    //     let solver_output = self.receiver.recv()?;
+    //     match solver_output {
+    //         ServerMessageType::Result(res) => todo!(),
+    //         ServerMessageType::Txt(s) => todo!(),
+    //         ServerMessageType::Term(t) => Ok(t),
+    //     }
+    // }
 
     async fn terminate(mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.process.kill().await?;
