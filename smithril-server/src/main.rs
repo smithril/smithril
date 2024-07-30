@@ -42,7 +42,7 @@ fn main() {
                 }
             },
             ClientMessageType::Assert(input_query) => {
-                match conv.as_mut() {
+                match conv.as_ref() {
                     Some(conv) => {
                         conv.assert(&input_query.query);
                         sender
@@ -68,23 +68,21 @@ fn main() {
                         ))
                         .unwrap(),
                 };
-            }
-            ClientMessageType::Evaluate(q) => {
-                match conv.as_ref() {
-                    Some(conv) => {
-                        let output = conv.eval(&q.query);
-                        sender.send(ServerMessageType::Term(output.unwrap())).unwrap();
-                    }
-                    None => sender
-                        .send(ServerMessageType::Txt(
-                            "Converter is not set up".to_string(),
-                        ))
-                        .unwrap(),
-                };
-                
-            }
-            
-
+            } // ClientMessageType::Evaluate(q) => {
+              //     match conv.as_ref() {
+              //         Some(conv) => {
+              //             let output = conv.eval(&q.query);
+              //             sender
+              //                 .send(ServerMessageType::Term(output.unwrap()))
+              //                 .unwrap();
+              //         }
+              //         None => sender
+              //             .send(ServerMessageType::Txt(
+              //                 "Converter is not set up".to_string(),
+              //             ))
+              //             .unwrap(),
+              //     };
+              // }
               //mixa117 assert and check
               //mixa117 test for GeneralSolver in lib.rs
               //mixa117 evaluate (term) get_model
