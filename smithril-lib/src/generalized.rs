@@ -103,68 +103,64 @@ impl fmt::Display for SolverResult {
     }
 }
 
-pub trait GeneralUnsatCoreConverter<'a, S, T>
+pub trait GeneralUnsatCoreConverter<S, T>
 where
     S: GeneralSort,
-    S: 'a,
     T: GeneralTerm,
-    T: 'a,
 {
-    fn unsat_core(&'a self) -> Vec<T>;
+    fn unsat_core(&self) -> Vec<T>;
 }
-pub trait GeneralConverter<'a, S, T>
+pub trait GeneralConverter<S, T>
 where
     S: GeneralSort,
-    S: 'a,
     T: GeneralTerm,
-    T: 'a,
 {
-    fn assert(&'a self, term: &T);
-    fn check_sat(&'a self) -> SolverResult;
-    fn eval(&'a self, term1: &T) -> Option<T>;
+    fn assert(&self, term: &T);
+    fn check_sat(&self) -> SolverResult;
+    // fn eval(&self, term1: &T) -> Option<T>;
     // fn unsat_core(&self) -> Vec<T>;
-    fn mk_bv_sort(&'a self, size: u64) -> S;
-    fn mk_bool_sort(&'a self) -> S;
-    fn mk_and(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bv_value_uint64(&'a self, sort: &S, val: u64) -> T;
-    fn mk_bvadd(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvand(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvashr(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvlshr(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvmul(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvnand(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvneg(&'a self, term: &T) -> T;
-    fn mk_bvnor(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvnot(&'a self, term: &T) -> T;
-    fn mk_bvnxor(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvor(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsdiv(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsge(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsgt(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvshl(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsle(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvslt(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsmod(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvsub(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvudiv(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvuge(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvugt(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvule(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvult(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvumod(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_bvxor(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_eq(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_implies(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_neq(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_not(&'a self, term: &T) -> T;
-    fn mk_or(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_smt_bool(&'a self, val: bool) -> T;
-    fn mk_smt_symbol(&'a self, name: &str, sort: &S) -> T;
-    fn mk_xor(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_array_sort(&'a self, index: &S, element: &S) -> S;
-    fn mk_select(&'a self, term1: &T, term2: &T) -> T;
-    fn mk_store(&'a self, term1: &T, term2: &T, term3: &T) -> T;
-    fn convert_term(&'a self, term: &Term) -> T {
+    fn mk_bv_sort(&self, size: u64) -> S;
+    fn mk_bool_sort(&self) -> S;
+    fn mk_and(&self, term1: &T, term2: &T) -> T;
+    fn mk_bv_value_uint64(&self, sort: &S, val: u64) -> T;
+    fn mk_bvadd(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvand(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvashr(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvlshr(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvmul(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvnand(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvneg(&self, term: &T) -> T;
+    fn mk_bvnor(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvnot(&self, term: &T) -> T;
+    fn mk_bvnxor(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvor(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsdiv(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsge(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsgt(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvshl(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsle(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvslt(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsmod(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvsub(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvudiv(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvuge(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvugt(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvule(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvult(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvumod(&self, term1: &T, term2: &T) -> T;
+    fn mk_bvxor(&self, term1: &T, term2: &T) -> T;
+    fn mk_eq(&self, term1: &T, term2: &T) -> T;
+    fn mk_implies(&self, term1: &T, term2: &T) -> T;
+    fn mk_neq(&self, term1: &T, term2: &T) -> T;
+    fn mk_not(&self, term: &T) -> T;
+    fn mk_or(&self, term1: &T, term2: &T) -> T;
+    fn mk_smt_bool(&self, val: bool) -> T;
+    fn mk_smt_symbol(&self, name: &str, sort: &S) -> T;
+    fn mk_xor(&self, term1: &T, term2: &T) -> T;
+    fn mk_array_sort(&self, index: &S, element: &S) -> S;
+    fn mk_select(&self, term1: &T, term2: &T) -> T;
+    fn mk_store(&self, term1: &T, term2: &T, term3: &T) -> T;
+    fn convert_term(&self, term: &Term) -> T {
         match &term.term {
             UnsortedTerm::Constant(const_term) => match const_term {
                 GenConstant::Numeral(x) => {
@@ -230,7 +226,7 @@ where
             },
         }
     }
-    fn convert_sort(&'a self, sort: &Sort) -> S {
+    fn convert_sort(&self, sort: &Sort) -> S {
         match sort {
             Sort::BvSort(x) => self.mk_bv_sort(*x),
             Sort::BoolSort() => self.mk_bool_sort(),
@@ -241,13 +237,13 @@ where
     }
 }
 
-pub trait GeneralUnsatCoreSolver<'a>{
-    fn unsat_core(&'a self) -> Vec<Term>;
+pub trait GeneralUnsatCoreSolver {
+    fn unsat_core(&self) -> Vec<Term>;
 }
-pub trait GeneralSolver<'a>{
-    fn assert(&'a self, term: &Term);
-    fn check_sat(&'a self) -> SolverResult;
-    fn eval(&'a self, term: &Term) -> Option<Term>;
+pub trait GeneralSolver {
+    fn assert(&self, term: &Term);
+    fn check_sat(&self) -> SolverResult;
+    // fn eval(&self, term: &Term) -> Option<Term>;
 }
 
 // mixa117 Z3_solver_assert_and_track ADD (used in klee) + same for bituzla - probably not needed???
