@@ -102,6 +102,12 @@ impl fmt::Display for SolverResult {
     }
 }
 
+macro_rules! define_converter_binary_function {
+    ($func_name:ident) => {
+        fn $func_name<'a>(&'a self, term1: &'a T, term2: &'a T) -> T;
+    };
+}
+
 pub trait GeneralUnsatCoreConverter<S, T>
 where
     S: GeneralSort,
@@ -115,52 +121,52 @@ where
     S: GeneralSort,
     T: GeneralTerm,
 {
-    fn assert(&self, term: &T);
-    fn check_sat(&self) -> SolverResult;
-    fn eval(&self, term1: &T) -> Option<T>;
+    fn assert<'a>(&'a self, term: &'a T);
     fn reset(&mut self);
     fn interrupt(&mut self);
+    fn eval(&self, term1: &T) -> Option<T>;
+    fn check_sat(&self) -> SolverResult;
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bool_sort(&self) -> S;
-    fn mk_and(&self, term1: &T, term2: &T) -> T;
-    fn mk_bv_value_uint64(&self, sort: &S, val: u64) -> T;
-    fn mk_bvadd(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvand(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvashr(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvlshr(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvmul(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvnand(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvneg(&self, term: &T) -> T;
-    fn mk_bvnor(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvnot(&self, term: &T) -> T;
-    fn mk_bvnxor(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvor(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsdiv(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsge(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsgt(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvshl(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsle(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvslt(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsmod(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvsub(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvudiv(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvuge(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvugt(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvule(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvult(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvumod(&self, term1: &T, term2: &T) -> T;
-    fn mk_bvxor(&self, term1: &T, term2: &T) -> T;
-    fn mk_eq(&self, term1: &T, term2: &T) -> T;
-    fn mk_implies(&self, term1: &T, term2: &T) -> T;
-    fn mk_neq(&self, term1: &T, term2: &T) -> T;
-    fn mk_not(&self, term: &T) -> T;
-    fn mk_or(&self, term1: &T, term2: &T) -> T;
+    fn mk_bv_value_uint64<'a>(&'a self, sort: &'a S, val: u64) -> T;
+    define_converter_binary_function!(mk_and);
+    define_converter_binary_function!(mk_bvadd);
+    define_converter_binary_function!(mk_bvand);
+    define_converter_binary_function!(mk_bvashr);
+    define_converter_binary_function!(mk_bvlshr);
+    define_converter_binary_function!(mk_bvmul);
+    define_converter_binary_function!(mk_bvnand);
+    fn mk_bvneg<'a>(&'a self, term: &'a T) -> T;
+    define_converter_binary_function!(mk_bvnor);
+    fn mk_bvnot<'a>(&'a self, term: &'a T) -> T;
+    define_converter_binary_function!(mk_bvnxor);
+    define_converter_binary_function!(mk_bvor);
+    define_converter_binary_function!(mk_bvsdiv);
+    define_converter_binary_function!(mk_bvsge);
+    define_converter_binary_function!(mk_bvsgt);
+    define_converter_binary_function!(mk_bvshl);
+    define_converter_binary_function!(mk_bvsle);
+    define_converter_binary_function!(mk_bvslt);
+    define_converter_binary_function!(mk_bvsmod);
+    define_converter_binary_function!(mk_bvsub);
+    define_converter_binary_function!(mk_bvudiv);
+    define_converter_binary_function!(mk_bvuge);
+    define_converter_binary_function!(mk_bvugt);
+    define_converter_binary_function!(mk_bvule);
+    define_converter_binary_function!(mk_bvult);
+    define_converter_binary_function!(mk_bvumod);
+    define_converter_binary_function!(mk_bvxor);
+    define_converter_binary_function!(mk_eq);
+    define_converter_binary_function!(mk_implies);
+    define_converter_binary_function!(mk_neq);
+    fn mk_not<'a>(&'a self, term: &'a T) -> T;
+    define_converter_binary_function!(mk_or);
     fn mk_smt_bool(&self, val: bool) -> T;
-    fn mk_smt_symbol(&self, name: &str, sort: &S) -> T;
-    fn mk_xor(&self, term1: &T, term2: &T) -> T;
-    fn mk_array_sort(&self, index: &S, element: &S) -> S;
-    fn mk_select(&self, term1: &T, term2: &T) -> T;
-    fn mk_store(&self, term1: &T, term2: &T, term3: &T) -> T;
+    fn mk_smt_symbol<'a>(&'a self, name: &str, sort: &'a S) -> T;
+    define_converter_binary_function!(mk_xor);
+    fn mk_array_sort<'a>(&'a self, index: &'a S, element: &'a S) -> S;
+    define_converter_binary_function!(mk_select);
+    fn mk_store<'a>(&'a self, term1: &'a T, term2: &'a T, term3: &'a T) -> T;
     fn convert_term(&self, term: &Term) -> T {
         match &term.term {
             UnsortedTerm::Constant(const_term) => match const_term {

@@ -5,9 +5,9 @@ mod utils;
 mod z3;
 
 pub mod converters {
+    use serde::{Deserialize, Serialize};
     use std::rc::Rc;
 
-    use serde::{Deserialize, Serialize};
     #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
     pub enum ClientMessageType {
         Converter(Converter),

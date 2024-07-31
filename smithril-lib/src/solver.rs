@@ -9,7 +9,7 @@ use tokio::process::{Child, Command};
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
-use crate::converters::{Converter, SolverQuery};
+use crate::converters::Converter;
 use crate::generalized::{SolverResult, Term};
 
 pub trait AsyncGeneralSolver {
@@ -155,6 +155,13 @@ impl PortfolioSolver {
         }
         Self { solvers }
     }
+
+    pub async fn terminate(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        for solver in self.solvers.iter_mut() {
+            solver.terminate().await?;
+        }
+        Ok(())
+    }
 }
 
 impl AsyncGeneralSolver for PortfolioSolver {
@@ -209,67 +216,6 @@ impl AsyncGeneralSolver for PortfolioSolver {
             break;
         }
         Ok(result)
-    }
-}
-
-async fn run_solver(
-    solver_path_string: String,
-    converter: Converter,
-    input_clone: SolverQuery,
-    token: CancellationToken,
-) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-    let mut solver_process = SolverProcess::new(&solver_path_string).await?;
-    let result = select! {
-        res = query_solver(&mut solver_process, converter, &input_clone) => { res }
-        _ = token.cancelled() => {
-            solver_process.terminate().await?;
-            let custom_error = tokio::io::Error::new(tokio::io::ErrorKind::Other, "oh no!");
-            return Result::Err(custom_error.into_inner().unwrap())
-        }
-    };
-    solver_process.terminate().await?;
-    result
-}
-
-async fn query_solver(
-    solver_process: &mut SolverProcess,
-    converter: Converter,
-    input_clone: &SolverQuery,
-) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-    solver_process.solver.init(&converter).await?;
-    solver_process.solver.assert(&input_clone.query).await?;
-    solver_process.solver.check_sat().await
-}
-
-pub async fn run_portfolio(
-    converters: Vec<Converter>,
-    input: SolverQuery,
-) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-    let mut handles = Vec::new();
-
-    let solver_path = get_solver_path("smithril-runner");
-    let solver_path_string = solver_path.to_string_lossy().into_owned();
-    let token = CancellationToken::new();
-
-    // Spawn a process for each solver
-    for converter in converters {
-        let input_clone = input.clone();
-        let solver_path_string = solver_path_string.clone();
-        let cloned_token = token.clone();
-        let handle = tokio::spawn(async move {
-            run_solver(solver_path_string, converter, input_clone, cloned_token).await
-        });
-        handles.push(handle);
-    }
-    let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
-
-    loop {
-        let result = futs.next().await.unwrap()?;
-        if result.is_err() {
-            continue;
-        }
-        token.cancel();
-        return result;
     }
 }
 
@@ -353,4 +299,6 @@ async fn general_solver_test() {
     assert_eq!(SolverResult::Unsat, status);
     let status = psolver.reset().await.unwrap();
     assert_eq!(SolverCommandResponse::Success(), status);
+
+    psolver.terminate().await.unwrap();
 }
