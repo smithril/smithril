@@ -56,22 +56,28 @@ fn main() {
         build_z3(&dir_z3).unwrap();
     }
 
-    let old = env::var("PKG_CONFIG_PATH");
-    let pkg_config_dir: PathBuf = dir_z3.join("build/install/lib/pkgconfig");
+    let old_ld_library_path = env::var("LD_LIBRARY_PATH");
+    let ld_library_dir: PathBuf = dir_z3.join("build/install/lib");
+    let ld_library_path = vec![ld_library_dir];
+    let paths = env::join_paths(ld_library_path).unwrap();
+    env::set_var("LD_LIBRARY_PATH", paths);
 
-    match old {
-        Ok(ref s) => {
-            let mut paths = env::split_paths(s).collect::<Vec<PathBuf>>();
-            paths.push(pkg_config_dir);
-            let paths = env::join_paths(paths).unwrap();
-            env::set_var("PKG_CONFIG_PATH", paths)
-        }
-        Err(_) => env::set_var("PKG_CONFIG_PATH", pkg_config_dir),
-    }
+    let old_pkg_config_path = env::var("PKG_CONFIG_PATH");
+    let pkg_config_dir: PathBuf = dir_z3.join("build/install/lib/pkgconfig");
+    let pkg_config_path = vec![pkg_config_dir];
+    let paths = env::join_paths(pkg_config_path).unwrap();
+    env::set_var("PKG_CONFIG_PATH", paths);
 
     let library = pkg_config::probe_library("z3").unwrap();
 
-    env::set_var("PKG_CONFIG_PATH", old.unwrap_or_else(|_| "".into()));
+    env::set_var(
+        "PKG_CONFIG_PATH",
+        old_pkg_config_path.unwrap_or_else(|_| "".into()),
+    );
+    env::set_var(
+        "LD_LIBRARY_PATH",
+        old_ld_library_path.unwrap_or_else(|_| "".into()),
+    );
 
     let bindings = bindgen::builder()
         .header("wrapper.h")

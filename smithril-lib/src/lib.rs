@@ -8,20 +8,6 @@ pub mod converters {
     use serde::{Deserialize, Serialize};
     use std::rc::Rc;
 
-    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
-    pub enum ClientMessageType {
-        Converter(Converter),
-        Assert(SolverQuery),
-        CheckSat(),
-    }
-
-    #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
-    pub enum ServerMessageType {
-        Result(SolverResult),
-        Txt(String),
-        Term(Term),
-    }
-
     #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub enum Converter {
         Bitwuzla,
@@ -34,25 +20,25 @@ pub mod converters {
     }
 
     use crate::{
-        bitwuzla::BitwuzlaConverter,
-        generalized::{SolverResult, Term},
-        z3::{Z3ContextInner, Z3Converter},
+        bitwuzla::{BitwuzlaConverter, BitwuzlaSolver},
+        generalized::Term,
+        z3::{Z3Converter, Z3Solver},
     };
 
-    pub fn mk_bitwulza() -> BitwuzlaConverter {
+    pub fn mk_bitwulza_solver(converter: Rc<BitwuzlaConverter>) -> BitwuzlaSolver {
+        BitwuzlaSolver::new(converter)
+    }
+
+    pub fn mk_bitwulza_converter() -> BitwuzlaConverter {
         BitwuzlaConverter::default()
     }
 
-    pub fn mk_z3_context() -> Z3ContextInner {
-        Z3ContextInner::default()
-    }
-
-    pub fn mk_z3() -> Z3Converter {
+    pub fn mk_z3_converter() -> Z3Converter {
         Z3Converter::default()
     }
 
-    pub fn mk_z3_with_context(context: Rc<Z3ContextInner>) -> Z3Converter {
-        Z3Converter::new(context)
+    pub fn mk_z3_solver(converter: Rc<Z3Converter>) -> Z3Solver {
+        Z3Solver::new(converter)
     }
 }
 
@@ -62,11 +48,11 @@ mod tests {
 
     use crate::converters;
     use crate::generalized::{
-        GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, GeneralUnsatCoreSolver,
-        SolverResult, Sort, Term, UnsortedTerm,
+        GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, Solver, SolverResult, Sort,
+        Term, UnsatCoreSolver, UnsortedTerm,
     };
 
-    fn generalized_solvers_sat(solver: &dyn GeneralSolver) {
+    fn solver_sat_works(solver: &dyn Solver) {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
             sort: Sort::BvSort(3),
@@ -88,7 +74,7 @@ mod tests {
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_solvers_unsat(solver: &dyn GeneralSolver) {
+    fn solver_unsat_works(solver: &dyn Solver) {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
             sort: Sort::BvSort(3),
@@ -118,9 +104,10 @@ mod tests {
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn generalized_sat_works<C, S, T>(converter: &C)
+    fn generalized_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T>,
         S: GeneralSort,
         T: GeneralTerm,
     {
@@ -140,14 +127,15 @@ mod tests {
             ))),
             sort: Sort::BoolSort(),
         };
-        converter.assert(&converter.convert_term(&t));
-        let result = converter.check_sat();
+        solver.assert(&converter.convert_term(&t));
+        let result = solver.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_unsat_works<C, S, T>(converter: &C)
+    fn generalized_unsat_works<C, SL, S, T>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T>,
         S: GeneralSort,
         T: GeneralTerm,
     {
@@ -182,14 +170,15 @@ mod tests {
             ))),
             sort: Sort::BoolSort(),
         };
-        converter.assert(&converter.convert_term(&u));
-        let result = converter.check_sat();
+        solver.assert(&converter.convert_term(&u));
+        let result = solver.check_sat();
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn generalized_array_sat_works<C, S, T>(converter: &C)
+    fn generalized_array_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T>,
         S: GeneralSort,
         T: GeneralTerm,
     {
@@ -234,15 +223,16 @@ mod tests {
             sort: Sort::BoolSort(),
         };
 
-        converter.assert(&converter.convert_term(&eq));
+        solver.assert(&converter.convert_term(&eq));
 
-        let result = converter.check_sat();
+        let result = solver.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_array_unsat_works<C, S, T>(converter: &C)
+    fn generalized_array_unsat_works<C, SL, S, T>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T>,
         S: GeneralSort,
         T: GeneralTerm,
     {
@@ -309,14 +299,15 @@ mod tests {
             ))),
             sort: Sort::BoolSort(),
         };
-        converter.assert(&converter.convert_term(&res));
-        let result = converter.check_sat();
+        solver.assert(&converter.convert_term(&res));
+        let result = solver.check_sat();
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn bv_test<C, S, T>(converter: &C)
+    fn generalized_bv_op_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T>,
         S: GeneralSort,
         T: GeneralTerm,
     {
@@ -352,12 +343,12 @@ mod tests {
             ))),
             sort: Sort::BoolSort(),
         };
-        converter.assert(&converter.convert_term(&eq));
-        let result = converter.check_sat();
+        solver.assert(&converter.convert_term(&eq));
+        let result = solver.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_eval_works(solver: &mut dyn GeneralSolver) {
+    fn solver_eval_works(solver: &dyn Solver) {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
             sort: Sort::BvSort(5),
@@ -407,104 +398,123 @@ mod tests {
         assert_eq!(eval_y.clone().unwrap(), num10);
     }
 
-    fn generalized_unsat_core_works<S: GeneralSolver + GeneralUnsatCoreSolver>(solver: &mut S) {
-        generalized_solvers_unsat(solver);
+    fn solver_unsat_core_works<S: Solver + UnsatCoreSolver>(solver: &S) {
+        solver_unsat_works(solver);
         let u_core = solver.unsat_core();
         assert_eq!(u_core.len(), 2);
     }
 
     #[test]
     fn bitwuzla_sat_works() {
-        let bc = converters::mk_bitwulza();
-        generalized_sat_works(&bc);
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        generalized_sat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
     fn z3_sat_works() {
-        let zc = converters::mk_z3();
-        generalized_sat_works(&zc);
+        let zc = converters::mk_z3_converter();
+        let zs = converters::mk_z3_solver(Rc::new(zc));
+        generalized_sat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
     fn bitwuzla_unsat_works() {
-        let bc = converters::mk_bitwulza();
-        generalized_unsat_works(&bc);
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        generalized_unsat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
     fn z3_unsat_works() {
-        let zc = converters::mk_z3();
-        generalized_unsat_works(&zc);
+        let zc = converters::mk_z3_converter();
+        let zs = converters::mk_z3_solver(Rc::new(zc));
+        generalized_unsat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
     fn z3_shared_context() {
-        let ct = Rc::new(converters::mk_z3_context());
-        let zc = converters::mk_z3_with_context(ct.clone());
-        generalized_unsat_works(&zc);
-        let zc = converters::mk_z3_with_context(ct);
-        generalized_sat_works(&zc);
+        let zc = Rc::new(converters::mk_z3_converter());
+        let zs = converters::mk_z3_solver(zc.clone());
+        generalized_unsat_works(zs.converter.as_ref(), &zs);
+        let zs = converters::mk_z3_solver(zc.clone());
+        generalized_sat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
     fn bitwuzla_array_sat_works() {
-        let bc = converters::mk_bitwulza();
-        generalized_array_sat_works(&bc);
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        generalized_array_sat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
     fn bitwuzla_array_unsat_works() {
-        let bc = converters::mk_bitwulza();
-        generalized_array_unsat_works(&bc);
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        generalized_array_unsat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
-    fn bitwuzla_bv_test() {
-        let bc = converters::mk_bitwulza();
-        bv_test(&bc);
+    fn bitwuzla_bv_op_sat_works() {
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        generalized_bv_op_sat_works(bs.converter.as_ref(), &bs);
+    }
+
+    #[test]
+    fn z3_bv_op_sat_works() {
+        let zc = converters::mk_z3_converter();
+        let zs = converters::mk_z3_solver(Rc::new(zc));
+        generalized_bv_op_sat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
     fn z3_array_sat_works() {
-        let zc = converters::mk_z3();
-        generalized_array_sat_works(&zc);
+        let zc = converters::mk_z3_converter();
+        let zs = converters::mk_z3_solver(Rc::new(zc));
+        generalized_array_sat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
     fn z3_array_unsat_works() {
-        let zc = converters::mk_z3();
-        generalized_array_unsat_works(&zc);
+        let zc = converters::mk_z3_converter();
+        let zs = converters::mk_z3_solver(Rc::new(zc));
+        generalized_array_unsat_works(zs.converter.as_ref(), &zs);
     }
 
     #[test]
-    fn general_solver_checksat_test() {
-        let mut solver: Box<dyn GeneralSolver> = Box::new(converters::mk_bitwulza());
-        generalized_solvers_sat(solver.as_mut());
-        solver = Box::new(converters::mk_z3());
-        generalized_solvers_sat(solver.as_mut());
+    fn z3_solver_sat_works() {
+        let zc = converters::mk_z3_converter();
+        let solver = Box::new(converters::mk_z3_solver(Rc::new(zc)));
+        solver_sat_works(solver.as_ref());
     }
 
     #[test]
-    fn z3_eval_works() {
-        let mut zc = converters::mk_z3();
-        generalized_eval_works(&mut zc);
+    fn z3_solver_eval_works() {
+        let zc = converters::mk_z3_converter();
+        let solver = Box::new(converters::mk_z3_solver(Rc::new(zc)));
+        solver_eval_works(solver.as_ref());
     }
 
     #[test]
     fn bitwuzla_eval_works() {
-        let mut bc = converters::mk_bitwulza();
-        generalized_eval_works(&mut bc);
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        solver_eval_works(&bs);
     }
 
     #[test]
-    fn bitwuzla_unsat_core_works() {
-        let mut bc = converters::mk_bitwulza();
-        generalized_unsat_core_works(&mut bc);
+    fn bitwuzla_solver_unsat_core_works() {
+        let bc = converters::mk_bitwulza_converter();
+        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        solver_unsat_core_works(&bs);
     }
 
     #[test]
-    fn z3_unsat_core_works() {
-        let mut zc = converters::mk_z3();
-        generalized_unsat_core_works(&mut zc);
+    fn z3_solver_unsat_core_works() {
+        let zc = converters::mk_z3_converter();
+        let solver = Box::new(converters::mk_z3_solver(Rc::new(zc)));
+        solver_unsat_core_works(solver.as_ref());
     }
 }

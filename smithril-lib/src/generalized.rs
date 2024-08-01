@@ -102,10 +102,13 @@ impl fmt::Display for SolverResult {
     }
 }
 
-macro_rules! define_converter_binary_function {
-    ($func_name:ident) => {
-        fn $func_name<'a>(&'a self, term1: &'a T, term2: &'a T) -> T;
-    };
+pub trait GeneralContext<S, T, SL>
+where
+    S: GeneralSort,
+    T: GeneralTerm,
+    SL: GeneralSolver<S, T>,
+{
+    fn new_solver(&self) -> SL;
 }
 
 pub trait GeneralUnsatCoreSolver<S, T>
@@ -116,19 +119,32 @@ where
     fn unsat_core(&self) -> Vec<T>;
 }
 
+pub trait GeneralSolver<S, T>
+where
+    S: GeneralSort,
+    T: GeneralTerm,
+{
+    fn eval(&self, term1: &T) -> Option<T>;
+    fn assert(&self, term: &T);
+    fn reset(&self);
+    fn interrupt(&self);
+    fn check_sat(&self) -> SolverResult;
+}
+
+macro_rules! define_converter_binary_function {
+    ($func_name:ident) => {
+        fn $func_name(&self, term1: &T, term2: &T) -> T;
+    };
+}
+
 pub trait GeneralConverter<S, T>
 where
     S: GeneralSort,
     T: GeneralTerm,
 {
-    fn assert<'a>(&'a self, term: &'a T);
-    fn eval(&self, term1: &T) -> Option<T>;
-    fn reset(&self);
-    fn interrupt(&self);
-    fn check_sat(&self) -> SolverResult;
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bool_sort(&self) -> S;
-    fn mk_bv_value_uint64<'a>(&'a self, sort: &'a S, val: u64) -> T;
+    fn mk_bv_value_uint64(&self, sort: &S, val: u64) -> T;
     define_converter_binary_function!(mk_and);
     define_converter_binary_function!(mk_bvadd);
     define_converter_binary_function!(mk_bvand);
@@ -136,9 +152,9 @@ where
     define_converter_binary_function!(mk_bvlshr);
     define_converter_binary_function!(mk_bvmul);
     define_converter_binary_function!(mk_bvnand);
-    fn mk_bvneg<'a>(&'a self, term: &'a T) -> T;
+    fn mk_bvneg(&self, term: &T) -> T;
     define_converter_binary_function!(mk_bvnor);
-    fn mk_bvnot<'a>(&'a self, term: &'a T) -> T;
+    fn mk_bvnot(&self, term: &T) -> T;
     define_converter_binary_function!(mk_bvnxor);
     define_converter_binary_function!(mk_bvor);
     define_converter_binary_function!(mk_bvsdiv);
@@ -159,14 +175,14 @@ where
     define_converter_binary_function!(mk_eq);
     define_converter_binary_function!(mk_implies);
     define_converter_binary_function!(mk_neq);
-    fn mk_not<'a>(&'a self, term: &'a T) -> T;
+    fn mk_not(&self, term: &T) -> T;
     define_converter_binary_function!(mk_or);
     fn mk_smt_bool(&self, val: bool) -> T;
-    fn mk_smt_symbol<'a>(&'a self, name: &str, sort: &'a S) -> T;
+    fn mk_smt_symbol(&self, name: &str, sort: &S) -> T;
     define_converter_binary_function!(mk_xor);
-    fn mk_array_sort<'a>(&'a self, index: &'a S, element: &'a S) -> S;
+    fn mk_array_sort(&self, index: &S, element: &S) -> S;
     define_converter_binary_function!(mk_select);
-    fn mk_store<'a>(&'a self, term1: &'a T, term2: &'a T, term3: &'a T) -> T;
+    fn mk_store(&self, term1: &T, term2: &T, term3: &T) -> T;
     fn convert_term(&self, term: &Term) -> T {
         match &term.term {
             UnsortedTerm::Constant(const_term) => match const_term {
@@ -248,7 +264,7 @@ pub trait UnsatCoreSolver {
     fn unsat_core(&self) -> Vec<Term>;
 }
 
-pub trait GeneralSolver {
+pub trait Solver {
     fn assert(&self, term: &Term);
     fn reset(&self);
     fn check_sat(&self) -> SolverResult;

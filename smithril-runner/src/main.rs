@@ -1,10 +1,10 @@
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
 use smithril_lib::{
     converters::{self, Converter},
-    generalized::{GeneralSolver, SolverResult},
+    generalized::{Solver, SolverResult},
     solver::{RemoteSolver, SolverCommand, SolverCommandResponse},
 };
-use std::{env, sync::Arc, thread};
+use std::{env, rc::Rc, sync::Arc, thread};
 
 #[derive(Debug)]
 pub struct RemoteSolverCommander {
@@ -42,15 +42,15 @@ fn main() {
         solver_result_sender,
     };
 
-    let converter: Box<dyn GeneralSolver + Send + Sync> = match converter_kind {
-        Converter::Bitwuzla => Box::new(converters::mk_bitwulza()),
-        Converter::Z3 => Box::new(converters::mk_z3()),
+    let converter: Box<dyn Solver + Send + Sync> = match converter_kind {
+        Converter::Bitwuzla => Box::new(converters::mk_bitwulza_solver(Rc::new(
+            converters::mk_bitwulza_converter(),
+        ))),
+        Converter::Z3 => Box::new(converters::mk_z3_solver(Rc::new(
+            converters::mk_z3_converter(),
+        ))),
     };
     let converter = Arc::new(converter);
-    remote_solver_commander
-        .response_sender
-        .send(SolverCommandResponse::Success())
-        .unwrap();
 
     {
         let converter = converter.clone();

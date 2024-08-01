@@ -12,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 use crate::converters::Converter;
 use crate::generalized::{SolverResult, Term};
 
-pub trait AsyncGeneralSolver {
+pub trait AsyncSolver {
     fn assert(
         &mut self,
         term: &Term,
@@ -71,7 +71,7 @@ impl RemoteSolver {
     }
 }
 
-impl AsyncGeneralSolver for RemoteSolver {
+impl AsyncSolver for RemoteSolver {
     async fn assert(
         &mut self,
         term: &Term,
@@ -169,7 +169,7 @@ impl PortfolioSolver {
     }
 }
 
-impl AsyncGeneralSolver for PortfolioSolver {
+impl AsyncSolver for PortfolioSolver {
     async fn assert(
         &mut self,
         term: &Term,
@@ -232,7 +232,7 @@ impl AsyncGeneralSolver for PortfolioSolver {
             result = res;
             break;
         }
-        while let Some(_) = futs.next().await {}
+        while futs.next().await.is_some() {}
         Ok(result)
     }
 }

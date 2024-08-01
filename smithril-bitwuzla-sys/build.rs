@@ -50,15 +50,9 @@ fn main() {
     let old = env::var("PKG_CONFIG_PATH");
     let pkg_config_dir: PathBuf = dir_bitwuzla.join("build/install/lib/x86_64-linux-gnu/pkgconfig");
 
-    match old {
-        Ok(ref s) => {
-            let mut paths = env::split_paths(s).collect::<Vec<PathBuf>>();
-            paths.push(pkg_config_dir);
-            let paths = env::join_paths(paths).unwrap();
-            env::set_var("PKG_CONFIG_PATH", paths)
-        }
-        Err(_) => env::set_var("PKG_CONFIG_PATH", pkg_config_dir),
-    }
+    let paths = vec![pkg_config_dir];
+    let paths = env::join_paths(paths).unwrap();
+    env::set_var("PKG_CONFIG_PATH", paths);
 
     let library = pkg_config::probe_library("bitwuzla").unwrap();
 
