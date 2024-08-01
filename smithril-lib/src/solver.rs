@@ -24,6 +24,9 @@ pub trait AsyncGeneralSolver {
     ) -> impl std::future::Future<
         Output = Result<SolverCommandResponse, Box<dyn std::error::Error + Send + Sync>>,
     > + Send;
+    fn interrupt(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
     fn check_sat(
         &mut self,
     ) -> impl std::future::Future<
@@ -33,7 +36,6 @@ pub trait AsyncGeneralSolver {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SolverCommand {
-    Init(Converter),
     Reset(),
     Assert(Term),
     CheckSat(),
@@ -48,6 +50,7 @@ pub enum SolverCommandResponse {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RemoteSolver {
     pub command_sender: IpcSender<SolverCommand>,
+    pub interrupt_sender: IpcSender<()>,
     pub response_receiver: IpcReceiver<SolverCommandResponse>,
     pub solver_result_receiver: IpcReceiver<SolverResult>,
 }
@@ -60,20 +63,11 @@ impl RemoteSolver {
         select! {
             res = self.check_sat() => { res }
             _ = token.cancelled() => {
+                self.interrupt().await.unwrap();
                 let custom_error = tokio::io::Error::new(tokio::io::ErrorKind::Other, "oh no!");
                 Result::Err(custom_error.into_inner().unwrap())
             }
         }
-    }
-
-    async fn init(
-        &mut self,
-        converter: &Converter,
-    ) -> Result<SolverCommandResponse, Box<dyn std::error::Error + Send + Sync>> {
-        self.command_sender
-            .send(SolverCommand::Init(converter.clone()))?;
-        let command_response = self.response_receiver.recv()?;
-        Ok(command_response)
     }
 }
 
@@ -96,6 +90,11 @@ impl AsyncGeneralSolver for RemoteSolver {
         Ok(command_response)
     }
 
+    async fn interrupt(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.interrupt_sender.send(())?;
+        Ok(())
+    }
+
     async fn reset(
         &mut self,
     ) -> Result<SolverCommandResponse, Box<dyn std::error::Error + Send + Sync>> {
@@ -111,11 +110,16 @@ struct SolverProcess {
 }
 
 impl SolverProcess {
-    async fn new(solver_path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    async fn new(
+        solver_path: &str,
+        converter: &Converter,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let (one_shot_server, one_shot_server_name) = IpcOneShotServer::new().unwrap();
 
+        let serialized_converter = serde_json::to_string(converter).unwrap();
         let process = Command::new(solver_path)
             .arg(one_shot_server_name)
+            .arg(serialized_converter)
             .spawn()?;
         let (_, solver) = one_shot_server.accept().unwrap();
 
@@ -149,8 +153,9 @@ impl PortfolioSolver {
         let mut solvers: Vec<SolverProcess> = Default::default();
 
         for converter in &converters {
-            let mut solver_process = SolverProcess::new(&solver_path_string).await.unwrap();
-            solver_process.solver.init(converter).await.unwrap();
+            let solver_process = SolverProcess::new(&solver_path_string, converter)
+                .await
+                .unwrap();
             solvers.push(solver_process);
         }
         Self { solvers }
@@ -194,6 +199,18 @@ impl AsyncGeneralSolver for PortfolioSolver {
         Ok(SolverCommandResponse::Success())
     }
 
+    async fn interrupt(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut handles = Vec::new();
+        for solver in self.solvers.iter_mut() {
+            let handler = solver.solver.interrupt();
+            handles.push(handler);
+        }
+        for handler in handles {
+            handler.await.unwrap();
+        }
+        Ok(())
+    }
+
     async fn check_sat(
         &mut self,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
@@ -215,6 +232,7 @@ impl AsyncGeneralSolver for PortfolioSolver {
             result = res;
             break;
         }
+        while let Some(_) = futs.next().await {}
         Ok(result)
     }
 }
@@ -279,7 +297,13 @@ fn unsat_works() -> Term {
 }
 
 #[tokio::test]
-async fn general_solver_test() {
+async fn portfolio_solver_test() {
+    use std::env;
+    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    smithril_converters_dir.push("../target/debug");
+    let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
+    env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
+
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works();
 

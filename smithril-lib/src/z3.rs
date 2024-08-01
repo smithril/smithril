@@ -3,11 +3,11 @@ use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
-use crate::generalized::GeneralUnsatCoreConverter;
 use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::SolverResult;
 use crate::generalized::Sort;
 use crate::generalized::Term;
+use crate::generalized::UnsatCoreSolver;
 use crate::generalized::UnsortedTerm;
 use crate::utils;
 use core::panic;
@@ -133,6 +133,9 @@ pub struct Z3Converter {
     pub unsat_map: Cell<HashMap<Z3Term, Z3Term>>,
 }
 
+unsafe impl Send for Z3Converter {}
+unsafe impl Sync for Z3Converter {}
+
 impl Z3Converter {
     pub fn new(context: Rc<Z3ContextInner>) -> Self {
         let context = Z3Context::new(context);
@@ -245,7 +248,7 @@ macro_rules! create_converter_ternary_function_z3 {
     };
 }
 
-impl GeneralUnsatCoreConverter<Z3Sort, Z3Term> for Z3Converter {
+impl GeneralUnsatCoreSolver<Z3Sort, Z3Term> for Z3Converter {
     fn unsat_core(&self) -> Vec<Z3Term> {
         let u_core = unsafe {
             smithril_z3_sys::Z3_solver_get_unsat_core(self.context.context(), self.solver)
@@ -283,14 +286,14 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         };
     }
 
-    fn reset(&mut self) {
+    fn reset(&self) {
         unsafe {
             smithril_z3_sys::Z3_solver_reset(self.context.context(), self.solver);
             self.context.check_error();
         }
     }
 
-    fn interrupt(&mut self) {
+    fn interrupt(&self) {
         unsafe {
             smithril_z3_sys::Z3_solver_interrupt(self.context.context(), self.solver);
             self.context.check_error();
@@ -418,9 +421,9 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
 }
 
-impl GeneralUnsatCoreSolver for Z3Converter {
+impl UnsatCoreSolver for Z3Converter {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_z3 = GeneralUnsatCoreConverter::unsat_core(self);
+        let u_core_z3 = GeneralUnsatCoreSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_z3 {
             let cur_asserted_terms_map = self.asserted_terms_map.take();
@@ -490,11 +493,11 @@ impl GeneralSolver for Z3Converter {
         }
     }
 
-    fn reset(&mut self) {
+    fn reset(&self) {
         GeneralConverter::reset(self)
     }
 
-    fn interrupt(&mut self) {
+    fn interrupt(&self) {
         GeneralConverter::interrupt(self)
     }
 }

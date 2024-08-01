@@ -4,7 +4,7 @@ use smithril_lib::{
     generalized::{GeneralSolver, SolverResult},
     solver::{RemoteSolver, SolverCommand, SolverCommandResponse},
 };
-use std::env;
+use std::{env, sync::Arc, thread};
 
 #[derive(Debug)]
 pub struct RemoteSolverCommander {
@@ -17,9 +17,12 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let one_shot_server_name = &args[1];
+    let serialized_converter = &args[2];
+    let converter_kind: Converter = serde_json::from_str(serialized_converter).unwrap();
     let tx = IpcSender::connect(one_shot_server_name.to_string()).unwrap();
 
     let (command_sender, command_receiver) = ipc_channel::ipc::channel::<SolverCommand>().unwrap();
+    let (interrupt_sender, interrupt_receiver) = ipc_channel::ipc::channel::<()>().unwrap();
     let (response_sender, response_receiver) =
         ipc_channel::ipc::channel::<SolverCommandResponse>().unwrap();
     let (solver_result_sender, solver_result_receiver) =
@@ -28,6 +31,7 @@ fn main() {
         command_sender,
         response_receiver,
         solver_result_receiver,
+        interrupt_sender,
     };
 
     tx.send(remove_solver).unwrap();
@@ -38,70 +42,48 @@ fn main() {
         solver_result_sender,
     };
 
-    let mut converter: Option<Box<dyn GeneralSolver>> = Option::None;
-    while let Ok(command) = remote_solver_commander.command_receiver.recv() {
+    let converter: Box<dyn GeneralSolver + Send + Sync> = match converter_kind {
+        Converter::Bitwuzla => Box::new(converters::mk_bitwulza()),
+        Converter::Z3 => Box::new(converters::mk_z3()),
+    };
+    let converter = Arc::new(converter);
+    remote_solver_commander
+        .response_sender
+        .send(SolverCommandResponse::Success())
+        .unwrap();
+
+    {
+        let converter = converter.clone();
+        thread::spawn(move || loop {
+            interrupt_receiver.recv().unwrap();
+            converter.interrupt();
+        });
+    }
+
+    loop {
+        let command = remote_solver_commander.command_receiver.recv().unwrap();
         match command {
-            SolverCommand::Init(converter_kind) => {
-                converter = match converter_kind {
-                    Converter::Bitwuzla => Some(Box::new(converters::mk_bitwulza())),
-                    Converter::Z3 => Some(Box::new(converters::mk_z3())),
-                };
+            SolverCommand::Assert(term) => {
+                converter.assert(&term);
                 remote_solver_commander
                     .response_sender
                     .send(SolverCommandResponse::Success())
                     .unwrap();
             }
-            SolverCommand::Assert(term) => match converter.as_ref() {
-                Some(converter) => {
-                    converter.assert(&term);
-                    remote_solver_commander
-                        .response_sender
-                        .send(SolverCommandResponse::Success())
-                        .unwrap();
-                }
-                None => {
-                    remote_solver_commander
-                        .response_sender
-                        .send(SolverCommandResponse::Error(
-                            "No one converter has set up!".to_string(),
-                        ))
-                        .unwrap();
-                }
-            },
-            SolverCommand::Reset() => match converter.as_mut() {
-                Some(converter) => {
-                    converter.reset();
-                    remote_solver_commander
-                        .response_sender
-                        .send(SolverCommandResponse::Success())
-                        .unwrap();
-                }
-                None => {
-                    remote_solver_commander
-                        .response_sender
-                        .send(SolverCommandResponse::Error(
-                            "No one converter has set up!".to_string(),
-                        ))
-                        .unwrap();
-                }
-            },
-            SolverCommand::CheckSat() => match converter.as_ref() {
-                Some(converter) => {
-                    let result = converter.check_sat();
-                    remote_solver_commander
-                        .solver_result_sender
-                        .send(result)
-                        .unwrap();
-                }
-                None => {
-                    remote_solver_commander
-                        .response_sender
-                        .send(SolverCommandResponse::Error(
-                            "No one converter has set up!".to_string(),
-                        ))
-                        .unwrap();
-                }
-            },
+            SolverCommand::Reset() => {
+                converter.reset();
+                remote_solver_commander
+                    .response_sender
+                    .send(SolverCommandResponse::Success())
+                    .unwrap();
+            }
+            SolverCommand::CheckSat() => {
+                let result = converter.check_sat();
+                remote_solver_commander
+                    .solver_result_sender
+                    .send(result)
+                    .unwrap();
+            }
         }
     }
 }

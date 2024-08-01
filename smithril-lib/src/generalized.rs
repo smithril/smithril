@@ -108,7 +108,7 @@ macro_rules! define_converter_binary_function {
     };
 }
 
-pub trait GeneralUnsatCoreConverter<S, T>
+pub trait GeneralUnsatCoreSolver<S, T>
 where
     S: GeneralSort,
     T: GeneralTerm,
@@ -122,9 +122,9 @@ where
     T: GeneralTerm,
 {
     fn assert<'a>(&'a self, term: &'a T);
-    fn reset(&mut self);
-    fn interrupt(&mut self);
     fn eval(&self, term1: &T) -> Option<T>;
+    fn reset(&self);
+    fn interrupt(&self);
     fn check_sat(&self) -> SolverResult;
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bool_sort(&self) -> S;
@@ -244,14 +244,14 @@ where
     }
 }
 
-pub trait GeneralUnsatCoreSolver {
+pub trait UnsatCoreSolver {
     fn unsat_core(&self) -> Vec<Term>;
 }
 
 pub trait GeneralSolver {
     fn assert(&self, term: &Term);
-    fn reset(&mut self);
+    fn reset(&self);
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
-    fn interrupt(&mut self);
+    fn interrupt(&self);
 }
