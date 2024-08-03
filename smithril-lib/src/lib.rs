@@ -21,7 +21,6 @@ pub mod converters {
     pub enum ConverterType {
         Bitwuzla,
         Z3,
-        // Uninitialized,
     }
 
     #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
