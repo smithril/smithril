@@ -1,24 +1,25 @@
 use core::fmt;
+use serde::{Deserialize, Serialize};
 
 pub trait GeneralSort {}
 
 pub trait GeneralTerm {}
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum GenConstant {
     Numeral(u64),
     Boolean(bool),
     Symbol(String),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum UnoOperationKind {
     Not,
     BvNeg,
     BvNot,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum DuoOperationKind {
     Eq,
     And,
@@ -53,37 +54,37 @@ pub enum DuoOperationKind {
     BvXor,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum TrioOperationKind {
     Store,
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum GenOperation {
     Uno(UnoOperationKind, Term),
     Duo(DuoOperationKind, Term, Term),
     Trio(TrioOperationKind, Term, Term, Term),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum UnsortedTerm {
     Constant(GenConstant),
     Operation(Box<GenOperation>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum Sort {
     BvSort(u64),
     BoolSort(),
     ArraySort(Box<Sort>, Box<Sort>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Term {
     pub term: UnsortedTerm,
     pub sort: Sort,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum SolverResult {
     Sat,
     Unsat,
