@@ -9,7 +9,6 @@ pub fn binary2integer(s: String) -> u64 {
             res += mask;
         }
         mask <<= 1;
-        println!("{} alalala", mask);
     }
     res
 }
