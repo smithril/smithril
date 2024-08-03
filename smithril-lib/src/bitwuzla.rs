@@ -152,9 +152,7 @@ impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
         let mut res: Vec<BitwuzlaTerm> = Vec::new();
         let slice = unsafe { std::slice::from_raw_parts(u_core, std::ptr::read(&size)) };
         for cur_term in slice {
-            res.push(BitwuzlaTerm {
-                term: *cur_term,
-            });
+            res.push(BitwuzlaTerm { term: *cur_term });
         }
         res
     }
