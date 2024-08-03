@@ -117,8 +117,7 @@ where
 {
     fn assert(&self, term: &T);
     fn check_sat(&self) -> SolverResult;
-    // fn eval(&self, term1: &T) -> Option<T>;
-    // fn unsat_core(&self) -> Vec<T>;
+    fn eval(&self, term1: &T) -> Option<T>;
     fn mk_bv_sort(&self, size: u64) -> S;
     fn mk_bool_sort(&self) -> S;
     fn mk_and(&self, term1: &T, term2: &T) -> T;
@@ -243,7 +242,5 @@ pub trait GeneralUnsatCoreSolver {
 pub trait GeneralSolver {
     fn assert(&self, term: &Term);
     fn check_sat(&self) -> SolverResult;
-    // fn eval(&self, term: &Term) -> Option<Term>;
+    fn eval(&self, term: &Term) -> Option<Term>;
 }
-
-// mixa117 Z3_solver_assert_and_track ADD (used in klee) + same for bituzla - probably not needed???

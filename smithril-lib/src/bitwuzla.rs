@@ -1,5 +1,3 @@
-use smithril_bitwuzla_sys::bitwuzla_sort_t;
-
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralSolver;
@@ -16,7 +14,6 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::ffi::CString;
-use std::slice;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BitwuzlaTerm {
@@ -35,7 +32,7 @@ pub struct BitwuzlaConverter {
     pub term_manager: *mut smithril_bitwuzla_sys::BitwuzlaTermManager,
     pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
     pub solver: *mut smithril_bitwuzla_sys::Bitwuzla,
-    pub tmp: Cell<HashMap<String, BitwuzlaTerm>>,
+    pub sym_map: Cell<HashMap<String, BitwuzlaTerm>>,
     pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
 }
 
@@ -67,7 +64,7 @@ impl BitwuzlaConverter {
             term_manager,
             options,
             solver,
-            tmp: Cell::new(HashMap::new()),
+            sym_map: Cell::new(HashMap::new()),
             asserted_terms_map: Cell::new(HashMap::new()),
         }
     }
@@ -165,8 +162,8 @@ impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
 
 impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        let mut sym_table = self.tmp.take();
-        let term = if let Some(term2) = sym_table.get(name) {
+        let mut cur_sym_table = self.sym_map.take();
+        let term = if let Some(term2) = cur_sym_table.get(name) {
             term2.term
         } else {
             let name_cstr = CString::new(name).unwrap();
@@ -177,11 +174,11 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
                     name_cstr.as_ptr(),
                 )
             };
-            let old_term = sym_table.insert(name.to_string(), BitwuzlaTerm { term });
+            let old_term = cur_sym_table.insert(name.to_string(), BitwuzlaTerm { term });
             assert!(old_term.is_none());
             term
         };
-        self.tmp.set(sym_table);
+        self.sym_map.set(cur_sym_table);
         BitwuzlaTerm { term }
     }
 
@@ -200,14 +197,14 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    // fn eval(&self, term1: &BitwuzlaTerm) -> Option<BitwuzlaTerm> {
-    //     let bitwuzla_term =
-    //         unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver, term1.term) };
-    //     let res = BitwuzlaTerm {
-    //         term: bitwuzla_term,
-    //     };
-    //     Some(res)
-    // }
+    fn eval(&self, term1: &BitwuzlaTerm) -> Option<BitwuzlaTerm> {
+        let bitwuzla_term =
+            unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver, term1.term) };
+        let res = BitwuzlaTerm {
+            term: bitwuzla_term,
+        };
+        Some(res)
+    }
 
     fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
         BitwuzlaSort {
@@ -315,51 +312,51 @@ impl GeneralSolver for BitwuzlaConverter {
         GeneralConverter::check_sat(self)
     }
 
-    // fn eval(&self, term: &Term) -> Option<Term> {
-    //     let expr = GeneralConverter::eval(self, &self.convert_term(term))?;
-    //     match term.sort {
-    //         Sort::BvSort(_) => {
-    //             let bitwuzla_string: *const i8 =
-    //                 unsafe { smithril_bitwuzla_sys::bitwuzla_term_to_string(expr.term) };
-    //             let s = unsafe {
-    //                 CStr::from_ptr(bitwuzla_string)
-    //                     .to_string_lossy()
-    //                     .into_owned()
-    //             };
-    //             let bv_const = utils::binary2integer(s);
-    //             let res = Term {
-    //                 term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
-    //                 sort: term.sort.clone(),
-    //             };
-    //             Some(res)
-    //         }
-    //         Sort::BoolSort() => {
-    //             let bitwuzla_string =
-    //                 unsafe { smithril_bitwuzla_sys::bitwuzla_term_to_string(expr.term) };
-    //             let s_cstr: &CStr = unsafe { CStr::from_ptr(bitwuzla_string) };
-    //             let s = s_cstr.to_string_lossy().into_owned();
-    //             match s.as_str() {
-    //                 "true" => {
-    //                     let res = Term {
-    //                         term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
-    //                         sort: term.sort.clone(),
-    //                     };
-    //                     Some(res)
-    //                 }
-    //                 "false" => {
-    //                     let res = Term {
-    //                         term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
-    //                         sort: term.sort.clone(),
-    //                     };
-    //                     Some(res)
-    //                 }
-    //                 _ => {
-    //                     panic!("Can't get boolean value from bitwuzla")
-    //                 }
-    //             }
-    //         }
+    fn eval(&self, term: &Term) -> Option<Term> {
+        let expr = GeneralConverter::eval(self, &self.convert_term(term))?;
+        match term.sort {
+            Sort::BvSort(_) => {
+                let bitwuzla_string: *const i8 =
+                    unsafe { smithril_bitwuzla_sys::bitwuzla_term_to_string(expr.term) };
+                let s = unsafe {
+                    CStr::from_ptr(bitwuzla_string)
+                        .to_string_lossy()
+                        .into_owned()
+                };
+                let bv_const = utils::binary2integer(s);
+                let res = Term {
+                    term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
+                    sort: term.sort.clone(),
+                };
+                Some(res)
+            }
+            Sort::BoolSort() => {
+                let bitwuzla_string =
+                    unsafe { smithril_bitwuzla_sys::bitwuzla_term_to_string(expr.term) };
+                let s_cstr: &CStr = unsafe { CStr::from_ptr(bitwuzla_string) };
+                let s = s_cstr.to_string_lossy().into_owned();
+                match s.as_str() {
+                    "true" => {
+                        let res = Term {
+                            term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
+                            sort: term.sort.clone(),
+                        };
+                        Some(res)
+                    }
+                    "false" => {
+                        let res = Term {
+                            term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
+                            sort: term.sort.clone(),
+                        };
+                        Some(res)
+                    }
+                    _ => {
+                        panic!("Can't get boolean value from bitwuzla")
+                    }
+                }
+            }
 
-    //         Sort::ArraySort(_, _) => panic!("Unexpected sort"),
-    //     }
-    // }
+            Sort::ArraySort(_, _) => panic!("Unexpected sort"),
+        }
+    }
 }
