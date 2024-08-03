@@ -59,11 +59,11 @@ pub mod converters {
 mod tests {
     use std::rc::Rc;
 
+    use crate::converters;
     use crate::generalized::{
         GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, GeneralUnsatCoreSolver,
         SolverResult, Sort, Term, UnsortedTerm,
     };
-    use crate::converters;
 
     fn generalized_solvers_sat(solver: &dyn GeneralSolver) {
         let x = Term {
