@@ -35,7 +35,6 @@ pub mod converters {
     use crate::{
         bitwuzla::BitwuzlaConverter,
         generalized::{SolverResult, Term},
-        generalized::{SolverResult, Term},
         z3::{Z3ContextInner, Z3Converter},
     };
 
@@ -474,38 +473,6 @@ mod tests {
     fn z3_array_unsat_works() {
         let zc = converters::mk_z3();
         generalized_array_unsat_works(&zc);
-    }
-
-    #[test]
-    fn general_solver_checksat_test() {
-        let mut solver: Box<dyn GeneralSolver> = Box::new(converters::mk_bitwulza());
-        generalized_solvers_sat(solver.as_mut());
-        solver = Box::new(converters::mk_z3());
-        generalized_solvers_sat(solver.as_mut());
-    }
-
-    #[test]
-    fn z3_eval_works() {
-        let mut zc = converters::mk_z3();
-        generalized_eval_works(&mut zc);
-    }
-
-    #[test]
-    fn bitwuzla_eval_works() {
-        let mut bc = converters::mk_bitwulza();
-        generalized_eval_works(&mut bc);
-    }
-
-    #[test]
-    fn bitwuzla_unsat_core_works() {
-        let mut bc = converters::mk_bitwulza();
-        generalized_unsat_core_works(&mut bc);
-    }
-
-    #[test]
-    fn z3_unsat_core_works() {
-        let mut zc = converters::mk_z3();
-        generalized_unsat_core_works(&mut zc);
     }
 
     #[test]
