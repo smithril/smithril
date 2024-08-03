@@ -12,7 +12,6 @@ pub mod converters {
         Converter(ConverterType),
         Assert(SolverQuery),
         CheckSat(),
-        // Evaluate(SolverQuery),
     }
 
     #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
@@ -358,61 +357,57 @@ mod tests {
         assert_eq!(SolverResult::Sat, result);
     }
 
-    // fn generalized_eval_works(solver: &mut dyn GeneralSolver) {
-    //     let x = Term {
-    //         term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
-    //         sort: Sort::BvSort(5),
-    //     };
-    //     let y = Term {
-    //         term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("y".to_string())),
-    //         sort: Sort::BvSort(5),
-    //     };
-    //     let num5 = Term {
-    //         term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
-    //         sort: Sort::BvSort(5),
-    //     };
-    //     let num10 = Term {
-    //         term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(10)),
-    //         sort: Sort::BvSort(5),
-    //     };
-    //     let eq_x = Term {
-    //         term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-    //             crate::generalized::DuoOperationKind::Eq,
-    //             x.clone(),
-    //             num5.clone(),
-    //         ))),
-    //         sort: Sort::BoolSort(),
-    //     };
-    //     let eq_y = Term {
-    //         term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-    //             crate::generalized::DuoOperationKind::Eq,
-    //             y.clone(),
-    //             num10.clone(),
-    //         ))),
-    //         sort: Sort::BoolSort(),
-    //     };
-    //     let t = Term {
-    //         term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-    //             crate::generalized::DuoOperationKind::And,
-    //             eq_x.clone(),
-    //             eq_y.clone(),
-    //         ))),
-    //         sort: Sort::BoolSort(),
-    //     };
-    //     solver.assert(&t);
-    //     let res = solver.check_sat();
-    //     assert_eq!(res, SolverResult::Sat);
-    //     let eval_x = solver.eval(&x);
-    //     let eval_y = solver.eval(&y);
-    //     assert_eq!(eval_x.clone().unwrap(), num5);
-    //     assert_eq!(eval_y.clone().unwrap(), num10);
-    // }
+    fn generalized_eval_works(solver: &mut dyn GeneralSolver) {
+        let x = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
+            sort: Sort::BvSort(5),
+        };
+        let y = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("y".to_string())),
+            sort: Sort::BvSort(5),
+        };
+        let num5 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            sort: Sort::BvSort(5),
+        };
+        let num10 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(10)),
+            sort: Sort::BvSort(5),
+        };
+        let eq_x = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                x.clone(),
+                num5.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let eq_y = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::Eq,
+                y.clone(),
+                num10.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        let t = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::And,
+                eq_x.clone(),
+                eq_y.clone(),
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        solver.assert(&t);
+        let res = solver.check_sat();
+        assert_eq!(res, SolverResult::Sat);
+        let eval_x = solver.eval(&x);
+        let eval_y = solver.eval(&y);
+        assert_eq!(eval_x.clone().unwrap(), num5);
+        assert_eq!(eval_y.clone().unwrap(), num10);
+    }
 
-    fn generalized_unsat_core_works<S: GeneralSolver + GeneralUnsatCoreSolver>(solver: &mut S)
-    // where
-    // S: GeneralSolver+GeneralUnsatCoreSolver<'a>,
-    {
-        // let tmp_solver = solver as &dyn GeneralSolver;
+    fn generalized_unsat_core_works<S: GeneralSolver + GeneralUnsatCoreSolver>(solver: &mut S) {
         generalized_solvers_unsat(solver);
         let u_core = solver.unsat_core();
         assert_eq!(u_core.len(), 2);
@@ -489,17 +484,17 @@ mod tests {
         generalized_solvers_sat(solver.as_mut());
     }
 
-    // #[test]
-    // fn z3_eval_works() {
-    //     let mut zc = converters::mk_z3();
-    //     generalized_eval_works(&mut zc);
-    // }
+    #[test]
+    fn z3_eval_works() {
+        let mut zc = converters::mk_z3();
+        generalized_eval_works(&mut zc);
+    }
 
-    // #[test]
-    // fn bitwuzla_eval_works() {
-    //     let mut bc = converters::mk_bitwulza();
-    //     generalized_eval_works(&mut bc);
-    // }
+    #[test]
+    fn bitwuzla_eval_works() {
+        let mut bc = converters::mk_bitwulza();
+        generalized_eval_works(&mut bc);
+    }
 
     #[test]
     fn bitwuzla_unsat_core_works() {
