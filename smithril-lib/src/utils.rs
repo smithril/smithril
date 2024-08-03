@@ -8,7 +8,7 @@ pub fn binary2integer(s: String) -> u64 {
         if sym == '1' {
             res += mask;
         }
-        mask = mask << 1;
+        mask <<= 1;
         println!("{} alalala", mask);
     }
     res

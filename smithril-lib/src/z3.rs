@@ -75,7 +75,7 @@ pub struct Z3Term {
 
 impl Clone for Z3Term {
     fn clone(&self) -> Self {
-        Z3Term::new(self.context.clone(), self.term.clone())
+        Z3Term::new(self.context.clone(), self.term)
     }
 }
 
