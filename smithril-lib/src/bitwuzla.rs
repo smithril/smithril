@@ -153,7 +153,7 @@ impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
         let slice = unsafe { std::slice::from_raw_parts(u_core, std::ptr::read(&size)) };
         for cur_term in slice {
             res.push(BitwuzlaTerm {
-                term: cur_term.clone(),
+                term: *cur_term,
             });
         }
         res

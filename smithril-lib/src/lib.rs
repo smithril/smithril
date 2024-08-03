@@ -58,14 +58,13 @@ pub mod converters {
 
 #[cfg(test)]
 mod tests {
-    use std::clone;
     use std::rc::Rc;
 
     use crate::generalized::{
         GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, GeneralUnsatCoreSolver,
         SolverResult, Sort, Term, UnsortedTerm,
     };
-    use crate::{converters, generalized};
+    use crate::converters;
 
     fn generalized_solvers_sat(solver: &dyn GeneralSolver) {
         let x = Term {
