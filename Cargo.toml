@@ -1,4 +1,8 @@
 [workspace]
 
-members = ["smithril-bitwuzla-sys", "smithril-lib", "smithril-z3-sys"]
+members = [
+  "smithril-bitwuzla-sys",
+  "smithril-z3-sys",
+  "smithril-lib",
+]
 resolver = "2"
