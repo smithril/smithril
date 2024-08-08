@@ -47,16 +47,19 @@ fn main() {
             .unwrap();
     }
 
-    let old = env::var("PKG_CONFIG_PATH");
+    let old_pkg_config_path = env::var("PKG_CONFIG_PATH");
     let pkg_config_dir: PathBuf = dir_bitwuzla.join("build/install/lib/x86_64-linux-gnu/pkgconfig");
 
-    let paths = vec![pkg_config_dir];
-    let paths = env::join_paths(paths).unwrap();
-    env::set_var("PKG_CONFIG_PATH", paths);
+    let pkg_config_paths = vec![pkg_config_dir];
+    let pkg_config_path = env::join_paths(pkg_config_paths).unwrap();
+    env::set_var("PKG_CONFIG_PATH", pkg_config_path);
 
     let library = pkg_config::probe_library("bitwuzla").unwrap();
 
-    env::set_var("PKG_CONFIG_PATH", old.unwrap_or_else(|_| "".into()));
+    env::set_var(
+        "PKG_CONFIG_PATH",
+        old_pkg_config_path.unwrap_or_else(|_| "".into()),
+    );
 
     println!("cargo:rustc-link-lib=stdc++");
 

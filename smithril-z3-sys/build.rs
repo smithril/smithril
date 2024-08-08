@@ -56,27 +56,17 @@ fn main() {
         build_z3(&dir_z3).unwrap();
     }
 
-    let old_ld_library_path = env::var("LD_LIBRARY_PATH");
-    let ld_library_dir: PathBuf = dir_z3.join("build/install/lib");
-    let ld_library_path = vec![ld_library_dir];
-    let paths = env::join_paths(ld_library_path).unwrap();
-    env::set_var("LD_LIBRARY_PATH", paths);
-
     let old_pkg_config_path = env::var("PKG_CONFIG_PATH");
     let pkg_config_dir: PathBuf = dir_z3.join("build/install/lib/pkgconfig");
-    let pkg_config_path = vec![pkg_config_dir];
-    let paths = env::join_paths(pkg_config_path).unwrap();
-    env::set_var("PKG_CONFIG_PATH", paths);
+    let pkg_config_paths = vec![pkg_config_dir];
+    let pkg_config_path = env::join_paths(pkg_config_paths).unwrap();
+    env::set_var("PKG_CONFIG_PATH", pkg_config_path);
 
     let library = pkg_config::probe_library("z3").unwrap();
 
     env::set_var(
         "PKG_CONFIG_PATH",
         old_pkg_config_path.unwrap_or_else(|_| "".into()),
-    );
-    env::set_var(
-        "LD_LIBRARY_PATH",
-        old_ld_library_path.unwrap_or_else(|_| "".into()),
     );
 
     let bindings = bindgen::builder()
