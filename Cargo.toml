@@ -4,5 +4,6 @@ members = [
   "smithril-bitwuzla-sys",
   "smithril-z3-sys",
   "smithril-lib",
+  "smithril-runner",
 ]
 resolver = "2"

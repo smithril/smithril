@@ -3,11 +3,12 @@ use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
-use crate::generalized::GeneralUnsatCoreConverter;
 use crate::generalized::GeneralUnsatCoreSolver;
+use crate::generalized::Solver;
 use crate::generalized::SolverResult;
 use crate::generalized::Sort;
 use crate::generalized::Term;
+use crate::generalized::UnsatCoreSolver;
 use crate::generalized::UnsortedTerm;
 use crate::utils;
 use core::panic;
@@ -19,16 +20,16 @@ use std::ptr;
 use std::rc::Rc;
 
 #[derive(PartialEq, Eq, Hash)]
-pub struct Z3ContextInner {
+pub struct Z3Context {
     pub context: smithril_z3_sys::Z3_context,
 }
 
-impl Default for Z3ContextInner {
+impl Default for Z3Context {
     fn default() -> Self {
-        Z3ContextInner {
+        Z3Context {
             context: unsafe {
                 let cfg = smithril_z3_sys::Z3_mk_config();
-                let ctx = smithril_z3_sys::Z3_mk_context_rc(cfg);
+                let ctx = smithril_z3_sys::Z3_mk_context(cfg);
                 smithril_z3_sys::Z3_set_error_handler(ctx, None);
                 smithril_z3_sys::Z3_set_ast_print_mode(
                     ctx,
@@ -41,7 +42,7 @@ impl Default for Z3ContextInner {
     }
 }
 
-impl Z3ContextInner {
+impl Z3Context {
     pub fn new() -> Self {
         Self::default()
     }
@@ -60,81 +61,34 @@ impl Z3ContextInner {
     }
 }
 
-impl Drop for Z3ContextInner {
+impl Drop for Z3Context {
     fn drop(&mut self) {
         unsafe {
             smithril_z3_sys::Z3_del_context(self.context);
         };
     }
 }
-#[derive(PartialEq, Eq, Hash)]
+
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Z3Term {
-    pub context: Rc<Z3Context>,
     pub term: smithril_z3_sys::Z3_ast,
 }
 
-impl Clone for Z3Term {
-    fn clone(&self) -> Self {
-        Z3Term::new(self.context.clone(), self.term)
-    }
-}
-
 impl Z3Term {
-    pub fn new(context: Rc<Z3Context>, term: smithril_z3_sys::Z3_ast) -> Self {
-        unsafe {
-            smithril_z3_sys::Z3_inc_ref(context.context(), term);
-        }
-        Self { term, context }
-    }
-
-    fn check_error(self) -> Self {
-        self.context.check_error();
-        self
-    }
-}
-
-impl Drop for Z3Term {
-    fn drop(&mut self) {
-        unsafe {
-            smithril_z3_sys::Z3_dec_ref(self.context.context(), self.term);
-        };
+    pub fn new(context: &Z3Context, term: smithril_z3_sys::Z3_ast) -> Self {
+        context.check_error();
+        Self { term }
     }
 }
 
 pub struct Z3Sort {
-    pub context: Rc<Z3Context>,
     pub sort: smithril_z3_sys::Z3_sort,
 }
 
 impl Z3Sort {
-    pub fn new(context: Rc<Z3Context>, sort: smithril_z3_sys::Z3_sort) -> Self {
-        unsafe {
-            smithril_z3_sys::Z3_inc_ref(context.context(), Self::to_ast(context.context(), sort));
-        }
-        Self { sort, context }
-    }
-
-    fn check_error(self) -> Self {
-        self.context.check_error();
-        self
-    }
-
-    fn to_ast(
-        context: smithril_z3_sys::Z3_context,
-        sort: smithril_z3_sys::Z3_sort,
-    ) -> smithril_z3_sys::Z3_ast {
-        unsafe { smithril_z3_sys::Z3_sort_to_ast(context, sort) }
-    }
-}
-
-impl Drop for Z3Sort {
-    fn drop(&mut self) {
-        unsafe {
-            smithril_z3_sys::Z3_dec_ref(
-                self.context.context(),
-                Self::to_ast(self.context.context(), self.sort),
-            );
-        };
+    pub fn new(context: &Z3Context, sort: smithril_z3_sys::Z3_sort) -> Self {
+        context.check_error();
+        Self { sort }
     }
 }
 
@@ -142,105 +96,77 @@ impl GeneralSort for Z3Sort {}
 
 impl GeneralTerm for Z3Term {}
 
-#[derive(PartialEq, Eq, Hash)]
-pub enum Z3Context {
-    Ref(Rc<Z3ContextInner>),
-    Val(Z3ContextInner),
+pub struct Z3Solver {
+    pub converter: Rc<Z3Converter>,
+    pub params: smithril_z3_sys::Z3_params,
+    pub solver: smithril_z3_sys::Z3_solver,
+    pub asserted_terms_map: Cell<HashMap<Z3Term, Term>>,
+    pub unsat_map: Cell<HashMap<Z3Term, Z3Term>>,
 }
 
-impl Default for Z3Context {
-    fn default() -> Self {
-        Z3Context::Val(Z3ContextInner::new())
-    }
-}
+unsafe impl Send for Z3Solver {}
+unsafe impl Sync for Z3Solver {}
 
-impl Z3Context {
-    fn new(context: Rc<Z3ContextInner>) -> Self {
-        Z3Context::Ref(context)
-    }
-    fn context(&self) -> smithril_z3_sys::Z3_context {
-        match self {
-            Z3Context::Ref(context) => context.context,
-            Z3Context::Val(context) => context.context,
-        }
-    }
-    fn check_error(&self) -> smithril_z3_sys::Z3_error_code {
-        match self {
-            Z3Context::Ref(context) => context.check_error(),
-            Z3Context::Val(context) => context.check_error(),
+impl Z3Solver {
+    pub fn new(converter: Rc<Z3Converter>) -> Self {
+        let params = unsafe {
+            let solver_parameters = smithril_z3_sys::Z3_mk_params(converter.context());
+            smithril_z3_sys::Z3_params_inc_ref(converter.context(), solver_parameters);
+            solver_parameters
+        };
+
+        let solver = unsafe {
+            let native_solver = smithril_z3_sys::Z3_mk_solver(converter.context());
+            smithril_z3_sys::Z3_solver_inc_ref(converter.context(), native_solver);
+            smithril_z3_sys::Z3_solver_set_params(converter.context(), native_solver, params);
+            native_solver
+        };
+
+        Self {
+            converter,
+            params,
+            solver,
+            asserted_terms_map: Cell::new(HashMap::new()),
+            unsat_map: Cell::new(HashMap::new()),
         }
     }
 }
 
 pub struct Z3Converter {
-    pub context: Rc<Z3Context>,
-    pub params: smithril_z3_sys::Z3_params,
-    pub solver: smithril_z3_sys::Z3_solver,
+    pub context: Z3Context,
     pub asserted_terms_map: Cell<HashMap<Z3Term, Term>>,
-    pub unsat_counter: u32,
     pub unsat_map: Cell<HashMap<Z3Term, Z3Term>>,
 }
 
+unsafe impl Send for Z3Converter {}
+unsafe impl Sync for Z3Converter {}
+
 impl Z3Converter {
-    pub fn new(context: Rc<Z3ContextInner>) -> Self {
-        let context = Rc::new(Z3Context::new(context));
-        let params = unsafe {
-            let solver_parameters = smithril_z3_sys::Z3_mk_params(context.context());
-            smithril_z3_sys::Z3_params_inc_ref(context.context(), solver_parameters);
-            solver_parameters
-        };
-
-        let solver = unsafe {
-            let native_solver = smithril_z3_sys::Z3_mk_solver(context.context());
-            smithril_z3_sys::Z3_solver_inc_ref(context.context(), native_solver);
-            smithril_z3_sys::Z3_solver_set_params(context.context(), native_solver, params);
-            native_solver
-        };
-
+    pub fn new(context: Z3Context) -> Self {
         Self {
             context,
-            params,
-            solver,
             asserted_terms_map: Cell::new(HashMap::new()),
-            unsat_counter: 0,
             unsat_map: Cell::new(HashMap::new()),
         }
+    }
+
+    pub fn context(&self) -> smithril_z3_sys::Z3_context {
+        self.context.context
     }
 }
 
 impl Default for Z3Converter {
     fn default() -> Self {
-        let context = Rc::new(Z3Context::default());
-        let params = unsafe {
-            let solver_parameters = smithril_z3_sys::Z3_mk_params(context.context());
-            smithril_z3_sys::Z3_params_inc_ref(context.context(), solver_parameters);
-            solver_parameters
-        };
-
-        let solver = unsafe {
-            let native_solver = smithril_z3_sys::Z3_mk_solver(context.context());
-            smithril_z3_sys::Z3_solver_inc_ref(context.context(), native_solver);
-            smithril_z3_sys::Z3_solver_set_params(context.context(), native_solver, params);
-            native_solver
-        };
-
-        Self {
-            context,
-            params,
-            solver,
-            asserted_terms_map: Cell::new(HashMap::new()),
-            unsat_counter: 0,
-            unsat_map: Cell::new(HashMap::new()),
-        }
+        let context = Z3Context::default();
+        Self::new(context)
     }
 }
 
-impl Drop for Z3Converter {
+impl Drop for Z3Solver {
     fn drop(&mut self) {
         unsafe {
-            smithril_z3_sys::Z3_solver_dec_ref(self.context.context(), self.solver);
-            smithril_z3_sys::Z3_params_dec_ref(self.context.context(), self.params);
-            smithril_z3_sys::Z3_params_dec_ref(self.context.context(), self.params);
+            smithril_z3_sys::Z3_solver_dec_ref(self.converter.context(), self.solver);
+            smithril_z3_sys::Z3_params_dec_ref(self.converter.context(), self.params);
         };
     }
 }
@@ -250,11 +176,10 @@ impl Z3Converter {}
 macro_rules! create_converter_binary_function_z3_narg {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
-            Z3Term::new(self.context.clone(), unsafe {
+            Z3Term::new(&self.context, unsafe {
                 let args = vec![term1.term, term2.term];
-                smithril_z3_sys::$z3_sys_func_name(self.context.context(), 2, args.as_ptr())
+                smithril_z3_sys::$z3_sys_func_name(self.context(), 2, args.as_ptr())
             })
-            .check_error()
         }
     };
 }
@@ -262,10 +187,9 @@ macro_rules! create_converter_binary_function_z3_narg {
 macro_rules! create_converter_unary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term: &Z3Term) -> Z3Term {
-            Z3Term::new(self.context.clone(), unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term.term)
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(self.context(), term.term)
             })
-            .check_error()
         }
     };
 }
@@ -273,10 +197,9 @@ macro_rules! create_converter_unary_function_z3 {
 macro_rules! create_converter_binary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
-            Z3Term::new(self.context.clone(), unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context.context(), term1.term, term2.term)
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(self.context(), term1.term, term2.term)
             })
-            .check_error()
         }
     };
 }
@@ -284,35 +207,31 @@ macro_rules! create_converter_binary_function_z3 {
 macro_rules! create_converter_ternary_function_z3 {
     ($func_name:ident, $z3_sys_func_name:ident) => {
         fn $func_name(&self, term1: &Z3Term, term2: &Z3Term, term3: &Z3Term) -> Z3Term {
-            Z3Term::new(self.context.clone(), unsafe {
+            Z3Term::new(&self.context, unsafe {
                 smithril_z3_sys::$z3_sys_func_name(
-                    self.context.context(),
+                    self.context(),
                     term1.term,
                     term2.term,
                     term3.term,
                 )
             })
-            .check_error()
         }
     };
 }
 
-impl GeneralUnsatCoreConverter<Z3Sort, Z3Term> for Z3Converter {
+impl GeneralUnsatCoreSolver<Z3Sort, Z3Term> for Z3Solver {
     fn unsat_core(&self) -> Vec<Z3Term> {
         let u_core = unsafe {
-            smithril_z3_sys::Z3_solver_get_unsat_core(self.context.context(), self.solver)
+            smithril_z3_sys::Z3_solver_get_unsat_core(self.converter.context(), self.solver)
         };
         let mut res: Vec<Z3Term> = Vec::new();
         let cur_unsat_map = self.unsat_map.take();
-        let size = unsafe { smithril_z3_sys::Z3_ast_vector_size(self.context.context(), u_core) };
+        let size = unsafe { smithril_z3_sys::Z3_ast_vector_size(self.converter.context(), u_core) };
         for i in 0..size {
             let track_term =
-                unsafe { smithril_z3_sys::Z3_ast_vector_get(self.context.context(), u_core, i) };
+                unsafe { smithril_z3_sys::Z3_ast_vector_get(self.converter.context(), u_core, i) };
             let cur_term = cur_unsat_map
-                .get(&Z3Term {
-                    context: self.context.clone(),
-                    term: track_term,
-                })
+                .get(&Z3Term { term: track_term })
                 .expect("Term not found in unsat_map");
             res.push(cur_term.clone());
         }
@@ -320,39 +239,24 @@ impl GeneralUnsatCoreConverter<Z3Sort, Z3Term> for Z3Converter {
     }
 }
 
-impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
+impl GeneralSolver<Z3Sort, Z3Term> for Z3Solver {
     fn assert(&self, term: &Z3Term) {
         unsafe {
             let mut cur_unsat_map = self.unsat_map.take();
             let cur_str = "sym".to_owned() + cur_unsat_map.len().to_string().as_str();
-            let track_term = self.mk_smt_symbol(cur_str.as_str(), &self.mk_bool_sort());
+            let track_term = self
+                .converter
+                .mk_smt_symbol(cur_str.as_str(), &self.converter.mk_bool_sort());
             smithril_z3_sys::Z3_solver_assert_and_track(
-                self.context.context(),
+                self.converter.context(),
                 self.solver,
                 term.term,
                 track_term.term,
             );
-            self.context.check_error();
+            self.converter.context.check_error();
             cur_unsat_map.insert(track_term, term.clone());
             self.unsat_map.set(cur_unsat_map);
-        }
-    }
-
-    fn check_sat(&self) -> SolverResult {
-        let res = unsafe { smithril_z3_sys::Z3_solver_check(self.context.context(), self.solver) };
-        self.context.check_error();
-        match res {
-            smithril_z3_sys::Z3_L_TRUE => SolverResult::Sat,
-            smithril_z3_sys::Z3_L_FALSE => SolverResult::Unsat,
-            _ => SolverResult::Unknown,
-        }
-    }
-
-    fn mk_bv_sort(&self, size: u64) -> Z3Sort {
-        Z3Sort::new(self.context.clone(), unsafe {
-            smithril_z3_sys::Z3_mk_bv_sort(self.context.context(), size as u32)
-        })
-        .check_error()
+        };
     }
 
     fn eval(&self, term1: &Z3Term) -> Option<Z3Term> {
@@ -360,37 +264,68 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         let model_completion = false;
         let t = term1.term;
         let status = unsafe {
-            smithril_z3_sys::Z3_inc_ref(self.context.context(), t);
+            smithril_z3_sys::Z3_inc_ref(self.converter.context(), t);
             let status = smithril_z3_sys::Z3_model_eval(
-                self.context.context(),
-                smithril_z3_sys::Z3_solver_get_model(self.context.context(), self.solver),
+                self.converter.context(),
+                smithril_z3_sys::Z3_solver_get_model(self.converter.context(), self.solver),
                 t,
                 model_completion,
                 &mut r,
             );
-            smithril_z3_sys::Z3_dec_ref(self.context.context(), t);
+            smithril_z3_sys::Z3_dec_ref(self.converter.context(), t);
             status
         };
         if status {
-            let res = Z3Term::new(self.context.clone(), r);
+            let res = Z3Term::new(&self.converter.context, r);
             Some(res)
         } else {
             None
         }
     }
 
-    fn mk_bool_sort(&self) -> Z3Sort {
-        Z3Sort::new(self.context.clone(), unsafe {
-            smithril_z3_sys::Z3_mk_bool_sort(self.context.context())
+    fn reset(&self) {
+        unsafe {
+            smithril_z3_sys::Z3_solver_reset(self.converter.context(), self.solver);
+            self.converter.context.check_error();
+        }
+    }
+
+    fn interrupt(&self) {
+        unsafe {
+            smithril_z3_sys::Z3_solver_interrupt(self.converter.context(), self.solver);
+            self.converter.context.check_error();
+        }
+    }
+
+    fn check_sat(&self) -> SolverResult {
+        let res =
+            unsafe { smithril_z3_sys::Z3_solver_check(self.converter.context(), self.solver) };
+        self.converter.context.check_error();
+        match res {
+            smithril_z3_sys::Z3_L_TRUE => SolverResult::Sat,
+            smithril_z3_sys::Z3_L_FALSE => SolverResult::Unsat,
+            _ => SolverResult::Unknown,
+        }
+    }
+}
+
+impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
+    fn mk_bv_sort(&self, size: u64) -> Z3Sort {
+        Z3Sort::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_bv_sort(self.context(), size as u32)
         })
-        .check_error()
+    }
+
+    fn mk_bool_sort(&self) -> Z3Sort {
+        Z3Sort::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_bool_sort(self.context())
+        })
     }
 
     fn mk_bv_value_uint64(&self, sort: &Z3Sort, val: u64) -> Z3Term {
-        Z3Term::new(self.context.clone(), unsafe {
-            smithril_z3_sys::Z3_mk_unsigned_int64(self.context.context(), val, sort.sort)
+        Z3Term::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_unsigned_int64(self.context(), val, sort.sort)
         })
-        .check_error()
     }
 
     fn mk_bvnxor(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
@@ -400,31 +335,29 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
     fn mk_smt_bool(&self, val: bool) -> Z3Term {
         let term = unsafe {
             if val {
-                smithril_z3_sys::Z3_mk_true(self.context.context())
+                smithril_z3_sys::Z3_mk_true(self.context())
             } else {
-                smithril_z3_sys::Z3_mk_false(self.context.context())
+                smithril_z3_sys::Z3_mk_false(self.context())
             }
         };
-        Z3Term::new(self.context.clone(), term).check_error()
+        Z3Term::new(&self.context, term)
     }
 
     fn mk_smt_symbol(&self, name: &str, sort: &Z3Sort) -> Z3Term {
         let name_cstr = CString::new(name).unwrap();
         let term = unsafe {
-            let symbol =
-                smithril_z3_sys::Z3_mk_string_symbol(self.context.context(), name_cstr.as_ptr());
-            smithril_z3_sys::Z3_mk_const(self.context.context(), symbol, sort.sort)
+            let symbol = smithril_z3_sys::Z3_mk_string_symbol(self.context(), name_cstr.as_ptr());
+            smithril_z3_sys::Z3_mk_const(self.context(), symbol, sort.sort)
         };
-        Z3Term::new(self.context.clone(), term).check_error()
+        Z3Term::new(&self.context, term)
     }
 
     fn mk_array_sort(&self, index: &Z3Sort, element: &Z3Sort) -> Z3Sort {
         let i = index.sort;
         let e = element.sort;
-        Z3Sort::new(self.context.clone(), unsafe {
-            smithril_z3_sys::Z3_mk_array_sort(self.context.context(), i, e)
+        Z3Sort::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_array_sort(self.context(), i, e)
         })
-        .check_error()
     }
 
     create_converter_binary_function_z3!(mk_eq, Z3_mk_eq);
@@ -463,9 +396,9 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
 }
 
-impl GeneralUnsatCoreSolver for Z3Converter {
+impl UnsatCoreSolver for Z3Solver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_z3 = GeneralUnsatCoreConverter::unsat_core(self);
+        let u_core_z3 = GeneralUnsatCoreSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_z3 {
             let cur_asserted_terms_map = self.asserted_terms_map.take();
@@ -479,25 +412,28 @@ impl GeneralUnsatCoreSolver for Z3Converter {
     }
 }
 
-impl GeneralSolver for Z3Converter {
+impl Solver for Z3Solver {
     fn assert(&self, term: &crate::generalized::Term) {
-        let cur_z3_term = self.convert_term(term);
-        GeneralConverter::assert(self, &cur_z3_term);
+        let cur_z3_term = self.converter.convert_term(term);
+        GeneralSolver::assert(self, &cur_z3_term);
         let mut cur_asserted_terms_map = self.asserted_terms_map.take();
         cur_asserted_terms_map.insert(cur_z3_term, term.clone());
         self.asserted_terms_map.set(cur_asserted_terms_map);
     }
 
     fn check_sat(&self) -> SolverResult {
-        GeneralConverter::check_sat(self)
+        GeneralSolver::check_sat(self)
     }
 
     fn eval(&self, term: &Term) -> Option<Term> {
-        let expr = GeneralConverter::eval(self, &self.convert_term(term))?;
+        let expr = GeneralSolver::eval(self, &self.converter.convert_term(term))?;
         match term.sort {
             Sort::BvSort(_) => {
                 let z3_string: *const i8 = unsafe {
-                    smithril_z3_sys::Z3_get_numeral_binary_string(self.context.context(), expr.term)
+                    smithril_z3_sys::Z3_get_numeral_binary_string(
+                        self.converter.context(),
+                        expr.term,
+                    )
                 };
                 let s = unsafe { CStr::from_ptr(z3_string).to_string_lossy().into_owned() };
                 let bv_const = utils::binary2integer(s);
@@ -509,7 +445,7 @@ impl GeneralSolver for Z3Converter {
             }
             Sort::BoolSort() => {
                 let z3_lbool = unsafe {
-                    smithril_z3_sys::Z3_get_bool_value(self.context.context(), expr.term)
+                    smithril_z3_sys::Z3_get_bool_value(self.converter.context(), expr.term)
                 };
                 match z3_lbool {
                     smithril_z3_sys::Z3_L_FALSE => {
@@ -533,5 +469,13 @@ impl GeneralSolver for Z3Converter {
             }
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
         }
+    }
+
+    fn reset(&self) {
+        GeneralSolver::reset(self)
+    }
+
+    fn interrupt(&self) {
+        GeneralSolver::interrupt(self)
     }
 }

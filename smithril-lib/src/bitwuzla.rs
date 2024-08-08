@@ -1,19 +1,27 @@
 use crate::generalized::GenConstant;
+use crate::generalized::GeneralUnsatCoreSolver;
+use crate::generalized::UnsatCoreSolver;
+use termination_callback::termination_callback;
+
+use crate::generalized::GeneralContext;
 use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
-use crate::generalized::GeneralUnsatCoreConverter;
-use crate::generalized::GeneralUnsatCoreSolver;
+use crate::generalized::Solver;
 use crate::generalized::SolverResult;
 use crate::generalized::Sort;
 use crate::generalized::Term;
 use crate::generalized::UnsortedTerm;
 use crate::utils;
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BitwuzlaTerm {
@@ -28,17 +36,88 @@ impl GeneralSort for BitwuzlaSort {}
 
 impl GeneralTerm for BitwuzlaTerm {}
 
-pub struct BitwuzlaConverter {
-    pub term_manager: *mut smithril_bitwuzla_sys::BitwuzlaTermManager,
-    pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
-    pub solver: *mut smithril_bitwuzla_sys::Bitwuzla,
-    pub sym_map: Cell<HashMap<String, BitwuzlaTerm>>,
-    pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
+pub struct BitwuzlaTerminationState {
+    termination_state: AtomicBool,
 }
 
-impl BitwuzlaConverter {
+impl Default for BitwuzlaTerminationState {
+    fn default() -> Self {
+        Self {
+            termination_state: AtomicBool::new(false),
+        }
+    }
+}
+
+impl BitwuzlaTerminationState {
+    pub fn terminated(&self) -> bool {
+        self.termination_state.load(Ordering::Relaxed)
+    }
+
+    pub fn terminate(&self) {
+        self.termination_state.store(true, Ordering::Relaxed)
+    }
+
+    pub fn start(&self) {
+        self.termination_state.store(false, Ordering::Relaxed)
+    }
+}
+
+mod termination_callback {
+    use super::BitwuzlaTerminationState;
+
+    #[no_mangle]
+    pub extern "C" fn termination_callback(state: *mut ::std::os::raw::c_void) -> i32 {
+        unsafe {
+            let state = state as *mut BitwuzlaTerminationState;
+            if (*state).terminated() {
+                1
+            } else {
+                0
+            }
+        }
+    }
+}
+
+pub struct BitwuzlaContext {
+    pub term_manager: *mut smithril_bitwuzla_sys::BitwuzlaTermManager,
+}
+
+impl BitwuzlaContext {
     pub fn new() -> Self {
         let term_manager = unsafe { smithril_bitwuzla_sys::bitwuzla_term_manager_new() };
+        Self { term_manager }
+    }
+}
+
+impl Default for BitwuzlaContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for BitwuzlaContext {
+    fn drop(&mut self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_term_manager_delete(self.term_manager);
+        };
+    }
+}
+
+impl GeneralContext<BitwuzlaSort, BitwuzlaTerm, BitwuzlaSolver> for BitwuzlaContext {
+    fn new_solver(&self) -> BitwuzlaSolver {
+        todo!()
+    }
+}
+
+pub struct BitwuzlaSolver {
+    pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
+    pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
+    pub solver: RefCell<*mut smithril_bitwuzla_sys::Bitwuzla>,
+    pub converter: Rc<BitwuzlaConverter>,
+}
+
+impl BitwuzlaSolver {
+    pub fn new(converter: Rc<BitwuzlaConverter>) -> Self {
         let options = unsafe { smithril_bitwuzla_sys::bitwuzla_options_new() };
 
         let cadical_cstr = CString::new("cadical").unwrap();
@@ -48,41 +127,81 @@ impl BitwuzlaConverter {
                 smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_MODELS,
                 1,
             );
-            smithril_bitwuzla_sys::bitwuzla_set_option_mode(
-                options,
-                smithril_bitwuzla_sys::BITWUZLA_OPT_SAT_SOLVER,
-                cadical_cstr.as_ptr(),
-            );
             smithril_bitwuzla_sys::bitwuzla_set_option(
                 options,
                 smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_UNSAT_CORES,
                 1,
             );
+            smithril_bitwuzla_sys::bitwuzla_set_option_mode(
+                options,
+                smithril_bitwuzla_sys::BITWUZLA_OPT_SAT_SOLVER,
+                cadical_cstr.as_ptr(),
+            )
         };
-        let solver = unsafe { smithril_bitwuzla_sys::bitwuzla_new(term_manager, options) };
+        let solver =
+            unsafe { smithril_bitwuzla_sys::bitwuzla_new(converter.term_manager(), options) };
+        let solver = RefCell::new(solver);
+        let termination_state = BitwuzlaTerminationState::default();
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
+                *solver.borrow(),
+                Some(termination_callback),
+                Box::into_raw(Box::new(termination_state)) as *mut ::std::os::raw::c_void,
+            )
+        }
         Self {
-            term_manager,
             options,
             solver,
-            sym_map: Cell::new(HashMap::new()),
             asserted_terms_map: Cell::new(HashMap::new()),
+            converter,
         }
+    }
+
+    fn term_manager(&self) -> *mut smithril_bitwuzla_sys::BitwuzlaTermManager {
+        self.converter.term_manager()
+    }
+
+    fn solver(&self) -> *mut smithril_bitwuzla_sys::Bitwuzla {
+        *self.solver.borrow()
+    }
+}
+
+impl Drop for BitwuzlaSolver {
+    fn drop(&mut self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_delete(self.solver());
+            smithril_bitwuzla_sys::bitwuzla_options_delete(self.options);
+        };
+    }
+}
+
+pub struct BitwuzlaConverter {
+    pub context: BitwuzlaContext,
+    pub symbol_cache: Cell<HashMap<String, BitwuzlaTerm>>,
+}
+
+unsafe impl Send for BitwuzlaConverter {}
+unsafe impl Sync for BitwuzlaConverter {}
+
+unsafe impl Send for BitwuzlaSolver {}
+unsafe impl Sync for BitwuzlaSolver {}
+
+impl BitwuzlaConverter {
+    pub fn new(context: BitwuzlaContext) -> Self {
+        Self {
+            context,
+            symbol_cache: Cell::new(HashMap::new()),
+        }
+    }
+
+    fn term_manager(&self) -> *mut smithril_bitwuzla_sys::BitwuzlaTermManager {
+        self.context.term_manager
     }
 }
 
 impl Default for BitwuzlaConverter {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Drop for BitwuzlaConverter {
-    fn drop(&mut self) {
-        unsafe {
-            smithril_bitwuzla_sys::bitwuzla_delete(self.solver);
-            smithril_bitwuzla_sys::bitwuzla_options_delete(self.options);
-            smithril_bitwuzla_sys::bitwuzla_term_manager_delete(self.term_manager);
-        };
+        Self::new(BitwuzlaContext::new())
     }
 }
 
@@ -99,7 +218,7 @@ macro_rules! create_converter_ternary_function_bitwuzla {
             BitwuzlaTerm {
                 term: unsafe {
                     smithril_bitwuzla_sys::bitwuzla_mk_term3(
-                        self.term_manager,
+                        self.term_manager(),
                         smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
                         term1.term,
                         term2.term,
@@ -117,7 +236,7 @@ macro_rules! create_converter_binary_function_bitwuzla {
             BitwuzlaTerm {
                 term: unsafe {
                     smithril_bitwuzla_sys::bitwuzla_mk_term2(
-                        self.term_manager,
+                        self.term_manager(),
                         smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
                         term1.term,
                         term2.term,
@@ -134,7 +253,7 @@ macro_rules! create_converter_unary_function_bitwuzla {
             BitwuzlaTerm {
                 term: unsafe {
                     smithril_bitwuzla_sys::bitwuzla_mk_term1(
-                        self.term_manager,
+                        self.term_manager(),
                         smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
                         term.term,
                     )
@@ -144,11 +263,11 @@ macro_rules! create_converter_unary_function_bitwuzla {
     };
 }
 
-impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
     fn unsat_core(&self) -> Vec<BitwuzlaTerm> {
         let mut size: usize = 0;
         let u_core =
-            unsafe { smithril_bitwuzla_sys::bitwuzla_get_unsat_core(self.solver, &mut size) };
+            unsafe { smithril_bitwuzla_sys::bitwuzla_get_unsat_core(self.solver(), &mut size) };
         let mut res: Vec<BitwuzlaTerm> = Vec::new();
         let slice = unsafe { std::slice::from_raw_parts(u_core, std::ptr::read(&size)) };
         for cur_term in slice {
@@ -158,61 +277,98 @@ impl GeneralUnsatCoreConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
     }
 }
 
-impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
-    fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        let mut cur_sym_table = self.sym_map.take();
-        let term = if let Some(term2) = cur_sym_table.get(name) {
-            term2.term
-        } else {
-            let name_cstr = CString::new(name).unwrap();
-            let term = unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_const(
-                    self.term_manager,
-                    sort.sort,
-                    name_cstr.as_ptr(),
-                )
-            };
-            let old_term = cur_sym_table.insert(name.to_string(), BitwuzlaTerm { term });
-            assert!(old_term.is_none());
-            term
-        };
-        self.sym_map.set(cur_sym_table);
-        BitwuzlaTerm { term }
-    }
-
+impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
     fn assert(&self, term: &BitwuzlaTerm) {
-        unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver, term.term) }
-    }
-
-    create_converter_binary_function_bitwuzla!(mk_eq, BITWUZLA_KIND_EQUAL);
-
-    fn check_sat(&self) -> SolverResult {
-        let res = unsafe { smithril_bitwuzla_sys::bitwuzla_check_sat(self.solver) };
-        match res {
-            smithril_bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
-            smithril_bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
-            _ => SolverResult::Unknown,
-        }
+        unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver(), term.term) }
     }
 
     fn eval(&self, term1: &BitwuzlaTerm) -> Option<BitwuzlaTerm> {
         let bitwuzla_term =
-            unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver, term1.term) };
+            unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver(), term1.term) };
         let res = BitwuzlaTerm {
             term: bitwuzla_term,
         };
         Some(res)
     }
 
+    fn reset(&self) {
+        let termination_state = BitwuzlaTerminationState::default();
+        unsafe {
+            let termination_callback_state =
+                smithril_bitwuzla_sys::bitwuzla_get_termination_callback_state(self.solver())
+                    as *mut BitwuzlaTerminationState;
+            drop(Box::from_raw(termination_callback_state));
+            smithril_bitwuzla_sys::bitwuzla_delete(self.solver());
+            self.solver.replace(smithril_bitwuzla_sys::bitwuzla_new(
+                self.term_manager(),
+                self.options,
+            ));
+            smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
+                self.solver(),
+                Some(termination_callback),
+                Box::into_raw(Box::new(termination_state)) as *mut ::std::os::raw::c_void,
+            )
+        }
+    }
+
+    fn interrupt(&self) {
+        unsafe {
+            let termination_callback_state =
+                smithril_bitwuzla_sys::bitwuzla_get_termination_callback_state(self.solver())
+                    as *mut BitwuzlaTerminationState;
+            (*termination_callback_state).terminate();
+        }
+    }
+
+    fn check_sat(&self) -> SolverResult {
+        unsafe {
+            let termination_callback_state =
+                smithril_bitwuzla_sys::bitwuzla_get_termination_callback_state(self.solver())
+                    as *mut BitwuzlaTerminationState;
+            (*termination_callback_state).start();
+        }
+        let res = unsafe { smithril_bitwuzla_sys::bitwuzla_check_sat(self.solver()) };
+        match res {
+            smithril_bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
+            smithril_bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
+            _ => SolverResult::Unknown,
+        }
+    }
+}
+
+impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
+        let mut sym_table = self.symbol_cache.take();
+        let term = if let Some(term2) = sym_table.get(name) {
+            term2.term
+        } else {
+            let name_cstr = CString::new(name).unwrap();
+            let term = unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_const(
+                    self.term_manager(),
+                    sort.sort,
+                    name_cstr.as_ptr(),
+                )
+            };
+            let old_term = sym_table.insert(name.to_string(), BitwuzlaTerm { term });
+            assert!(old_term.is_none());
+            term
+        };
+        self.symbol_cache.set(sym_table);
+        BitwuzlaTerm { term }
+    }
+
+    create_converter_binary_function_bitwuzla!(mk_eq, BITWUZLA_KIND_EQUAL);
+
     fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
         BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager, size) },
+            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager(), size) },
         }
     }
 
     fn mk_bool_sort(&self) -> BitwuzlaSort {
         BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bool_sort(self.term_manager) },
+            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bool_sort(self.term_manager()) },
         }
     }
 
@@ -220,7 +376,9 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         let i = index.sort;
         let e = element.sort;
         BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_array_sort(self.term_manager, i, e) },
+            sort: unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_array_sort(self.term_manager(), i, e)
+            },
         }
     }
 
@@ -228,7 +386,7 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         BitwuzlaTerm {
             term: unsafe {
                 smithril_bitwuzla_sys::bitwuzla_mk_bv_value_uint64(
-                    self.term_manager,
+                    self.term_manager(),
                     sort.sort,
                     val,
                 )
@@ -239,8 +397,8 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_bool(&self, val: bool) -> BitwuzlaTerm {
         let term = unsafe {
             match val {
-                true => smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager),
-                false => smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager),
+                true => smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager()),
+                false => smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager()),
             }
         };
         BitwuzlaTerm { term }
@@ -282,9 +440,9 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
 
-impl GeneralUnsatCoreSolver for BitwuzlaConverter {
+impl UnsatCoreSolver for BitwuzlaSolver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_bitwuzla = GeneralUnsatCoreConverter::unsat_core(self);
+        let u_core_bitwuzla = GeneralUnsatCoreSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_bitwuzla {
             let cur_asserted_terms_map = self.asserted_terms_map.take();
@@ -298,20 +456,21 @@ impl GeneralUnsatCoreSolver for BitwuzlaConverter {
     }
 }
 
-impl GeneralSolver for BitwuzlaConverter {
+impl Solver for BitwuzlaSolver {
     fn assert(&self, term: &crate::generalized::Term) {
-        let cur_bitwuzla_term = self.convert_term(term);
-        GeneralConverter::assert(self, &cur_bitwuzla_term);
+        let cur_bitwuzla_term = self.converter.convert_term(term);
+        GeneralSolver::assert(self, &cur_bitwuzla_term);
         let mut cur_asserted_terms_map = self.asserted_terms_map.take();
         cur_asserted_terms_map.insert(cur_bitwuzla_term, term.clone());
         self.asserted_terms_map.set(cur_asserted_terms_map);
     }
+
     fn check_sat(&self) -> SolverResult {
-        GeneralConverter::check_sat(self)
+        GeneralSolver::check_sat(self)
     }
 
     fn eval(&self, term: &Term) -> Option<Term> {
-        let expr = GeneralConverter::eval(self, &self.convert_term(term))?;
+        let expr = GeneralSolver::eval(self, &self.converter.convert_term(term))?;
         match term.sort {
             Sort::BvSort(_) => {
                 let bitwuzla_string: *const i8 =
@@ -356,5 +515,13 @@ impl GeneralSolver for BitwuzlaConverter {
 
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
         }
+    }
+
+    fn reset(&self) {
+        GeneralSolver::reset(self)
+    }
+
+    fn interrupt(&self) {
+        GeneralSolver::interrupt(self)
     }
 }
