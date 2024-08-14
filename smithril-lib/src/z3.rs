@@ -1,6 +1,9 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
 use crate::generalized::GenConstant;
+use crate::generalized::GeneralArrayConverter;
+use crate::generalized::GeneralBoolConverter;
+use crate::generalized::GeneralBvConverter;
 use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralSolver;
@@ -14,6 +17,8 @@ use crate::generalized::SolverResult;
 use crate::generalized::Sort;
 use crate::generalized::Term;
 use crate::generalized::UnsortedTerm;
+use std::ffi::c_uint;
+
 use crate::utils;
 use core::panic;
 use std::collections::HashMap;
@@ -247,6 +252,65 @@ impl Factory<Z3Converter, Z3Solver, Z3Interrupter> for Z3Factory {
             context: solver.context.context(),
             solver: solver.solver.0,
         }
+    }
+}
+
+pub struct Z3Options {
+    pub options: smithril_z3_sys::Z3_params,
+    pub context: Rc<Z3Converter>,
+}
+
+impl Z3Options {
+    pub fn new(conv: Rc<Z3Converter>) -> Self {
+        let params = unsafe {
+            let solver_parameters = smithril_z3_sys::Z3_mk_params(conv.context());
+            smithril_z3_sys::Z3_params_inc_ref(conv.context(), solver_parameters);
+            solver_parameters
+        };
+        let unsat_cstr = CString::new(":unsat_core").unwrap();
+        unsafe {
+            let param_symbol =
+                smithril_z3_sys::Z3_mk_string_symbol(conv.context(), unsat_cstr.as_ptr());
+            smithril_z3_sys::Z3_params_set_bool(conv.context(), params, param_symbol, false);
+        }
+        Self {
+            options: params,
+            context: conv.clone(),
+        }
+    }
+}
+
+impl Drop for Z3Options {
+    fn drop(&mut self) {
+        unsafe { smithril_z3_sys::Z3_params_dec_ref(self.context.context(), self.options) };
+    }
+}
+
+impl GeneralOptions for Z3Options {
+    fn set_unsat_core(self, val: bool) -> Self {
+        let unsat_cstr = CString::new("unsat_core").unwrap();
+        unsafe {
+            let param_symbol =
+                smithril_z3_sys::Z3_mk_string_symbol(self.context.context(), unsat_cstr.as_ptr());
+            smithril_z3_sys::Z3_params_set_bool(
+                self.context.context(),
+                self.options,
+                param_symbol,
+                val,
+            );
+        }
+        self
+    }
+
+    fn get_produce_unsat_core(&self) -> bool {
+        let res = unsafe {
+            let param_str =
+                smithril_z3_sys::Z3_params_to_string(self.context.context(), self.options);
+            CStr::from_ptr(param_str)
+                .to_string_lossy()
+                .contains("unsat_core true")
+        };
+        res
     }
 }
 
@@ -519,29 +583,25 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 }
 
-impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
-    fn mk_bv_sort(&self, size: u64) -> Z3Sort {
+impl GeneralArrayConverter<Z3Sort, Z3Term> for Z3Converter {
+    fn mk_array_sort(&self, index: &Z3Sort, element: &Z3Sort) -> Z3Sort {
+        let i = index.sort;
+        let e = element.sort;
         Z3Sort::new(&self.context, unsafe {
-            smithril_z3_sys::Z3_mk_bv_sort(self.context(), size as u32)
+            smithril_z3_sys::Z3_mk_array_sort(self.context(), i, e)
         })
     }
 
+    create_converter_binary_function_z3!(mk_select, Z3_mk_select);
+    create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
+}
+
+impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     fn mk_bool_sort(&self) -> Z3Sort {
         Z3Sort::new(&self.context, unsafe {
             smithril_z3_sys::Z3_mk_bool_sort(self.context())
         })
     }
-
-    fn mk_bv_value_uint64(&self, sort: &Z3Sort, val: u64) -> Z3Term {
-        Z3Term::new(&self.context, unsafe {
-            smithril_z3_sys::Z3_mk_unsigned_int64(self.context(), val, sort.sort)
-        })
-    }
-
-    fn mk_bvnxor(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
-        self.mk_not(&self.mk_xor(term1, term2))
-    }
-
     fn mk_smt_bool(&self, val: bool) -> Z3Term {
         let term = unsafe {
             if val {
@@ -553,6 +613,334 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         Z3Term::new(&self.context, term)
     }
 
+    create_converter_binary_function_z3_narg!(mk_neq, Z3_mk_distinct);
+    create_converter_binary_function_z3_narg!(mk_and, Z3_mk_and);
+    create_converter_binary_function_z3_narg!(mk_or, Z3_mk_or);
+    create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
+    create_converter_unary_function_z3!(mk_not, Z3_mk_not);
+    create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
+}
+
+impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
+    fn mk_bv_sort(&self, size: u64) -> Z3Sort {
+        Z3Sort::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_bv_sort(self.context(), size as u32)
+        })
+    }
+    fn mk_bv_value_uint64(&self, sort: &Z3Sort, val: u64) -> Z3Term {
+        Z3Term::new(&self.context, unsafe {
+            smithril_z3_sys::Z3_mk_unsigned_int64(self.context(), val, sort.sort)
+        })
+    }
+    fn mk_bv_nxor(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+        self.mk_not(&self.mk_xor(term1, term2))
+    }
+
+    create_converter_binary_function_z3!(mk_bv_add, Z3_mk_bvadd);
+    create_converter_binary_function_z3!(mk_bv_and, Z3_mk_bvand);
+    create_converter_binary_function_z3!(mk_bv_ashr, Z3_mk_bvashr);
+    create_converter_binary_function_z3!(mk_bv_lshr, Z3_mk_bvlshr);
+    create_converter_binary_function_z3!(mk_bv_mul, Z3_mk_bvmul);
+    create_converter_binary_function_z3!(mk_bv_nand, Z3_mk_bvnand);
+    create_converter_unary_function_z3!(mk_bv_neg, Z3_mk_bvneg);
+    create_converter_binary_function_z3!(mk_bv_nor, Z3_mk_bvnor);
+    create_converter_unary_function_z3!(mk_bv_not, Z3_mk_bvnot);
+    create_converter_binary_function_z3!(mk_bv_or, Z3_mk_bvor);
+    create_converter_binary_function_z3!(mk_bv_sdiv, Z3_mk_bvsdiv);
+    create_converter_binary_function_z3!(mk_bv_sge, Z3_mk_bvsge);
+    create_converter_binary_function_z3!(mk_bv_sgt, Z3_mk_bvsgt);
+    create_converter_binary_function_z3!(mk_bv_shl, Z3_mk_bvshl);
+    create_converter_binary_function_z3!(mk_bv_sle, Z3_mk_bvsle);
+    create_converter_binary_function_z3!(mk_bv_slt, Z3_mk_bvslt);
+    create_converter_binary_function_z3!(mk_bv_smod, Z3_mk_bvsmod);
+    create_converter_binary_function_z3!(mk_bv_sub, Z3_mk_bvsub);
+    create_converter_binary_function_z3!(mk_bv_udiv, Z3_mk_bvudiv);
+    create_converter_binary_function_z3!(mk_bv_uge, Z3_mk_bvuge);
+    create_converter_binary_function_z3!(mk_bv_ugt, Z3_mk_bvugt);
+    create_converter_binary_function_z3!(mk_bv_ule, Z3_mk_bvule);
+    create_converter_binary_function_z3!(mk_bv_ult, Z3_mk_bvult);
+    create_converter_binary_function_z3!(mk_bv_umod, Z3_mk_bvurem);
+    create_converter_binary_function_z3!(mk_bv_xor, Z3_mk_bvxor);
+}
+
+impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
+    fn mk_fp_sort(&self, ew: u64, sw: u64) -> Z3Sort {
+        Z3Sort {
+            sort: unsafe { smithril_z3_sys::Z3_mk_fpa_sort(self.context(), ew as u32, sw as u32) },
+        }
+    }
+
+    fn mk_fp_value(
+        &self,
+        bv_sign: &Z3Term,
+        bv_exponent: &Z3Term,
+        bv_significand: &Z3Term,
+    ) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_fp(
+                self.context(),
+                bv_sign.term,
+                bv_exponent.term,
+                bv_significand.term,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_get_bv_exp_size(&self, term1: &Z3Term) -> u64 {
+        unsafe {
+            let exp_sort = smithril_z3_sys::Z3_get_sort(self.context(), term1.term);
+            smithril_z3_sys::Z3_fpa_get_ebits(self.context(), exp_sort) as u64
+        }
+    }
+
+    fn fp_get_bv_sig_size(&self, term1: &Z3Term) -> u64 {
+        unsafe {
+            let exp_sort = smithril_z3_sys::Z3_get_sort(self.context(), term1.term);
+            (smithril_z3_sys::Z3_fpa_get_sbits(self.context(), exp_sort) - 1) as u64
+        }
+    }
+
+    fn fp_get_values_ieee(&self, term1: &Z3Term) -> crate::generalized::FloatingPointAsBvStr {
+        unsafe {
+            let bv_term = smithril_z3_sys::Z3_mk_fpa_to_ieee_bv(self.context(), term1.term);
+            let exp_size = self.fp_get_bv_exp_size(term1) as c_uint;
+            let sig_size = self.fp_get_bv_sig_size(term1) as c_uint;
+
+            let sign_term = smithril_z3_sys::Z3_mk_extract(
+                self.context(),
+                exp_size + sig_size,
+                exp_size + sig_size,
+                bv_term,
+            );
+            let sign_term = smithril_z3_sys::Z3_simplify(self.context(), sign_term);
+
+            let exponent_term = smithril_z3_sys::Z3_mk_extract(
+                self.context(),
+                exp_size + sig_size - 1,
+                sig_size,
+                bv_term,
+            );
+            let exponent_term = smithril_z3_sys::Z3_simplify(self.context(), exponent_term);
+
+            let significand_term =
+                smithril_z3_sys::Z3_mk_extract(self.context(), sig_size - 1, 0, bv_term);
+            let significand_term = smithril_z3_sys::Z3_simplify(self.context(), significand_term);
+
+            let sign_str: *const i8 =
+                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), sign_term);
+            let sign = CStr::from_ptr(sign_str).to_string_lossy().into_owned();
+
+            let exponent_str: *const i8 =
+                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), exponent_term);
+            let exponent = CStr::from_ptr(exponent_str).to_string_lossy().into_owned();
+
+            let significand_str: *const i8 =
+                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), significand_term);
+            let significand = CStr::from_ptr(significand_str)
+                .to_string_lossy()
+                .into_owned();
+
+            FloatingPointAsBvStr {
+                sign,
+                exponent,
+                significand,
+            }
+        }
+    }
+
+    fn fp_is_nan(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_nan(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_is_inf(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_infinite(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_is_normal(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_normal(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_is_subnormal(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_subnormal(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_is_zero(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_zero(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_is_pos(&self, term1: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_is_positive(self.context(), term1.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn fp_eq(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_eq(self.context(), term1.term, term2.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_rem, Z3_mk_fpa_rem);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_min, Z3_mk_fpa_min);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_max, Z3_mk_fpa_max);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_lt, Z3_mk_fpa_lt);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_leq, Z3_mk_fpa_leq);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_gt, Z3_mk_fpa_gt);
+    create_converter_fp_binary_no_rm_function_z3!(mk_fp_geq, Z3_mk_fpa_geq);
+    create_converter_fp_binary_function_z3!(mk_fp_add, Z3_mk_fpa_add);
+    create_converter_fp_binary_function_z3!(mk_fp_sub, Z3_mk_fpa_sub);
+    create_converter_fp_binary_function_z3!(mk_fp_mul, Z3_mk_fpa_mul);
+    create_converter_fp_binary_function_z3!(mk_fp_div, Z3_mk_fpa_div);
+
+    create_converter_fp_unary_function_z3!(mk_fp_sqrt, Z3_mk_fpa_sqrt);
+    create_converter_fp_unary_function_z3!(mk_fp_rti, Z3_mk_fpa_round_to_integral);
+    create_converter_fp_unary_no_rm_function_z3!(mk_fp_abs, Z3_mk_fpa_abs);
+    create_converter_fp_unary_no_rm_function_z3!(mk_fp_neg, Z3_mk_fpa_neg);
+
+    fn get_rouning_mode(&self, r_mode: RoundingMode) -> Z3Term {
+        unsafe {
+            let rm = match r_mode {
+                RoundingMode::RNA => smithril_z3_sys::Z3_mk_fpa_rna(self.context()),
+                RoundingMode::RNE => smithril_z3_sys::Z3_mk_fpa_rne(self.context()),
+                RoundingMode::RTN => smithril_z3_sys::Z3_mk_fpa_rtn(self.context()),
+                RoundingMode::RTP => smithril_z3_sys::Z3_mk_fpa_rtp(self.context()),
+                RoundingMode::RTZ => smithril_z3_sys::Z3_mk_fpa_rtz(self.context()),
+            };
+            Z3Term::new(&self.context, rm)
+        }
+    }
+
+    fn mk_fp_pos_zero(&self, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_zero(self.context(), sort.sort, false);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_inf(self.context(), sort.sort, false);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_zero(self.context(), sort.sort, true);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_inf(self.context(), sort.sort, true);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_fp_from_fp(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_to_fp_float(
+                self.context(),
+                rmterm.term,
+                term1.term,
+                sort.sort,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_sbv(&self, rmterm: &Z3Term, term1: &Z3Term, w: u64) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_to_sbv(
+                self.context(),
+                rmterm.term,
+                term1.term,
+                w as u32,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_ubv(&self, rmterm: &Z3Term, term1: &Z3Term, w: u64) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_fpa_to_ubv(
+                self.context(),
+                rmterm.term,
+                term1.term,
+                w as u32,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_fp_from_sbv(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_to_fp_signed(
+                self.context(),
+                rmterm.term,
+                term1.term,
+                sort.sort,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_fp_from_ubv(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_to_fp_unsigned(
+                self.context(),
+                rmterm.term,
+                term1.term,
+                sort.sort,
+            );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_extract(&self, high: u64, low: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term =
+                smithril_z3_sys::Z3_mk_extract(self.context(), high as u32, low as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_concat(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+        unsafe {
+            let term =
+                smithril_z3_sys::Z3_mk_concat(self.context(), term1.term, term2.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+}
+
+impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
     fn mk_smt_symbol(&self, name: &str, sort: &Z3Sort) -> Z3Term {
         let name_cstr = CString::new(name).unwrap();
         let term = unsafe {
@@ -562,48 +950,22 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         Z3Term::new(&self.context, term)
     }
 
-    fn mk_array_sort(&self, index: &Z3Sort, element: &Z3Sort) -> Z3Sort {
-        let i = index.sort;
-        let e = element.sort;
-        Z3Sort::new(&self.context, unsafe {
-            smithril_z3_sys::Z3_mk_array_sort(self.context(), i, e)
-        })
+    fn try_get_bool_converter(&self) -> Option<&dyn GeneralBoolConverter<Z3Sort, Z3Term>> {
+        Some(self)
     }
 
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<Z3Sort, Z3Term>> {
+        Some(self)
+    }
+
+    fn try_get_array_converter(&self) -> Option<&dyn GeneralArrayConverter<Z3Sort, Z3Term>> {
+        Some(self)
+    }
+
+    fn try_get_fp_converter(&self) -> Option<&dyn GeneralFpConverter<Z3Sort, Z3Term>> {
+        Some(self)
+    }
     create_converter_binary_function_z3!(mk_eq, Z3_mk_eq);
-    create_converter_binary_function_z3!(mk_bvadd, Z3_mk_bvadd);
-    create_converter_binary_function_z3!(mk_bvand, Z3_mk_bvand);
-    create_converter_binary_function_z3!(mk_bvashr, Z3_mk_bvashr);
-    create_converter_binary_function_z3!(mk_bvlshr, Z3_mk_bvlshr);
-    create_converter_binary_function_z3!(mk_bvmul, Z3_mk_bvmul);
-    create_converter_binary_function_z3!(mk_bvnand, Z3_mk_bvnand);
-    create_converter_unary_function_z3!(mk_bvneg, Z3_mk_bvneg);
-    create_converter_binary_function_z3!(mk_bvnor, Z3_mk_bvnor);
-    create_converter_unary_function_z3!(mk_bvnot, Z3_mk_bvnot);
-    create_converter_binary_function_z3!(mk_bvor, Z3_mk_bvor);
-    create_converter_binary_function_z3!(mk_bvsdiv, Z3_mk_bvsdiv);
-    create_converter_binary_function_z3!(mk_bvsge, Z3_mk_bvsge);
-    create_converter_binary_function_z3!(mk_bvsgt, Z3_mk_bvsgt);
-    create_converter_binary_function_z3!(mk_bvshl, Z3_mk_bvshl);
-    create_converter_binary_function_z3!(mk_bvsle, Z3_mk_bvsle);
-    create_converter_binary_function_z3!(mk_bvslt, Z3_mk_bvslt);
-    create_converter_binary_function_z3!(mk_bvsmod, Z3_mk_bvsmod);
-    create_converter_binary_function_z3!(mk_bvsub, Z3_mk_bvsub);
-    create_converter_binary_function_z3!(mk_bvudiv, Z3_mk_bvudiv);
-    create_converter_binary_function_z3!(mk_bvuge, Z3_mk_bvuge);
-    create_converter_binary_function_z3!(mk_bvugt, Z3_mk_bvugt);
-    create_converter_binary_function_z3!(mk_bvule, Z3_mk_bvule);
-    create_converter_binary_function_z3!(mk_bvult, Z3_mk_bvult);
-    create_converter_binary_function_z3!(mk_bvumod, Z3_mk_bvurem);
-    create_converter_binary_function_z3!(mk_bvxor, Z3_mk_bvxor);
-    create_converter_binary_function_z3_narg!(mk_neq, Z3_mk_distinct);
-    create_converter_binary_function_z3_narg!(mk_and, Z3_mk_and);
-    create_converter_binary_function_z3_narg!(mk_or, Z3_mk_or);
-    create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
-    create_converter_unary_function_z3!(mk_not, Z3_mk_not);
-    create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
-    create_converter_binary_function_z3!(mk_select, Z3_mk_select);
-    create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
 }
 
 impl Solver for Z3Solver {
@@ -672,6 +1034,7 @@ impl Solver for Z3Solver {
                 }
             }
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
+            Sort::FpSort(_, _) => panic!("Unexpected sort"),
         }
     }
 
