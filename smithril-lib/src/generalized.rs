@@ -102,11 +102,13 @@ impl fmt::Display for SolverResult {
     }
 }
 
-pub trait GeneralContext<S, T, SL>
+pub trait GeneralContext<S, T, SL, O, C>
 where
     S: GeneralSort,
     T: GeneralTerm,
-    SL: GeneralSolver<S, T>,
+    O: GeneralOptions,
+    C: GeneralConverter<S, T>,
+    SL: GeneralSolver<S, T, O, C>,
 {
     fn new_solver(&self) -> SL;
 }
@@ -119,16 +121,19 @@ where
     fn unsat_core(&self) -> Vec<T>;
 }
 
-pub trait GeneralSolver<S, T>
+pub trait GeneralSolver<S, T, O, C>
 where
     S: GeneralSort,
     T: GeneralTerm,
+    O: GeneralOptions,
+    C: GeneralConverter<S, T>,
 {
     fn eval(&self, term1: &T) -> Option<T>;
     fn assert(&self, term: &T);
     fn reset(&self);
     fn interrupt(&self);
     fn check_sat(&self) -> SolverResult;
+    fn new(conv: &C, opt: &O) -> Self;
 }
 
 macro_rules! define_converter_binary_function {
@@ -270,4 +275,31 @@ pub trait Solver {
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
     fn interrupt(&self);
+}
+
+pub trait GeneralOptions {
+    fn produce_unsat_core(self, val: bool) -> Self;
+}
+
+#[derive(Clone)]
+pub struct SolverOptions {
+    pub unsat_core_enabled: bool,
+    pub max_time: i32,
+    pub max_memory: i32,
+}
+
+impl SolverOptions {
+    pub fn new() -> Self {
+        Self {
+            unsat_core_enabled: false,
+            max_time: 0,
+            max_memory: 0,
+        }
+    }
+}
+
+impl Default for SolverOptions {
+    fn default() -> Self {
+        Self::new()
+    }
 }

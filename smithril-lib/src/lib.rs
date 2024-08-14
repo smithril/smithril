@@ -20,16 +20,23 @@ pub mod converters {
     }
 
     use crate::{
-        bitwuzla::{BitwuzlaConverter, BitwuzlaSolver},
+        bitwuzla::{BitwuzlaConverter, BitwuzlaOptions, BitwuzlaSolver},
         generalized::Term,
-        z3::{Z3Converter, Z3Solver},
+        z3::{Z3Converter, Z3Options, Z3Solver},
     };
 
-    pub fn mk_bitwulza_solver(converter: Rc<BitwuzlaConverter>) -> BitwuzlaSolver {
-        BitwuzlaSolver::new(converter)
+    pub fn mk_bitwuzla_solver(converter: Rc<BitwuzlaConverter>) -> BitwuzlaSolver {
+        BitwuzlaSolver::new(converter, BitwuzlaOptions::new())
     }
 
-    pub fn mk_bitwulza_converter() -> BitwuzlaConverter {
+    pub fn mk_bitwuzla_solver_with_options(
+        converter: Rc<BitwuzlaConverter>,
+        options: BitwuzlaOptions,
+    ) -> BitwuzlaSolver {
+        BitwuzlaSolver::new(converter, options)
+    }
+
+    pub fn mk_bitwuzla_converter() -> BitwuzlaConverter {
         BitwuzlaConverter::default()
     }
 
@@ -38,7 +45,19 @@ pub mod converters {
     }
 
     pub fn mk_z3_solver(converter: Rc<Z3Converter>) -> Z3Solver {
-        Z3Solver::new(converter)
+        Z3Solver::new(converter.clone(), Z3Options::new(converter))
+    }
+
+    pub fn mk_z3_solver_with_options(converter: Rc<Z3Converter>, options: Z3Options) -> Z3Solver {
+        Z3Solver::new(converter, options)
+    }
+
+    pub fn mk_z3_option(converter: Rc<Z3Converter>) -> Z3Options {
+        Z3Options::new(converter)
+    }
+
+    pub fn mk_bitwuzla_option() -> BitwuzlaOptions {
+        BitwuzlaOptions::new()
     }
 }
 
@@ -48,8 +67,8 @@ mod tests {
 
     use crate::converters;
     use crate::generalized::{
-        GeneralConverter, GeneralSolver, GeneralSort, GeneralTerm, Solver, SolverResult, Sort,
-        Term, UnsatCoreSolver, UnsortedTerm,
+        GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm, Solver,
+        SolverResult, Sort, Term, UnsatCoreSolver, UnsortedTerm,
     };
 
     fn solver_sat_works(solver: &dyn Solver) {
@@ -104,12 +123,13 @@ mod tests {
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn generalized_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
+    fn generalized_sat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
-        SL: GeneralSolver<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
         S: GeneralSort,
         T: GeneralTerm,
+        O: GeneralOptions,
     {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
@@ -132,12 +152,13 @@ mod tests {
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_unsat_works<C, SL, S, T>(converter: &C, solver: &SL)
+    fn generalized_unsat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
-        SL: GeneralSolver<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
         S: GeneralSort,
         T: GeneralTerm,
+        O: GeneralOptions,
     {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
@@ -175,12 +196,13 @@ mod tests {
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn generalized_array_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
+    fn generalized_array_sat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
-        SL: GeneralSolver<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
         S: GeneralSort,
         T: GeneralTerm,
+        O: GeneralOptions,
     {
         let s = Sort::BvSort(3);
         let boxs = Box::new(s.clone());
@@ -229,12 +251,13 @@ mod tests {
         assert_eq!(SolverResult::Sat, result);
     }
 
-    fn generalized_array_unsat_works<C, SL, S, T>(converter: &C, solver: &SL)
+    fn generalized_array_unsat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
-        SL: GeneralSolver<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
         S: GeneralSort,
         T: GeneralTerm,
+        O: GeneralOptions,
     {
         let s = Sort::BvSort(3);
         let boxs = Box::new(s.clone());
@@ -304,12 +327,13 @@ mod tests {
         assert_eq!(SolverResult::Unsat, result);
     }
 
-    fn generalized_bv_op_sat_works<C, SL, S, T>(converter: &C, solver: &SL)
+    fn generalized_bv_op_sat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
     where
         C: GeneralConverter<S, T>,
-        SL: GeneralSolver<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
         S: GeneralSort,
         T: GeneralTerm,
+        O: GeneralOptions,
     {
         let x = Term {
             term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
@@ -406,8 +430,8 @@ mod tests {
 
     #[test]
     fn bitwuzla_sat_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         generalized_sat_works(bs.converter.as_ref(), &bs);
     }
 
@@ -420,8 +444,8 @@ mod tests {
 
     #[test]
     fn bitwuzla_unsat_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         generalized_unsat_works(bs.converter.as_ref(), &bs);
     }
 
@@ -443,22 +467,22 @@ mod tests {
 
     #[test]
     fn bitwuzla_array_sat_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         generalized_array_sat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
     fn bitwuzla_array_unsat_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         generalized_array_unsat_works(bs.converter.as_ref(), &bs);
     }
 
     #[test]
     fn bitwuzla_bv_op_sat_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         generalized_bv_op_sat_works(bs.converter.as_ref(), &bs);
     }
 
@@ -499,22 +523,25 @@ mod tests {
 
     #[test]
     fn bitwuzla_eval_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
         solver_eval_works(&bs);
     }
 
     #[test]
     fn bitwuzla_solver_unsat_core_works() {
-        let bc = converters::mk_bitwulza_converter();
-        let bs = converters::mk_bitwulza_solver(Rc::new(bc));
+        let bc = converters::mk_bitwuzla_converter();
+        let bo = converters::mk_bitwuzla_option().produce_unsat_core(true);
+        let bs = converters::mk_bitwuzla_solver_with_options(Rc::new(bc), bo);
         solver_unsat_core_works(&bs);
     }
 
     #[test]
     fn z3_solver_unsat_core_works() {
         let zc = converters::mk_z3_converter();
-        let solver = Box::new(converters::mk_z3_solver(Rc::new(zc)));
-        solver_unsat_core_works(solver.as_ref());
+        let zc_rc = Rc::new(zc);
+        let zo = converters::mk_z3_option(zc_rc.clone()).produce_unsat_core(true);
+        let zs = Box::new(converters::mk_z3_solver_with_options(zc_rc, zo));
+        solver_unsat_core_works(zs.as_ref());
     }
 }

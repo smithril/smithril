@@ -1,5 +1,6 @@
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralConverter;
+use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
@@ -19,7 +20,7 @@ use std::ffi::CString;
 use std::ptr;
 use std::rc::Rc;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Z3Context {
     pub context: smithril_z3_sys::Z3_context,
 }
@@ -69,6 +70,38 @@ impl Drop for Z3Context {
     }
 }
 
+pub struct Z3Options {
+    pub options: smithril_z3_sys::Z3_params,
+    pub context: smithril_z3_sys::Z3_context,
+}
+
+impl Z3Options {
+    pub fn new(conv: Rc<Z3Converter>) -> Self {
+        let params = unsafe {
+            let solver_parameters = smithril_z3_sys::Z3_mk_params(conv.context());
+            smithril_z3_sys::Z3_params_inc_ref(conv.context(), solver_parameters);
+            solver_parameters
+        };
+        Self {
+            options: params,
+            context: conv.context(),
+        }
+    }
+}
+
+impl Drop for Z3Options {
+    fn drop(&mut self) {
+        unsafe { smithril_z3_sys::Z3_params_dec_ref(self.context, self.options) };
+    }
+}
+
+impl GeneralOptions for Z3Options {
+    fn produce_unsat_core(self, val: bool) -> Self {
+        let _unsat_core_production = val;
+        self
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Z3Term {
     pub term: smithril_z3_sys::Z3_ast,
@@ -108,23 +141,21 @@ unsafe impl Send for Z3Solver {}
 unsafe impl Sync for Z3Solver {}
 
 impl Z3Solver {
-    pub fn new(converter: Rc<Z3Converter>) -> Self {
-        let params = unsafe {
-            let solver_parameters = smithril_z3_sys::Z3_mk_params(converter.context());
-            smithril_z3_sys::Z3_params_inc_ref(converter.context(), solver_parameters);
-            solver_parameters
-        };
-
+    pub fn new(converter: Rc<Z3Converter>, options: Z3Options) -> Self {
         let solver = unsafe {
             let native_solver = smithril_z3_sys::Z3_mk_solver(converter.context());
             smithril_z3_sys::Z3_solver_inc_ref(converter.context(), native_solver);
-            smithril_z3_sys::Z3_solver_set_params(converter.context(), native_solver, params);
+            smithril_z3_sys::Z3_solver_set_params(
+                converter.context(),
+                native_solver,
+                options.options,
+            );
             native_solver
         };
 
         Self {
             converter,
-            params,
+            params: options.options,
             solver,
             asserted_terms_map: Cell::new(HashMap::new()),
             unsat_map: Cell::new(HashMap::new()),
@@ -166,7 +197,6 @@ impl Drop for Z3Solver {
     fn drop(&mut self) {
         unsafe {
             smithril_z3_sys::Z3_solver_dec_ref(self.converter.context(), self.solver);
-            smithril_z3_sys::Z3_params_dec_ref(self.converter.context(), self.params);
         };
     }
 }
@@ -239,7 +269,12 @@ impl GeneralUnsatCoreSolver<Z3Sort, Z3Term> for Z3Solver {
     }
 }
 
-impl GeneralSolver<Z3Sort, Z3Term> for Z3Solver {
+impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
+    fn new(_conv: &Z3Converter, _opt: &Z3Options) -> Self {
+        todo!()
+        //wip
+    }
+
     fn assert(&self, term: &Z3Term) {
         unsafe {
             let mut cur_unsat_map = self.unsat_map.take();
