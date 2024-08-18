@@ -72,7 +72,7 @@ impl Drop for Z3Context {
 
 pub struct Z3Options {
     pub options: smithril_z3_sys::Z3_params,
-    pub context: smithril_z3_sys::Z3_context,
+    pub context: Rc<Z3Converter>,
 }
 
 impl Z3Options {
@@ -82,22 +82,38 @@ impl Z3Options {
             smithril_z3_sys::Z3_params_inc_ref(conv.context(), solver_parameters);
             solver_parameters
         };
+        let unsat_cstr = CString::new(":unsat_core").unwrap();
+        unsafe {
+            let param_symbol =
+                smithril_z3_sys::Z3_mk_string_symbol(conv.context(), unsat_cstr.as_ptr());
+            smithril_z3_sys::Z3_params_set_bool(conv.context(), params, param_symbol, true);
+        }
         Self {
             options: params,
-            context: conv.context(),
+            context: conv.clone(),
         }
     }
 }
 
 impl Drop for Z3Options {
     fn drop(&mut self) {
-        unsafe { smithril_z3_sys::Z3_params_dec_ref(self.context, self.options) };
+        unsafe { smithril_z3_sys::Z3_params_dec_ref(self.context.context(), self.options) };
     }
 }
 
 impl GeneralOptions for Z3Options {
     fn produce_unsat_core(self, val: bool) -> Self {
-        let _unsat_core_production = val;
+        let unsat_cstr = CString::new("unsat_core").unwrap();
+        unsafe {
+            let param_symbol =
+                smithril_z3_sys::Z3_mk_string_symbol(self.context.context(), unsat_cstr.as_ptr());
+            smithril_z3_sys::Z3_params_set_bool(
+                self.context.context(),
+                self.options,
+                param_symbol,
+                val,
+            )
+        }
         self
     }
 }
