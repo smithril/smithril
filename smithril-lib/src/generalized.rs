@@ -278,7 +278,8 @@ pub trait Solver {
 }
 
 pub trait GeneralOptions {
-    fn produce_unsat_core(self, val: bool) -> Self;
+    fn set_unsat_core(self, val: bool) -> Self;
+    fn get_produce_unsat_core(&self) -> bool;
 }
 
 #[derive(Clone)]

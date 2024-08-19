@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn bitwuzla_solver_unsat_core_works() {
         let bc = converters::mk_bitwuzla_converter();
-        let bo = converters::mk_bitwuzla_option().produce_unsat_core(true);
+        let bo = converters::mk_bitwuzla_option().set_unsat_core(true);
         let bs = converters::mk_bitwuzla_solver_with_options(Rc::new(bc), bo);
         solver_unsat_core_works(&bs);
     }
@@ -540,7 +540,7 @@ mod tests {
     fn z3_solver_unsat_core_works() {
         let zc = converters::mk_z3_converter();
         let zc_rc = Rc::new(zc);
-        let zo = converters::mk_z3_option(zc_rc.clone()).produce_unsat_core(true);
+        let zo = converters::mk_z3_option(zc_rc.clone()).set_unsat_core(true);
         let zs = Box::new(converters::mk_z3_solver_with_options(zc_rc, zo));
         solver_unsat_core_works(zs.as_ref());
     }

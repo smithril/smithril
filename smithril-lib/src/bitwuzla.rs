@@ -151,7 +151,7 @@ impl Drop for BitwuzlaOptions {
 }
 
 impl GeneralOptions for BitwuzlaOptions {
-    fn produce_unsat_core(self, val: bool) -> Self {
+    fn set_unsat_core(self, val: bool) -> Self {
         unsafe {
             smithril_bitwuzla_sys::bitwuzla_set_option(
                 self.options,
@@ -160,6 +160,16 @@ impl GeneralOptions for BitwuzlaOptions {
             );
         }
         self
+    }
+
+    fn get_produce_unsat_core(&self) -> bool {
+        unsafe {
+            let res = smithril_bitwuzla_sys::bitwuzla_get_option(
+                self.options,
+                smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_UNSAT_CORES,
+            );
+            res != 0
+        }
     }
 }
 

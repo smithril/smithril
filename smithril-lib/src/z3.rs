@@ -86,7 +86,7 @@ impl Z3Options {
         unsafe {
             let param_symbol =
                 smithril_z3_sys::Z3_mk_string_symbol(conv.context(), unsat_cstr.as_ptr());
-            smithril_z3_sys::Z3_params_set_bool(conv.context(), params, param_symbol, true);
+            smithril_z3_sys::Z3_params_set_bool(conv.context(), params, param_symbol, false);
         }
         Self {
             options: params,
@@ -102,7 +102,7 @@ impl Drop for Z3Options {
 }
 
 impl GeneralOptions for Z3Options {
-    fn produce_unsat_core(self, val: bool) -> Self {
+    fn set_unsat_core(self, val: bool) -> Self {
         let unsat_cstr = CString::new("unsat_core").unwrap();
         unsafe {
             let param_symbol =
@@ -112,9 +112,20 @@ impl GeneralOptions for Z3Options {
                 self.options,
                 param_symbol,
                 val,
-            )
+            );
         }
         self
+    }
+
+    fn get_produce_unsat_core(&self) -> bool {
+        let res = unsafe {
+            let param_str =
+                smithril_z3_sys::Z3_params_to_string(self.context.context(), self.options);
+            CStr::from_ptr(param_str)
+                .to_string_lossy()
+                .contains("unsat_core true")
+        };
+        res
     }
 }
 
@@ -147,7 +158,7 @@ impl GeneralTerm for Z3Term {}
 
 pub struct Z3Solver {
     pub converter: Rc<Z3Converter>,
-    pub params: smithril_z3_sys::Z3_params,
+    pub options: Z3Options,
     pub solver: smithril_z3_sys::Z3_solver,
     pub asserted_terms_map: Cell<HashMap<Z3Term, Term>>,
     pub unsat_map: Cell<HashMap<Z3Term, Z3Term>>,
@@ -171,7 +182,7 @@ impl Z3Solver {
 
         Self {
             converter,
-            params: options.options,
+            options,
             solver,
             asserted_terms_map: Cell::new(HashMap::new()),
             unsat_map: Cell::new(HashMap::new()),
@@ -292,22 +303,28 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 
     fn assert(&self, term: &Z3Term) {
-        unsafe {
-            let mut cur_unsat_map = self.unsat_map.take();
-            let cur_str = "sym".to_owned() + cur_unsat_map.len().to_string().as_str();
-            let track_term = self
-                .converter
-                .mk_smt_symbol(cur_str.as_str(), &self.converter.mk_bool_sort());
-            smithril_z3_sys::Z3_solver_assert_and_track(
-                self.converter.context(),
-                self.solver,
-                term.term,
-                track_term.term,
-            );
-            self.converter.context.check_error();
-            cur_unsat_map.insert(track_term, term.clone());
-            self.unsat_map.set(cur_unsat_map);
-        };
+        if self.options.get_produce_unsat_core() {
+            unsafe {
+                let mut cur_unsat_map = self.unsat_map.take();
+                let cur_str = "sym".to_owned() + cur_unsat_map.len().to_string().as_str();
+                let track_term = self
+                    .converter
+                    .mk_smt_symbol(cur_str.as_str(), &self.converter.mk_bool_sort());
+                smithril_z3_sys::Z3_solver_assert_and_track(
+                    self.converter.context(),
+                    self.solver,
+                    term.term,
+                    track_term.term,
+                );
+                self.converter.context.check_error();
+                cur_unsat_map.insert(track_term, term.clone());
+                self.unsat_map.set(cur_unsat_map);
+            }
+        } else {
+            unsafe {
+                smithril_z3_sys::Z3_solver_assert(self.converter.context(), self.solver, term.term);
+            }
+        }
     }
 
     fn eval(&self, term1: &Z3Term) -> Option<Z3Term> {
