@@ -297,11 +297,6 @@ impl GeneralUnsatCoreSolver<Z3Sort, Z3Term> for Z3Solver {
 }
 
 impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
-    fn new(_conv: &Z3Converter, _opt: &Z3Options) -> Self {
-        todo!()
-        //wip
-    }
-
     fn assert(&self, term: &Z3Term) {
         if self.options.get_produce_unsat_core() {
             unsafe {

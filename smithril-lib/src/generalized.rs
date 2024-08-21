@@ -133,7 +133,6 @@ where
     fn reset(&self);
     fn interrupt(&self);
     fn check_sat(&self) -> SolverResult;
-    fn new(conv: &C, opt: &O) -> Self;
 }
 
 macro_rules! define_converter_binary_function {
@@ -282,7 +281,6 @@ pub trait GeneralOptions {
     fn get_produce_unsat_core(&self) -> bool;
 }
 
-#[derive(Clone)]
 pub struct SolverOptions {
     pub unsat_core_enabled: bool,
     pub max_time: i32,

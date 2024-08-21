@@ -118,21 +118,21 @@ pub struct BitwuzlaOptions {
 
 impl BitwuzlaOptions {
     pub fn new() -> Self {
-        let opt = unsafe { smithril_bitwuzla_sys::bitwuzla_options_new() };
+        let options = unsafe { smithril_bitwuzla_sys::bitwuzla_options_new() };
         let cadical_cstr = CString::new("cadical").unwrap();
         unsafe {
             smithril_bitwuzla_sys::bitwuzla_set_option(
-                opt,
+                options,
                 smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_MODELS,
                 1,
             );
             smithril_bitwuzla_sys::bitwuzla_set_option_mode(
-                opt,
+                options,
                 smithril_bitwuzla_sys::BITWUZLA_OPT_SAT_SOLVER,
                 cadical_cstr.as_ptr(),
             );
         };
-        Self { options: opt }
+        Self { options }
     }
 }
 
@@ -324,11 +324,6 @@ impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
 impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
     for BitwuzlaSolver
 {
-    fn new(_conv: &BitwuzlaConverter, _opt: &BitwuzlaOptions) -> Self {
-        todo!()
-        //wip
-    }
-
     fn assert(&self, term: &BitwuzlaTerm) {
         unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver(), term.term) }
     }
