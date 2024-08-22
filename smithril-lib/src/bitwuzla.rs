@@ -1,4 +1,5 @@
 use crate::generalized::GenConstant;
+use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::UnsatCoreSolver;
 use termination_callback::termination_callback;
@@ -103,23 +104,21 @@ impl Drop for BitwuzlaContext {
     }
 }
 
-impl GeneralContext<BitwuzlaSort, BitwuzlaTerm, BitwuzlaSolver> for BitwuzlaContext {
+impl GeneralContext<BitwuzlaSort, BitwuzlaTerm, BitwuzlaSolver, BitwuzlaOptions, BitwuzlaConverter>
+    for BitwuzlaContext
+{
     fn new_solver(&self) -> BitwuzlaSolver {
         todo!()
     }
 }
 
-pub struct BitwuzlaSolver {
+pub struct BitwuzlaOptions {
     pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
-    pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
-    pub solver: RefCell<*mut smithril_bitwuzla_sys::Bitwuzla>,
-    pub converter: Rc<BitwuzlaConverter>,
 }
 
-impl BitwuzlaSolver {
-    pub fn new(converter: Rc<BitwuzlaConverter>) -> Self {
+impl BitwuzlaOptions {
+    pub fn new() -> Self {
         let options = unsafe { smithril_bitwuzla_sys::bitwuzla_options_new() };
-
         let cadical_cstr = CString::new("cadical").unwrap();
         unsafe {
             smithril_bitwuzla_sys::bitwuzla_set_option(
@@ -127,19 +126,65 @@ impl BitwuzlaSolver {
                 smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_MODELS,
                 1,
             );
-            smithril_bitwuzla_sys::bitwuzla_set_option(
-                options,
-                smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_UNSAT_CORES,
-                1,
-            );
             smithril_bitwuzla_sys::bitwuzla_set_option_mode(
                 options,
                 smithril_bitwuzla_sys::BITWUZLA_OPT_SAT_SOLVER,
                 cadical_cstr.as_ptr(),
-            )
+            );
         };
-        let solver =
-            unsafe { smithril_bitwuzla_sys::bitwuzla_new(converter.term_manager(), options) };
+        Self { options }
+    }
+}
+
+impl Default for BitwuzlaOptions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for BitwuzlaOptions {
+    fn drop(&mut self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_options_delete(self.options);
+        };
+    }
+}
+
+impl GeneralOptions for BitwuzlaOptions {
+    fn set_unsat_core(self, val: bool) -> Self {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_set_option(
+                self.options,
+                smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_UNSAT_CORES,
+                val as u64,
+            );
+        }
+        self
+    }
+
+    fn get_produce_unsat_core(&self) -> bool {
+        unsafe {
+            let res = smithril_bitwuzla_sys::bitwuzla_get_option(
+                self.options,
+                smithril_bitwuzla_sys::BITWUZLA_OPT_PRODUCE_UNSAT_CORES,
+            );
+            res != 0
+        }
+    }
+}
+
+pub struct BitwuzlaSolver {
+    pub options: BitwuzlaOptions,
+    pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
+    pub solver: RefCell<*mut smithril_bitwuzla_sys::Bitwuzla>,
+    pub converter: Rc<BitwuzlaConverter>,
+}
+
+impl BitwuzlaSolver {
+    pub fn new(converter: Rc<BitwuzlaConverter>, options: BitwuzlaOptions) -> Self {
+        let solver = unsafe {
+            smithril_bitwuzla_sys::bitwuzla_new(converter.term_manager(), options.options)
+        };
         let solver = RefCell::new(solver);
         let termination_state = BitwuzlaTerminationState::default();
         unsafe {
@@ -151,8 +196,8 @@ impl BitwuzlaSolver {
         }
         Self {
             options,
-            solver,
             asserted_terms_map: Cell::new(HashMap::new()),
+            solver,
             converter,
         }
     }
@@ -170,7 +215,6 @@ impl Drop for BitwuzlaSolver {
     fn drop(&mut self) {
         unsafe {
             smithril_bitwuzla_sys::bitwuzla_delete(self.solver());
-            smithril_bitwuzla_sys::bitwuzla_options_delete(self.options);
         };
     }
 }
@@ -277,7 +321,9 @@ impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
     }
 }
 
-impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
+impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
+    for BitwuzlaSolver
+{
     fn assert(&self, term: &BitwuzlaTerm) {
         unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver(), term.term) }
     }
@@ -301,7 +347,7 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaSolver {
             smithril_bitwuzla_sys::bitwuzla_delete(self.solver());
             self.solver.replace(smithril_bitwuzla_sys::bitwuzla_new(
                 self.term_manager(),
-                self.options,
+                self.options.options,
             ));
             smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
                 self.solver(),

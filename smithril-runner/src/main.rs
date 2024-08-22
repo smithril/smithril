@@ -43,8 +43,8 @@ fn main() {
     };
 
     let converter: Box<dyn Solver + Send + Sync> = match converter_kind {
-        Converter::Bitwuzla => Box::new(converters::mk_bitwulza_solver(Rc::new(
-            converters::mk_bitwulza_converter(),
+        Converter::Bitwuzla => Box::new(converters::mk_bitwuzla_solver(Rc::new(
+            converters::mk_bitwuzla_converter(),
         ))),
         Converter::Z3 => Box::new(converters::mk_z3_solver(Rc::new(
             converters::mk_z3_converter(),
