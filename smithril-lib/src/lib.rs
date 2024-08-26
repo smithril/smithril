@@ -514,7 +514,8 @@ mod tests {
     fn bitwuzla_solver_unsat_core_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let options = Options::default().set_produce_unsat_core(true);
+        let mut options = Options::default();
+        options.set_produce_unsat_core(true);
         let solver = factory.new_solver_with_options(context, &options);
         solver_unsat_core_works(solver.as_ref());
     }
@@ -523,7 +524,8 @@ mod tests {
     fn z3_solver_unsat_core_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let options = Options::default().set_produce_unsat_core(true);
+        let mut options = Options::default();
+        options.set_produce_unsat_core(true);
         let solver = factory.new_solver_with_options(context, &options);
         solver_unsat_core_works(solver.as_ref());
     }

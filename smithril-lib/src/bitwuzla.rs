@@ -2,6 +2,7 @@ use crate::generalized::GenConstant;
 use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
+use crate::generalized::OptionKind;
 use crate::generalized::Options;
 use crate::generalized::UnsatCoreSolver;
 use std::hash::Hash;
@@ -113,8 +114,8 @@ pub struct BitwuzlaOptions {
     pub options: *mut smithril_bitwuzla_sys::BitwuzlaOptions,
 }
 
-impl BitwuzlaOptions {
-    pub fn new(opt: &Options) -> Self {
+impl Default for BitwuzlaOptions {
+    fn default() -> Self {
         let options = unsafe { smithril_bitwuzla_sys::bitwuzla_options_new() };
         let cadical_cstr = CString::new("cadical").unwrap();
         unsafe {
@@ -129,11 +130,19 @@ impl BitwuzlaOptions {
                 1,
             );
         };
-        let res = Self { options };
-        if opt.get_produce_unsat_core() {
-            res.set_produce_unsat_core(true)
+        Self { options }
+    }
+}
+
+impl From<&Options> for BitwuzlaOptions {
+    fn from(value: &Options) -> Self {
+        let options = Self::default();
+        for opt_kind in value.bool_options.iter() {
+            match opt_kind {
+                (OptionKind::ProduceUnsatCore, val) => options.set_produce_unsat_core(*val),
+            }
         }
-        res
+        options
     }
 }
 
@@ -245,7 +254,7 @@ impl GeneralOptions for BitwuzlaOptions {
 
 impl BitwuzlaSolver {
     pub fn new(context: Rc<BitwuzlaConverter>, options: &Options) -> Self {
-        let options = BitwuzlaOptions::new(options);
+        let options = BitwuzlaOptions::from(options);
         let solver =
             unsafe { smithril_bitwuzla_sys::bitwuzla_new(context.term_manager(), options.options) };
         let solver = RefCell::new(solver);

@@ -1,6 +1,6 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 pub trait GeneralSort {}
 
@@ -288,19 +288,25 @@ pub trait Solver {
     fn eval(&self, term: &Term) -> Option<Term>;
 }
 
-#[derive(Default, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]
+#[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]
+pub enum OptionKind {
+    ProduceUnsatCore,
+}
+
+#[derive(Default, PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub struct Options {
-    produce_unsat_core: bool,
+    pub bool_options: HashMap<OptionKind, bool>,
 }
 
 impl Options {
-    pub fn set_produce_unsat_core(self, val: bool) -> Self {
-        Self {
-            produce_unsat_core: val,
-        }
+    pub fn set_produce_unsat_core(&mut self, val: bool) {
+        self.bool_options.insert(OptionKind::ProduceUnsatCore, val);
     }
     pub fn get_produce_unsat_core(&self) -> bool {
-        self.produce_unsat_core
+        *self
+            .bool_options
+            .get(&OptionKind::ProduceUnsatCore)
+            .unwrap_or(&false)
     }
 }
 

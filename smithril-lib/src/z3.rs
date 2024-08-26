@@ -7,6 +7,7 @@ use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
 use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
+use crate::generalized::OptionKind;
 use crate::generalized::Options;
 use crate::generalized::Solver;
 use crate::generalized::SolverResult;
@@ -94,21 +95,31 @@ impl Hash for Z3Options {
     }
 }
 
+impl From<(Rc<Z3Converter>, &Options)> for Z3Options {
+    fn from(value: (Rc<Z3Converter>, &Options)) -> Self {
+        let context = value.0;
+        let opt = value.1;
+        let options = Self::new(context);
+        for opt_kind in opt.bool_options.iter() {
+            match opt_kind {
+                (OptionKind::ProduceUnsatCore, val) => options.set_produce_unsat_core(*val),
+            }
+        }
+        options
+    }
+}
+
 impl Z3Options {
-    pub fn new(conv: Rc<Z3Converter>, opt: &Options) -> Self {
+    pub fn new(conv: Rc<Z3Converter>) -> Self {
         let params = unsafe {
             let solver_parameters = smithril_z3_sys::Z3_mk_params(conv.context());
             smithril_z3_sys::Z3_params_inc_ref(conv.context(), solver_parameters);
             solver_parameters
         };
-        let res = Self {
+        Self {
             options: params,
             context: conv.clone(),
-        };
-        if opt.get_produce_unsat_core() {
-            res.set_produce_unsat_core(true)
         }
-        res
     }
 }
 struct Z3Holder(smithril_z3_sys::Z3_context, smithril_z3_sys::Z3_solver);
@@ -288,7 +299,7 @@ impl Hash for Z3Solver {
 
 impl Z3Solver {
     pub fn new(context: Rc<Z3Converter>, options: &Options) -> Self {
-        let options = Z3Options::new(context.clone(), options);
+        let options = Z3Options::from((context.clone(), options));
         let solver = unsafe {
             let native_solver = smithril_z3_sys::Z3_mk_solver(context.context());
             smithril_z3_sys::Z3_solver_inc_ref(context.context(), native_solver);
