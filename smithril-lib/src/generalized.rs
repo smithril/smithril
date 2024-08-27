@@ -1,5 +1,6 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, rc::Rc};
 
 pub trait GeneralSort {}
 
@@ -102,21 +103,29 @@ impl fmt::Display for SolverResult {
     }
 }
 
-pub trait GeneralContext<S, T, SL, O, C>
+pub trait GeneralFactory<S, T, O, C, SL, I>
 where
     S: GeneralSort,
     T: GeneralTerm,
     O: GeneralOptions,
     C: GeneralConverter<S, T>,
     SL: GeneralSolver<S, T, O, C>,
+    SL: Solver,
+    I: Interrupter + Sync + Send,
 {
-    fn new_solver(&self) -> SL;
+    fn new_context(&mut self) -> Rc<C>;
+    fn delete_context(&mut self, context: Rc<C>);
+    fn new_solver(&mut self, context: Rc<C>) -> Rc<SL>;
+    fn new_solver_with_options(&mut self, context: Rc<C>, options: &Options) -> Rc<SL>;
+    fn delete_solver(&mut self, solver: Rc<SL>);
+    fn new_interrupter(&self, solver: Rc<SL>) -> I;
 }
 
-pub trait GeneralUnsatCoreSolver<S, T>
+pub trait GeneralUnsatCoreSolver<S, T, C>
 where
     S: GeneralSort,
     T: GeneralTerm,
+    C: GeneralConverter<S, T>,
 {
     fn unsat_core(&self) -> Vec<T>;
 }
@@ -268,37 +277,40 @@ pub trait UnsatCoreSolver {
     fn unsat_core(&self) -> Vec<Term>;
 }
 
+pub trait Interrupter {
+    fn interrupt(&self);
+}
+
 pub trait Solver {
     fn assert(&self, term: &Term);
     fn reset(&self);
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
-    fn interrupt(&self);
+}
+
+#[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]
+pub enum OptionKind {
+    ProduceUnsatCore,
+}
+
+#[derive(Default, PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
+pub struct Options {
+    pub bool_options: HashMap<OptionKind, bool>,
+}
+
+impl Options {
+    pub fn set_produce_unsat_core(&mut self, val: bool) {
+        self.bool_options.insert(OptionKind::ProduceUnsatCore, val);
+    }
+    pub fn get_produce_unsat_core(&self) -> bool {
+        *self
+            .bool_options
+            .get(&OptionKind::ProduceUnsatCore)
+            .unwrap_or(&false)
+    }
 }
 
 pub trait GeneralOptions {
-    fn set_unsat_core(self, val: bool) -> Self;
+    fn set_produce_unsat_core(&self, val: bool);
     fn get_produce_unsat_core(&self) -> bool;
-}
-
-pub struct SolverOptions {
-    pub unsat_core_enabled: bool,
-    pub max_time: i32,
-    pub max_memory: i32,
-}
-
-impl SolverOptions {
-    pub fn new() -> Self {
-        Self {
-            unsat_core_enabled: false,
-            max_time: 0,
-            max_memory: 0,
-        }
-    }
-}
-
-impl Default for SolverOptions {
-    fn default() -> Self {
-        Self::new()
-    }
 }
