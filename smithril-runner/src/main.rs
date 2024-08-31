@@ -5,7 +5,7 @@ use smithril_lib::{
         GeneralConverter, GeneralFactory, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
         Interrupter, Solver, SolverResult,
     },
-    solver::{ContextLabel, OptionsLabel, RemoteCommand, RemoteWorker, SolverLabel},
+    solver::{ContextLabel, OptionsLabel, RemoteCommand, RemoteState, RemoteWorker, SolverLabel},
 };
 use std::{
     collections::HashMap,
@@ -18,6 +18,8 @@ use std::{
 pub struct RemoteCommander {
     pub command_receiver: IpcReceiver<RemoteCommand>,
     pub interrupt_receiver: IpcReceiver<SolverLabel>,
+    pub check_state_receiver: IpcReceiver<()>,
+    pub state_sender: IpcSender<RemoteState>,
     pub solver_result_sender: IpcSender<SolverResult>,
     pub new_solver_sender: IpcSender<SolverLabel>,
     pub new_options_sender: IpcSender<OptionsLabel>,
@@ -35,6 +37,8 @@ fn main() {
     let (command_sender, command_receiver) = ipc_channel::ipc::channel::<RemoteCommand>().unwrap();
     let (interrupt_sender, interrupt_receiver) =
         ipc_channel::ipc::channel::<SolverLabel>().unwrap();
+    let (check_state_sender, check_state_receiver) = ipc_channel::ipc::channel::<()>().unwrap();
+    let (state_sender, state_receiver) = ipc_channel::ipc::channel::<RemoteState>().unwrap();
     let (solver_result_sender, solver_result_receiver) =
         ipc_channel::ipc::channel::<SolverResult>().unwrap();
     let (new_context_sender, new_context_receiver) =
@@ -50,6 +54,8 @@ fn main() {
         new_solver_receiver,
         new_context_receiver,
         new_options_receiver,
+        check_state_sender,
+        state_receiver,
     };
 
     tx.send(remove_solver).unwrap();
@@ -61,6 +67,8 @@ fn main() {
         new_context_sender,
         interrupt_receiver,
         new_options_sender,
+        state_sender,
+        check_state_receiver,
     };
 
     match converter_kind {
@@ -93,6 +101,7 @@ fn start<
     let mut solvers = HashMap::new();
     let interrupters: Arc<RwLock<HashMap<SolverLabel, Arc<I>>>> =
         Arc::new(RwLock::new(HashMap::new()));
+    let state = Arc::new(RwLock::new(RemoteState::Idle));
     {
         let interrupters = interrupters.clone();
         thread::spawn(move || loop {
@@ -100,6 +109,15 @@ fn start<
             let interrupters = interrupters.read().unwrap();
             let interrupter = interrupters.get(&solver_label).unwrap();
             interrupter.interrupt();
+        });
+    }
+
+    {
+        let state = state.clone();
+        thread::spawn(move || loop {
+            remote_commander.check_state_receiver.recv().unwrap();
+            let state = state.read().unwrap().clone();
+            remote_commander.state_sender.send(state).unwrap();
         });
     }
 
@@ -147,9 +165,12 @@ fn start<
                 Solver::reset(solver.as_ref());
             }
             RemoteCommand::CheckSat(solver_lable) => {
+                let mut state = state.write().unwrap();
+                *state = RemoteState::Busy;
                 let solver = solvers.get(&solver_lable).unwrap();
                 let result = Solver::check_sat(solver.as_ref());
                 remote_commander.solver_result_sender.send(result).unwrap();
+                *state = RemoteState::Idle;
             }
             RemoteCommand::NewSolverWithOptions(context_label, options) => {
                 let context = contexts.get(&context_label).unwrap();

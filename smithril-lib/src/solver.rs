@@ -105,6 +105,12 @@ pub enum RemoteCommand {
 }
 
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum RemoteState {
+    Busy,
+    Idle,
+}
+
+#[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct SolverLabel(pub u64);
 
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone, Copy)]
@@ -175,6 +181,8 @@ impl RemoteContext {}
 pub struct RemoteWorker {
     pub command_sender: IpcSender<RemoteCommand>,
     pub interrupt_sender: IpcSender<SolverLabel>,
+    pub check_state_sender: IpcSender<()>,
+    pub state_receiver: IpcReceiver<RemoteState>,
     pub new_solver_receiver: IpcReceiver<SolverLabel>,
     pub new_context_receiver: IpcReceiver<ContextLabel>,
     pub new_options_receiver: IpcReceiver<OptionsLabel>,
