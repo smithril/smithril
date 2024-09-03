@@ -1,6 +1,6 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 pub trait GeneralSort {}
 
@@ -113,12 +113,14 @@ where
     SL: Solver,
     I: Interrupter + Sync + Send,
 {
-    fn new_context(&mut self) -> Rc<C>;
-    fn delete_context(&mut self, context: Rc<C>);
-    fn new_solver(&mut self, context: Rc<C>) -> Rc<SL>;
-    fn new_solver_with_options(&mut self, context: Rc<C>, options: &Options) -> Rc<SL>;
-    fn delete_solver(&mut self, solver: Rc<SL>);
-    fn new_interrupter(&self, solver: Rc<SL>) -> I;
+    fn new_context(&mut self) -> Arc<C>;
+    fn delete_context(&mut self, context: Arc<C>);
+    fn new_solver(&mut self, context: Arc<C>, options: &Options) -> Arc<SL>;
+    fn delete_solver(&mut self, solver: Arc<SL>);
+    fn new_interrupter(&self, solver: Arc<SL>) -> I;
+    fn new_default_solver(&mut self, context: Arc<C>) -> Arc<SL> {
+        self.new_solver(context, &Default::default())
+    }
 }
 
 pub trait GeneralUnsatCoreSolver<S, T, C>
@@ -296,6 +298,7 @@ pub enum OptionKind {
 #[derive(Default, PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub struct Options {
     pub bool_options: HashMap<OptionKind, bool>,
+    pub external_timeout: Option<Duration>,
 }
 
 impl Options {
@@ -307,6 +310,12 @@ impl Options {
             .bool_options
             .get(&OptionKind::ProduceUnsatCore)
             .unwrap_or(&false)
+    }
+    pub fn set_external_timeout(&mut self, val: Option<Duration>) {
+        self.external_timeout = val;
+    }
+    pub fn get_external_timeout(&self) -> Option<Duration> {
+        self.external_timeout
     }
 }
 

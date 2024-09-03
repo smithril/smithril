@@ -400,7 +400,7 @@ mod tests {
     fn bitwuzla_sat_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -408,7 +408,7 @@ mod tests {
     fn z3_sat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -416,7 +416,7 @@ mod tests {
     fn bitwuzla_unsat_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_unsat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -424,7 +424,7 @@ mod tests {
     fn z3_unsat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_unsat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -432,9 +432,9 @@ mod tests {
     fn z3_shared_context() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_unsat_works(context.as_ref(), solver.as_ref());
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -442,7 +442,7 @@ mod tests {
     fn bitwuzla_array_sat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_array_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -450,7 +450,7 @@ mod tests {
     fn bitwuzla_array_unsat_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_array_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -458,7 +458,7 @@ mod tests {
     fn bitwuzla_bv_op_sat_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_bv_op_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -466,7 +466,7 @@ mod tests {
     fn z3_bv_op_sat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_bv_op_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -474,7 +474,7 @@ mod tests {
     fn z3_array_sat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_array_sat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -482,7 +482,7 @@ mod tests {
     fn z3_array_unsat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         generalized_array_unsat_works(context.as_ref(), solver.as_ref());
     }
 
@@ -490,7 +490,7 @@ mod tests {
     fn z3_solver_sat_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         solver_sat_works(solver.as_ref());
     }
 
@@ -498,7 +498,7 @@ mod tests {
     fn z3_solver_eval_works() {
         let mut factory = Z3Factory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         solver_eval_works(solver.as_ref());
     }
 
@@ -506,7 +506,7 @@ mod tests {
     fn bitwuzla_eval_works() {
         let mut factory = BitwuzlaFactory::default();
         let context = factory.new_context();
-        let solver = factory.new_solver(context.clone());
+        let solver = factory.new_default_solver(context.clone());
         solver_eval_works(solver.as_ref());
     }
 
@@ -516,7 +516,7 @@ mod tests {
         let context = factory.new_context();
         let mut options = Options::default();
         options.set_produce_unsat_core(true);
-        let solver = factory.new_solver_with_options(context, &options);
+        let solver = factory.new_solver(context, &options);
         solver_unsat_core_works(solver.as_ref());
     }
 
@@ -526,7 +526,7 @@ mod tests {
         let context = factory.new_context();
         let mut options = Options::default();
         options.set_produce_unsat_core(true);
-        let solver = factory.new_solver_with_options(context, &options);
+        let solver = factory.new_solver(context, &options);
         solver_unsat_core_works(solver.as_ref());
     }
 }
