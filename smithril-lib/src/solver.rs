@@ -1058,7 +1058,7 @@ async fn smithril_timeout_test() {
         env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
     }
 
-    let converters = vec![Converter::Bitwuzla, Converter::Z3];
+    let converters = vec![Converter::Dummy];
 
     let mut factory = SmithrilFactory::new(converters.clone()).await;
     let context = factory.new_context().await;

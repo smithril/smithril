@@ -1,4 +1,5 @@
 mod bitwuzla;
+mod dummy;
 pub mod generalized;
 pub mod solver;
 mod utils;
@@ -11,6 +12,7 @@ pub mod converters {
     pub enum Converter {
         Bitwuzla,
         Z3,
+        Dummy,
     }
 
     #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
@@ -18,7 +20,7 @@ pub mod converters {
         pub query: Term,
     }
 
-    use crate::{bitwuzla::BitwuzlaFactory, generalized::Term, z3::Z3Factory};
+    use crate::{bitwuzla::BitwuzlaFactory, dummy::DummyFactory, generalized::Term, z3::Z3Factory};
 
     pub fn mk_bitwuzla_factory() -> BitwuzlaFactory {
         BitwuzlaFactory::default()
@@ -26,6 +28,10 @@ pub mod converters {
 
     pub fn mk_z3_factory() -> Z3Factory {
         Z3Factory::default()
+    }
+
+    pub fn mk_dummy_factory() -> DummyFactory {
+        DummyFactory::default()
     }
 }
 

@@ -84,6 +84,10 @@ fn main() {
             let mut factory = converters::mk_z3_factory();
             start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
+        Converter::Dummy => {
+            let mut factory = converters::mk_dummy_factory();
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
+        }
     };
 }
 
