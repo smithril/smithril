@@ -103,13 +103,9 @@ impl fmt::Display for SolverResult {
     }
 }
 
-pub trait GeneralFactory<S, T, O, C, SL, I>
+pub trait Factory<C, SL, I>
 where
-    S: GeneralSort,
-    T: GeneralTerm,
-    O: GeneralOptions,
-    C: GeneralConverter<S, T>,
-    SL: GeneralSolver<S, T, O, C>,
+    C: Context,
     SL: Solver,
     I: Interrupter + Sync + Send,
 {
@@ -218,6 +214,8 @@ macro_rules! define_converter_binary_function {
         fn $func_name(&self, term1: &T, term2: &T) -> T;
     };
 }
+
+pub trait Context {}
 
 pub trait GeneralConverter<S, T>
 where

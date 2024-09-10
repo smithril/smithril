@@ -1,6 +1,7 @@
+use crate::generalized::Context;
+use crate::generalized::Factory;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralConverter;
-use crate::generalized::GeneralFactory;
 use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
@@ -218,7 +219,7 @@ impl Default for Z3Factory {
     }
 }
 
-impl GeneralFactory<Z3Sort, Z3Term, Z3Options, Z3Converter, Z3Solver, Z3Interrupter> for Z3Factory {
+impl Factory<Z3Converter, Z3Solver, Z3Interrupter> for Z3Factory {
     fn new_context(&mut self) -> Arc<Z3Converter> {
         let context = Arc::new(Z3Converter::default());
         self.contexts.insert(context.clone());
@@ -332,6 +333,8 @@ impl Z3Solver {
 pub struct Z3Converter {
     pub context: Z3Context,
 }
+
+impl Context for Z3Converter {}
 
 impl PartialEq for Z3Converter {
     fn eq(&self, other: &Self) -> bool {

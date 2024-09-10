@@ -40,7 +40,7 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        GeneralConverter, GeneralFactory, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
+        Factory, GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
         Options, Solver, SolverResult, Sort, Term, UnsortedTerm,
     };
     use crate::z3::Z3Factory;

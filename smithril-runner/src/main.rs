@@ -1,10 +1,7 @@
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
 use smithril_lib::{
     converters::{self, Converter},
-    generalized::{
-        GeneralConverter, GeneralFactory, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
-        Interrupter, Solver, SolverResult, Term,
-    },
+    generalized::{Context, Factory, Interrupter, Solver, SolverResult, Term},
     solver::{
         ContextLabel, RemoteCommand, RemoteFactoryCommand, RemoteSolverCommand, RemoteState,
         RemoteWorkerCommunicator, SolverLabel,
@@ -101,12 +98,9 @@ fn main() {
 }
 
 fn start<
-    S: GeneralSort,
-    T: GeneralTerm,
-    O: GeneralOptions,
-    C: GeneralConverter<S, T>,
-    SL: GeneralSolver<S, T, O, C> + Solver + Send + Sync + 'static,
-    GF: GeneralFactory<S, T, O, C, SL, I>,
+    C: Context,
+    SL: Solver + Send + Sync + 'static,
+    GF: Factory<C, SL, I>,
     I: Interrupter + Send + Sync + 'static,
 >(
     factory: &mut GF,

@@ -1,3 +1,5 @@
+use crate::generalized::Context;
+use crate::generalized::Factory;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralOptions;
 use crate::generalized::Interrupter;
@@ -9,7 +11,6 @@ use std::sync::RwLock;
 use termination_callback::termination_callback;
 
 use crate::generalized::GeneralConverter;
-use crate::generalized::GeneralFactory;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
@@ -169,16 +170,7 @@ pub struct BitwuzlaFactory {
     solvers: HashSet<Arc<BitwuzlaSolver>>,
 }
 
-impl
-    GeneralFactory<
-        BitwuzlaSort,
-        BitwuzlaTerm,
-        BitwuzlaOptions,
-        BitwuzlaConverter,
-        BitwuzlaSolver,
-        BitwuzlaInterrupter,
-    > for BitwuzlaFactory
-{
+impl Factory<BitwuzlaConverter, BitwuzlaSolver, BitwuzlaInterrupter> for BitwuzlaFactory {
     fn new_context(&mut self) -> Arc<BitwuzlaConverter> {
         let context = Arc::new(BitwuzlaConverter::default());
         self.contexts.insert(context.clone());
@@ -331,6 +323,8 @@ pub struct BitwuzlaConverter {
     pub context: BitwuzlaContext,
     pub symbol_cache: RwLock<HashMap<String, BitwuzlaTerm>>,
 }
+
+impl Context for BitwuzlaConverter {}
 
 impl PartialEq for BitwuzlaConverter {
     fn eq(&self, other: &Self) -> bool {
