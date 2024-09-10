@@ -5,7 +5,6 @@ use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
-use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
@@ -13,7 +12,6 @@ use crate::generalized::Solver;
 use crate::generalized::SolverResult;
 use crate::generalized::Sort;
 use crate::generalized::Term;
-use crate::generalized::UnsatCoreSolver;
 use crate::generalized::UnsortedTerm;
 use crate::utils;
 use core::panic;
@@ -422,7 +420,7 @@ macro_rules! create_converter_ternary_function_z3 {
     };
 }
 
-impl GeneralUnsatCoreSolver<Z3Sort, Z3Term, Z3Converter> for Z3Solver {
+impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     fn unsat_core(&self) -> Vec<Z3Term> {
         let context = self.context.as_ref();
         let u_core =
@@ -440,9 +438,7 @@ impl GeneralUnsatCoreSolver<Z3Sort, Z3Term, Z3Converter> for Z3Solver {
         }
         res
     }
-}
 
-impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     fn assert(&self, term: &Z3Term) {
         if self.options.get_produce_unsat_core() {
             unsafe {
@@ -607,9 +603,9 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_ternary_function_z3!(mk_store, Z3_mk_store);
 }
 
-impl UnsatCoreSolver for Z3Solver {
+impl Solver for Z3Solver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_z3 = GeneralUnsatCoreSolver::unsat_core(self);
+        let u_core_z3 = GeneralSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_z3 {
             let cur_asserted_terms_map = self.asserted_terms_map.read().unwrap();
@@ -620,9 +616,7 @@ impl UnsatCoreSolver for Z3Solver {
         }
         u_core
     }
-}
 
-impl Solver for Z3Solver {
     fn assert(&self, term: &crate::generalized::Term) {
         let context = self.context.as_ref();
         let cur_z3_term = context.convert_term(term);

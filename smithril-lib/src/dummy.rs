@@ -1,8 +1,6 @@
 use crate::generalized::GeneralOptions;
-use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
 use crate::generalized::Options;
-use crate::generalized::UnsatCoreSolver;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -210,13 +208,11 @@ macro_rules! create_converter_unary_function_dummy {
     };
 }
 
-impl GeneralUnsatCoreSolver<DummySort, DummyTerm, DummyConverter> for DummySolver {
+impl GeneralSolver<DummySort, DummyTerm, DummyOptions, DummyConverter> for DummySolver {
     fn unsat_core(&self) -> Vec<DummyTerm> {
         Vec::new()
     }
-}
 
-impl GeneralSolver<DummySort, DummyTerm, DummyOptions, DummyConverter> for DummySolver {
     fn assert(&self, _term: &DummyTerm) {}
 
     fn eval(&self, _term1: &DummyTerm) -> Option<DummyTerm> {
@@ -297,9 +293,9 @@ impl GeneralConverter<DummySort, DummyTerm> for DummyConverter {
     create_converter_ternary_function_dummy!(mk_store, dummy_KIND_ARRAY_STORE);
 }
 
-impl UnsatCoreSolver for DummySolver {
+impl Solver for DummySolver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_dummy = GeneralUnsatCoreSolver::unsat_core(self);
+        let u_core_dummy = GeneralSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_dummy {
             let cur_asserted_terms_map = self.asserted_terms_map.read().unwrap();
@@ -310,9 +306,7 @@ impl UnsatCoreSolver for DummySolver {
         }
         u_core
     }
-}
 
-impl Solver for DummySolver {
     fn assert(&self, term: &crate::generalized::Term) {
         let context = self.context.as_ref();
         let cur_dummy_term = context.convert_term(term);

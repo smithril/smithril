@@ -3,7 +3,7 @@ use smithril_lib::{
     converters::{self, Converter},
     generalized::{
         GeneralConverter, GeneralFactory, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
-        Interrupter, Solver, SolverResult,
+        Interrupter, Solver, SolverResult, Term,
     },
     solver::{
         ContextLabel, RemoteCommand, RemoteFactoryCommand, RemoteSolverCommand, RemoteState,
@@ -27,6 +27,8 @@ pub struct RemoteCommander {
     pub new_solver_sender: IpcSender<SolverLabel>,
     pub new_context_sender: IpcSender<ContextLabel>,
     pub confirmation_sender: IpcSender<()>,
+    pub eval_sender: IpcSender<Option<Term>>,
+    pub unsat_core_sender: IpcSender<Vec<Term>>,
 }
 
 fn main() {
@@ -51,6 +53,9 @@ fn main() {
     let (new_solver_sender, new_solver_receiver) =
         ipc_channel::ipc::channel::<SolverLabel>().unwrap();
     let (confirmation_sender, confirmation_receiver) = ipc_channel::ipc::channel::<()>().unwrap();
+    let (eval_sender, eval_receiver) = ipc_channel::ipc::channel::<Option<Term>>().unwrap();
+    let (unsat_core_sender, unsat_core_receiver) =
+        ipc_channel::ipc::channel::<Vec<Term>>().unwrap();
     let remove_solver = RemoteWorkerCommunicator {
         solver_result_receiver,
         interrupt_sender,
@@ -60,6 +65,8 @@ fn main() {
         state_receiver,
         command_sender,
         confirmation_receiver,
+        eval_receiver,
+        unsat_core_receiver,
     };
 
     tx.send(remove_solver).unwrap();
@@ -73,6 +80,8 @@ fn main() {
         check_state_receiver,
         command_receiver,
         confirmation_sender,
+        eval_sender,
+        unsat_core_sender,
     };
 
     match converter_kind {
@@ -135,28 +144,38 @@ fn start<
         let command = remote_commander.command_receiver.recv().unwrap();
         match command {
             RemoteCommand::Solver(command) => match command {
-                RemoteSolverCommand::Assert(solver_lable, term) => {
-                    let solver = solvers.get(&solver_lable).unwrap().clone();
+                RemoteSolverCommand::Assert(solver_label, term) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::assert(solver.as_ref(), &term);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
-                RemoteSolverCommand::Reset(solver_lable) => {
-                    let solver = solvers.get(&solver_lable).unwrap().clone();
+                RemoteSolverCommand::Reset(solver_label) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::reset(solver.as_ref());
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
-                RemoteSolverCommand::CheckSat(solver_lable) => {
+                RemoteSolverCommand::CheckSat(solver_label) => {
                     {
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Busy;
                     };
-                    let solver = solvers.get(&solver_lable).unwrap().clone();
+                    let solver = solvers.get(&solver_label).unwrap().clone();
                     let result = Solver::check_sat(solver.as_ref());
                     remote_commander.solver_result_sender.send(result).unwrap();
                     {
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Idle;
                     }
+                }
+                RemoteSolverCommand::UnsatCore(solver_label) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
+                    let result = Solver::unsat_core(solver.as_ref());
+                    remote_commander.unsat_core_sender.send(result).unwrap();
+                }
+                RemoteSolverCommand::Eval(solver_label, term) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
+                    let result = Solver::eval(solver.as_ref(), &term);
+                    remote_commander.eval_sender.send(result).unwrap();
                 }
             },
             RemoteCommand::Factory(command) => match command {

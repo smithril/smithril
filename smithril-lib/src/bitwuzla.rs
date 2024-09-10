@@ -1,10 +1,8 @@
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralOptions;
-use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
-use crate::generalized::UnsatCoreSolver;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -431,7 +429,9 @@ macro_rules! create_converter_unary_function_bitwuzla {
     };
 }
 
-impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaConverter> for BitwuzlaSolver {
+impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
+    for BitwuzlaSolver
+{
     fn unsat_core(&self) -> Vec<BitwuzlaTerm> {
         let mut size: usize = 0;
         let u_core =
@@ -443,11 +443,7 @@ impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaConverter> for B
         }
         res
     }
-}
 
-impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
-    for BitwuzlaSolver
-{
     fn assert(&self, term: &BitwuzlaTerm) {
         unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver(), term.term) }
     }
@@ -613,9 +609,9 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
 
-impl UnsatCoreSolver for BitwuzlaSolver {
+impl Solver for BitwuzlaSolver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_bitwuzla = GeneralUnsatCoreSolver::unsat_core(self);
+        let u_core_bitwuzla = GeneralSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_bitwuzla {
             let cur_asserted_terms_map = self.asserted_terms_map.read().unwrap();
@@ -626,9 +622,7 @@ impl UnsatCoreSolver for BitwuzlaSolver {
         }
         u_core
     }
-}
 
-impl Solver for BitwuzlaSolver {
     fn assert(&self, term: &crate::generalized::Term) {
         let context = self.context.as_ref();
         let cur_bitwuzla_term = context.convert_term(term);

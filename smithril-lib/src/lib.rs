@@ -41,7 +41,7 @@ mod tests {
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
         GeneralConverter, GeneralFactory, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
-        Options, Solver, SolverResult, Sort, Term, UnsatCoreSolver, UnsortedTerm,
+        Options, Solver, SolverResult, Sort, Term, UnsortedTerm,
     };
     use crate::z3::Z3Factory;
 
@@ -396,7 +396,7 @@ mod tests {
         assert_eq!(eval_y.clone().unwrap(), num10);
     }
 
-    fn solver_unsat_core_works<S: Solver + UnsatCoreSolver>(solver: &S) {
+    fn solver_unsat_core_works<S: Solver>(solver: &S) {
         solver_unsat_works(solver);
         let u_core = solver.unsat_core();
         assert_eq!(u_core.len(), 2);
