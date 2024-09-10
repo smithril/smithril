@@ -3,7 +3,8 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Debug};
+use std::error::Error;
+use std::fmt::{self, Debug, Display};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -167,7 +168,16 @@ impl AsyncResultSolver for RemoteSolver {
     }
 
     async fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        todo!()
+        let command_response = self.worker.unsat_core(self.label).await?;
+        Ok(command_response)
+    }
+
+    async fn eval(
+        &self,
+        term: &Term,
+    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.eval(self.label, term).await?;
+        Ok(command_response)
     }
 }
 
@@ -398,6 +408,16 @@ impl RemoteWorkerLockingCommunicator {
         Ok(state)
     }
 }
+
+#[derive(Debug)]
+pub struct WorkerError {}
+impl Display for WorkerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Worker error!")
+    }
+}
+
+impl Error for WorkerError {}
 
 impl RemoteWorker {
     pub async fn new(
@@ -742,6 +762,34 @@ impl RemoteWorker {
         Ok(())
     }
 
+    pub async fn eval(
+        &self,
+        solver: SolverLabel,
+        term: &Term,
+    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let state = self.check_state().await?;
+        if state == RemoteState::Busy {
+            Err(Box::new(WorkerError {}))
+        } else {
+            let command_response = self.communicator().await.eval(solver, term).await?;
+            Ok(command_response)
+        }
+    }
+
+    pub async fn unsat_core(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let state = self.check_state().await?;
+        if state == RemoteState::Busy {
+            Err(Box::new(WorkerError {}))
+        } else {
+            dbg!("UNSAT CORE!");
+            let command_response = self.communicator().await.unsat_core(solver).await?;
+            Ok(command_response)
+        }
+    }
+
     pub async fn interrupt(
         &self,
         solver: SolverLabel,
@@ -983,7 +1031,41 @@ impl AsyncSolver for SmithrilSolver {
     }
 
     async fn unsat_core(&self) -> Vec<Term> {
-        todo!()
+        let mut handles = Vec::new();
+        for solver in self.solvers.iter() {
+            let handler = solver.unsat_core();
+            handles.push(handler);
+        }
+        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
+
+        let mut result = vec![];
+        while let Some(res) = futs.next().await {
+            if res.is_err() {
+                continue;
+            }
+            result = res.unwrap();
+            break;
+        }
+        result
+    }
+
+    async fn eval(&self, term: &Term) -> Option<Term> {
+        let mut handles = Vec::new();
+        for solver in self.solvers.iter() {
+            let handler = solver.eval(term);
+            handles.push(handler);
+        }
+        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
+
+        let mut result = None;
+        while let Some(res) = futs.next().await {
+            if res.is_err() {
+                continue;
+            }
+            result = res.unwrap();
+            break;
+        }
+        result
     }
 }
 
@@ -1074,6 +1156,35 @@ async fn smithril_working_test() {
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Unsat, status);
     solver.reset().await;
+
+    factory.terminate().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn smithril_unsat_core_test() {
+    use std::env;
+    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    smithril_converters_dir.push("../target/debug");
+    let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
+    unsafe {
+        env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
+    }
+
+    let converters = vec![Converter::Bitwuzla, Converter::Z3];
+
+    let factory = SmithrilFactory::new(converters.clone()).await;
+    let context = factory.new_context().await;
+    let mut options = Options::default();
+    options.set_produce_unsat_core(true);
+    let solver = factory.new_solver(context, &options).await;
+
+    let t = unsat_works();
+
+    solver.assert(&t).await;
+    let status = solver.check_sat().await;
+    assert_eq!(SolverResult::Unsat, status);
+    let unsat_core = solver.unsat_core().await;
+    assert_eq!(unsat_core.len(), 1);
 
     factory.terminate().await;
 }

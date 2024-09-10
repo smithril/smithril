@@ -199,6 +199,12 @@ pub trait AsyncResultSolver {
         &self,
     ) -> impl std::future::Future<Output = Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>>
            + Send;
+    fn eval(
+        &self,
+        term: &Term,
+    ) -> impl std::future::Future<
+        Output = Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>,
+    > + Send;
 }
 
 pub trait AsyncSolver {
@@ -207,6 +213,7 @@ pub trait AsyncSolver {
     fn interrupt(&self) -> impl std::future::Future<Output = ()> + Send;
     fn check_sat(&self) -> impl std::future::Future<Output = SolverResult> + Send;
     fn unsat_core(&self) -> impl std::future::Future<Output = Vec<Term>> + Send;
+    fn eval(&self, term: &Term) -> impl std::future::Future<Output = Option<Term>> + Send;
 }
 
 macro_rules! define_converter_binary_function {
