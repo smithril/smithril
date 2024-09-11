@@ -1,15 +1,16 @@
+use crate::generalized::Context;
+use crate::generalized::Factory;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralOptions;
-use crate::generalized::GeneralUnsatCoreSolver;
 use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
-use crate::generalized::UnsatCoreSolver;
 use std::hash::Hash;
+use std::sync::Arc;
+use std::sync::RwLock;
 use termination_callback::termination_callback;
 
 use crate::generalized::GeneralConverter;
-use crate::generalized::GeneralFactory;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
@@ -19,13 +20,10 @@ use crate::generalized::Sort;
 use crate::generalized::Term;
 use crate::generalized::UnsortedTerm;
 use crate::utils;
-use std::cell::Cell;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::ffi::CString;
-use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
@@ -34,9 +32,15 @@ pub struct BitwuzlaTerm {
     pub term: smithril_bitwuzla_sys::BitwuzlaTerm,
 }
 
+unsafe impl Send for BitwuzlaTerm {}
+unsafe impl Sync for BitwuzlaTerm {}
+
 pub struct BitwuzlaSort {
     pub sort: smithril_bitwuzla_sys::BitwuzlaSort,
 }
+
+unsafe impl Send for BitwuzlaSort {}
+unsafe impl Sync for BitwuzlaSort {}
 
 impl GeneralSort for BitwuzlaSort {}
 
@@ -162,64 +166,49 @@ impl Hash for BitwuzlaOptions {
 
 #[derive(Default)]
 pub struct BitwuzlaFactory {
-    contexts: HashSet<Rc<BitwuzlaConverter>>,
-    solvers: HashSet<Rc<BitwuzlaSolver>>,
+    contexts: HashSet<Arc<BitwuzlaConverter>>,
+    solvers: HashSet<Arc<BitwuzlaSolver>>,
 }
 
-impl
-    GeneralFactory<
-        BitwuzlaSort,
-        BitwuzlaTerm,
-        BitwuzlaOptions,
-        BitwuzlaConverter,
-        BitwuzlaSolver,
-        BitwuzlaInterrupter,
-    > for BitwuzlaFactory
-{
-    fn new_context(&mut self) -> Rc<BitwuzlaConverter> {
-        let context = Rc::new(BitwuzlaConverter::default());
+impl Factory<BitwuzlaConverter, BitwuzlaSolver, BitwuzlaInterrupter> for BitwuzlaFactory {
+    fn new_context(&mut self) -> Arc<BitwuzlaConverter> {
+        let context = Arc::new(BitwuzlaConverter::default());
         self.contexts.insert(context.clone());
         context
     }
 
-    fn delete_context(&mut self, context: Rc<BitwuzlaConverter>) {
+    fn delete_context(&mut self, context: Arc<BitwuzlaConverter>) {
         self.contexts.remove(&context);
-        assert_eq!(Rc::strong_count(&context), 1);
+        assert_eq!(Arc::strong_count(&context), 1);
     }
 
-    fn new_solver(&mut self, context: Rc<BitwuzlaConverter>) -> Rc<BitwuzlaSolver> {
-        let solver = Rc::new(BitwuzlaSolver::new(context.clone(), &Options::default()));
-        self.solvers.insert(solver.clone());
-        solver
-    }
-
-    fn delete_solver(&mut self, solver: Rc<BitwuzlaSolver>) {
+    fn delete_solver(&mut self, solver: Arc<BitwuzlaSolver>) {
         self.solvers.remove(&solver);
-        assert_eq!(Rc::strong_count(&solver), 1);
+        assert_eq!(Arc::strong_count(&solver), 1);
     }
 
-    fn new_interrupter(&self, solver: Rc<BitwuzlaSolver>) -> BitwuzlaInterrupter {
+    fn new_interrupter(&self, solver: Arc<BitwuzlaSolver>) -> BitwuzlaInterrupter {
         BitwuzlaInterrupter {
-            holder: BitwuzlaHolder(solver.solver()),
+            holder: BitwuzlaSolverSys(solver.solver()),
         }
     }
 
-    fn new_solver_with_options(
+    fn new_solver(
         &mut self,
-        context: Rc<BitwuzlaConverter>,
+        context: Arc<BitwuzlaConverter>,
         options: &Options,
-    ) -> Rc<BitwuzlaSolver> {
-        let solver = Rc::new(BitwuzlaSolver::new(context, options));
+    ) -> Arc<BitwuzlaSolver> {
+        let solver = Arc::new(BitwuzlaSolver::new(context, options));
         self.solvers.insert(solver.clone());
         solver
     }
 }
 
 pub struct BitwuzlaSolver {
-    pub context: Rc<BitwuzlaConverter>,
+    pub context: Arc<BitwuzlaConverter>,
     pub options: BitwuzlaOptions,
-    pub asserted_terms_map: Cell<HashMap<BitwuzlaTerm, Term>>,
-    pub solver: RefCell<*mut smithril_bitwuzla_sys::Bitwuzla>,
+    pub asserted_terms_map: RwLock<HashMap<BitwuzlaTerm, Term>>,
+    solver: RwLock<BitwuzlaSolverSys>,
 }
 
 impl Drop for BitwuzlaOptions {
@@ -253,29 +242,29 @@ impl GeneralOptions for BitwuzlaOptions {
 }
 
 impl BitwuzlaSolver {
-    pub fn new(context: Rc<BitwuzlaConverter>, options: &Options) -> Self {
+    pub fn new(context: Arc<BitwuzlaConverter>, options: &Options) -> Self {
         let options = BitwuzlaOptions::from(options);
         let solver =
             unsafe { smithril_bitwuzla_sys::bitwuzla_new(context.term_manager(), options.options) };
-        let solver = RefCell::new(solver);
+        let solver = RwLock::new(BitwuzlaSolverSys(solver));
         let termination_state = BitwuzlaTerminationState::default();
         unsafe {
             smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
-                *solver.borrow(),
+                solver.read().unwrap().0,
                 Some(termination_callback),
                 Box::into_raw(Box::new(termination_state)) as *mut ::std::os::raw::c_void,
             )
         }
         Self {
             options,
-            asserted_terms_map: Cell::new(HashMap::new()),
+            asserted_terms_map: RwLock::new(HashMap::new()),
             solver,
             context,
         }
     }
 
     fn solver(&self) -> *mut smithril_bitwuzla_sys::Bitwuzla {
-        *self.solver.borrow()
+        self.solver.read().unwrap().0
     }
 }
 
@@ -283,7 +272,12 @@ impl PartialEq for BitwuzlaSolver {
     fn eq(&self, other: &Self) -> bool {
         let res = self.context.eq(&other.context);
         let res = res && self.options.eq(&other.options);
-        res && self.solver.eq(&other.solver)
+        res && self
+            .solver
+            .read()
+            .unwrap()
+            .0
+            .eq(&other.solver.read().unwrap().0)
     }
 }
 
@@ -305,13 +299,13 @@ impl Drop for BitwuzlaSolver {
     }
 }
 
-struct BitwuzlaHolder(*mut smithril_bitwuzla_sys::Bitwuzla);
+struct BitwuzlaSolverSys(*mut smithril_bitwuzla_sys::Bitwuzla);
 
-unsafe impl Send for BitwuzlaHolder {}
-unsafe impl Sync for BitwuzlaHolder {}
+unsafe impl Send for BitwuzlaSolverSys {}
+unsafe impl Sync for BitwuzlaSolverSys {}
 
 pub struct BitwuzlaInterrupter {
-    holder: BitwuzlaHolder,
+    holder: BitwuzlaSolverSys,
 }
 
 impl Interrupter for BitwuzlaInterrupter {
@@ -327,8 +321,10 @@ impl Interrupter for BitwuzlaInterrupter {
 
 pub struct BitwuzlaConverter {
     pub context: BitwuzlaContext,
-    pub symbol_cache: Cell<HashMap<String, BitwuzlaTerm>>,
+    pub symbol_cache: RwLock<HashMap<String, BitwuzlaTerm>>,
 }
+
+impl Context for BitwuzlaConverter {}
 
 impl PartialEq for BitwuzlaConverter {
     fn eq(&self, other: &Self) -> bool {
@@ -344,17 +340,17 @@ impl Hash for BitwuzlaConverter {
     }
 }
 
-unsafe impl Send for BitwuzlaConverter {}
-unsafe impl Sync for BitwuzlaConverter {}
+unsafe impl Send for BitwuzlaContext {}
+unsafe impl Sync for BitwuzlaContext {}
 
-unsafe impl Send for BitwuzlaSolver {}
-unsafe impl Sync for BitwuzlaSolver {}
+unsafe impl Send for BitwuzlaOptions {}
+unsafe impl Sync for BitwuzlaOptions {}
 
 impl BitwuzlaConverter {
     pub fn new(context: BitwuzlaContext) -> Self {
         Self {
             context,
-            symbol_cache: Cell::new(HashMap::new()),
+            symbol_cache: RwLock::new(HashMap::new()),
         }
     }
 
@@ -427,7 +423,9 @@ macro_rules! create_converter_unary_function_bitwuzla {
     };
 }
 
-impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaConverter> for BitwuzlaSolver {
+impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
+    for BitwuzlaSolver
+{
     fn unsat_core(&self) -> Vec<BitwuzlaTerm> {
         let mut size: usize = 0;
         let u_core =
@@ -439,11 +437,7 @@ impl GeneralUnsatCoreSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaConverter> for B
         }
         res
     }
-}
 
-impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverter>
-    for BitwuzlaSolver
-{
     fn assert(&self, term: &BitwuzlaTerm) {
         unsafe { smithril_bitwuzla_sys::bitwuzla_assert(self.solver(), term.term) }
     }
@@ -466,10 +460,13 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
                     as *mut BitwuzlaTerminationState;
             drop(Box::from_raw(termination_callback_state));
             smithril_bitwuzla_sys::bitwuzla_delete(self.solver());
-            self.solver.replace(smithril_bitwuzla_sys::bitwuzla_new(
-                context.term_manager(),
-                self.options.options,
-            ));
+            {
+                let mut solver = self.solver.write().unwrap();
+                *solver = BitwuzlaSolverSys(smithril_bitwuzla_sys::bitwuzla_new(
+                    context.term_manager(),
+                    self.options.options,
+                ));
+            }
             smithril_bitwuzla_sys::bitwuzla_set_termination_callback(
                 self.solver(),
                 Some(termination_callback),
@@ -505,7 +502,7 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
 
 impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
-        let mut sym_table = self.symbol_cache.take();
+        let mut sym_table = self.symbol_cache.write().unwrap();
         let term = if let Some(term2) = sym_table.get(name) {
             term2.term
         } else {
@@ -521,7 +518,6 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
             assert!(old_term.is_none());
             term
         };
-        self.symbol_cache.set(sym_table);
         BitwuzlaTerm { term }
     }
 
@@ -607,30 +603,26 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
 
-impl UnsatCoreSolver for BitwuzlaSolver {
+impl Solver for BitwuzlaSolver {
     fn unsat_core(&self) -> Vec<Term> {
-        let u_core_bitwuzla = GeneralUnsatCoreSolver::unsat_core(self);
+        let u_core_bitwuzla = GeneralSolver::unsat_core(self);
         let mut u_core: Vec<Term> = Vec::new();
         for cur_term in u_core_bitwuzla {
-            let cur_asserted_terms_map = self.asserted_terms_map.take();
+            let cur_asserted_terms_map = self.asserted_terms_map.read().unwrap();
             match cur_asserted_terms_map.get(&cur_term) {
                 Some(t) => u_core.push(t.clone()),
                 None => panic!("Term not found in asserted_terms_map"),
             }
-            self.asserted_terms_map.set(cur_asserted_terms_map);
         }
         u_core
     }
-}
 
-impl Solver for BitwuzlaSolver {
     fn assert(&self, term: &crate::generalized::Term) {
         let context = self.context.as_ref();
         let cur_bitwuzla_term = context.convert_term(term);
         GeneralSolver::assert(self, &cur_bitwuzla_term);
-        let mut cur_asserted_terms_map = self.asserted_terms_map.take();
+        let mut cur_asserted_terms_map = self.asserted_terms_map.write().unwrap();
         cur_asserted_terms_map.insert(cur_bitwuzla_term, term.clone());
-        self.asserted_terms_map.set(cur_asserted_terms_map);
     }
 
     fn check_sat(&self) -> SolverResult {

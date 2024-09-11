@@ -1,6 +1,6 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 pub trait GeneralSort {}
 
@@ -103,31 +103,65 @@ impl fmt::Display for SolverResult {
     }
 }
 
-pub trait GeneralFactory<S, T, O, C, SL, I>
+pub trait Factory<C, SL, I>
 where
-    S: GeneralSort,
-    T: GeneralTerm,
-    O: GeneralOptions,
-    C: GeneralConverter<S, T>,
-    SL: GeneralSolver<S, T, O, C>,
+    C: Context,
     SL: Solver,
     I: Interrupter + Sync + Send,
 {
-    fn new_context(&mut self) -> Rc<C>;
-    fn delete_context(&mut self, context: Rc<C>);
-    fn new_solver(&mut self, context: Rc<C>) -> Rc<SL>;
-    fn new_solver_with_options(&mut self, context: Rc<C>, options: &Options) -> Rc<SL>;
-    fn delete_solver(&mut self, solver: Rc<SL>);
-    fn new_interrupter(&self, solver: Rc<SL>) -> I;
+    fn new_context(&mut self) -> Arc<C>;
+    fn delete_context(&mut self, context: Arc<C>);
+    fn new_solver(&mut self, context: Arc<C>, options: &Options) -> Arc<SL>;
+    fn delete_solver(&mut self, solver: Arc<SL>);
+    fn new_interrupter(&self, solver: Arc<SL>) -> I;
+    fn new_default_solver(&mut self, context: Arc<C>) -> Arc<SL> {
+        self.new_solver(context, &Default::default())
+    }
 }
 
-pub trait GeneralUnsatCoreSolver<S, T, C>
+pub trait AsyncContext {}
+
+pub trait AsyncResultFactory<C, SL>
 where
-    S: GeneralSort,
-    T: GeneralTerm,
-    C: GeneralConverter<S, T>,
+    C: AsyncContext,
+    SL: AsyncResultSolver,
 {
-    fn unsat_core(&self) -> Vec<T>;
+    fn terminate(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn new_context(
+        &self,
+    ) -> impl std::future::Future<Output = Result<C, Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn new_solver(
+        &self,
+        context: &C,
+        options: &Options,
+    ) -> impl std::future::Future<Output = Result<Arc<SL>, Box<dyn std::error::Error + Send + Sync>>>
+           + Send;
+    fn delete_context(
+        &self,
+        context: C,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn delete_solver(
+        &self,
+        solver: Arc<SL>,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+}
+
+pub trait AsyncFactory<C, SL>
+where
+    C: AsyncContext,
+    SL: AsyncSolver,
+{
+    fn terminate(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn new_context(&self) -> impl std::future::Future<Output = Arc<C>> + Send;
+    fn new_solver(
+        &self,
+        context: Arc<C>,
+        options: &Options,
+    ) -> impl std::future::Future<Output = Arc<SL>> + Send;
+    fn delete_context(&self, context: Arc<C>) -> impl std::future::Future<Output = ()> + Send;
+    fn delete_solver(&self, solver: Arc<SL>) -> impl std::future::Future<Output = ()> + Send;
 }
 
 pub trait GeneralSolver<S, T, O, C>
@@ -142,6 +176,44 @@ where
     fn reset(&self);
     fn interrupt(&self);
     fn check_sat(&self) -> SolverResult;
+    fn unsat_core(&self) -> Vec<T>;
+}
+
+pub trait AsyncResultSolver {
+    fn assert(
+        &self,
+        term: &Term,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn reset(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn interrupt(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn check_sat(
+        &self,
+    ) -> impl std::future::Future<
+        Output = Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>,
+    > + Send;
+    fn unsat_core(
+        &self,
+    ) -> impl std::future::Future<Output = Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>>
+           + Send;
+    fn eval(
+        &self,
+        term: &Term,
+    ) -> impl std::future::Future<
+        Output = Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>,
+    > + Send;
+}
+
+pub trait AsyncSolver {
+    fn assert(&self, term: &Term) -> impl std::future::Future<Output = ()> + Send;
+    fn reset(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn interrupt(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn check_sat(&self) -> impl std::future::Future<Output = SolverResult> + Send;
+    fn unsat_core(&self) -> impl std::future::Future<Output = Vec<Term>> + Send;
+    fn eval(&self, term: &Term) -> impl std::future::Future<Output = Option<Term>> + Send;
 }
 
 macro_rules! define_converter_binary_function {
@@ -149,6 +221,8 @@ macro_rules! define_converter_binary_function {
         fn $func_name(&self, term1: &T, term2: &T) -> T;
     };
 }
+
+pub trait Context {}
 
 pub trait GeneralConverter<S, T>
 where
@@ -273,10 +347,6 @@ where
     }
 }
 
-pub trait UnsatCoreSolver {
-    fn unsat_core(&self) -> Vec<Term>;
-}
-
 pub trait Interrupter {
     fn interrupt(&self);
 }
@@ -286,6 +356,7 @@ pub trait Solver {
     fn reset(&self);
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
+    fn unsat_core(&self) -> Vec<Term>;
 }
 
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]
@@ -296,6 +367,7 @@ pub enum OptionKind {
 #[derive(Default, PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub struct Options {
     pub bool_options: HashMap<OptionKind, bool>,
+    pub external_timeout: Option<Duration>,
 }
 
 impl Options {
@@ -307,6 +379,12 @@ impl Options {
             .bool_options
             .get(&OptionKind::ProduceUnsatCore)
             .unwrap_or(&false)
+    }
+    pub fn set_external_timeout(&mut self, val: Option<Duration>) {
+        self.external_timeout = val;
+    }
+    pub fn get_external_timeout(&self) -> Option<Duration> {
+        self.external_timeout
     }
 }
 
