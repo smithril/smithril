@@ -1020,7 +1020,7 @@ impl Solver for Z3Solver {
                 }
             }
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
-            Sort::FpSort(_, _) => panic!("Unexpected sort"),
+            Sort::FpSort(_, _) => panic!("Unimplemented sort"),
         }
     }
 
