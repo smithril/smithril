@@ -452,7 +452,7 @@ where
         }
     }
     fn try_get_bool_converter(&self) -> Option<&dyn GeneralBoolConverter<S, T>>;
-    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<S, T>>;
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBitVectorConverter<S, T>>;
     fn try_get_array_converter(&self) -> Option<&dyn GeneralArrayConverter<S, T>>;
     fn try_get_fp_converter(&self) -> Option<&dyn GeneralFpConverter<S, T>>;
 }
@@ -635,7 +635,7 @@ where
     }
 }
 
-pub trait GeneralBvConverter<S, T>: GeneralConverter<S, T>
+pub trait GeneralBitVectorConverter<S, T>: GeneralConverter<S, T>
 where
     S: GeneralSort,
     T: GeneralTerm,
@@ -817,11 +817,6 @@ impl Options {
 
 pub trait GeneralOptions {
     fn set_produce_unsat_core(&self, val: bool);
-    fn get_produce_unsat_core(&self) -> bool;
-}
-
-pub trait GeneralOptions {
-    fn set_unsat_core(self, val: bool) -> Self;
     fn get_produce_unsat_core(&self) -> bool;
 }
 

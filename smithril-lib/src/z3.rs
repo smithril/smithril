@@ -1,10 +1,12 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
+use crate::generalized::FloatingPointAsBvStr;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
+use crate::generalized::GeneralBitVectorConverter;
 use crate::generalized::GeneralBoolConverter;
-use crate::generalized::GeneralBvConverter;
 use crate::generalized::GeneralConverter;
+use crate::generalized::GeneralFpConverter;
 use crate::generalized::GeneralOptions;
 use crate::generalized::GeneralSolver;
 use crate::generalized::GeneralSort;
@@ -12,6 +14,7 @@ use crate::generalized::GeneralTerm;
 use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
+use crate::generalized::RoundingMode;
 use crate::generalized::Solver;
 use crate::generalized::SolverResult;
 use crate::generalized::Sort;
@@ -255,63 +258,53 @@ impl Factory<Z3Converter, Z3Solver, Z3Interrupter> for Z3Factory {
     }
 }
 
-pub struct Z3Options {
-    pub options: smithril_z3_sys::Z3_params,
-    pub context: Rc<Z3Converter>,
+macro_rules! create_converter_fp_unary_function_z3 {
+    ($func_name:ident, $z3_sys_func_name:ident) => {
+        fn $func_name(&self, r_mode: &RoundingMode, term: &Z3Term) -> Z3Term {
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(
+                    self.context(),
+                    self.get_rouning_mode(r_mode.clone()).term,
+                    term.term,
+                )
+            })
+        }
+    };
 }
 
-impl Z3Options {
-    pub fn new(conv: Rc<Z3Converter>) -> Self {
-        let params = unsafe {
-            let solver_parameters = smithril_z3_sys::Z3_mk_params(conv.context());
-            smithril_z3_sys::Z3_params_inc_ref(conv.context(), solver_parameters);
-            solver_parameters
-        };
-        let unsat_cstr = CString::new(":unsat_core").unwrap();
-        unsafe {
-            let param_symbol =
-                smithril_z3_sys::Z3_mk_string_symbol(conv.context(), unsat_cstr.as_ptr());
-            smithril_z3_sys::Z3_params_set_bool(conv.context(), params, param_symbol, false);
+macro_rules! create_converter_fp_binary_function_z3 {
+    ($func_name:ident, $z3_sys_func_name:ident) => {
+        fn $func_name(&self, r_mode: &RoundingMode, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(
+                    self.context(),
+                    self.get_rouning_mode(r_mode.clone()).term,
+                    term1.term,
+                    term2.term,
+                )
+            })
         }
-        Self {
-            options: params,
-            context: conv.clone(),
-        }
-    }
+    };
 }
 
-impl Drop for Z3Options {
-    fn drop(&mut self) {
-        unsafe { smithril_z3_sys::Z3_params_dec_ref(self.context.context(), self.options) };
-    }
+macro_rules! create_converter_fp_unary_no_rm_function_z3 {
+    ($func_name:ident, $z3_sys_func_name:ident) => {
+        fn $func_name(&self, _r_mode: &RoundingMode, term: &Z3Term) -> Z3Term {
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(self.context(), term.term)
+            })
+        }
+    };
 }
 
-impl GeneralOptions for Z3Options {
-    fn set_unsat_core(self, val: bool) -> Self {
-        let unsat_cstr = CString::new("unsat_core").unwrap();
-        unsafe {
-            let param_symbol =
-                smithril_z3_sys::Z3_mk_string_symbol(self.context.context(), unsat_cstr.as_ptr());
-            smithril_z3_sys::Z3_params_set_bool(
-                self.context.context(),
-                self.options,
-                param_symbol,
-                val,
-            );
+macro_rules! create_converter_fp_binary_no_rm_function_z3 {
+    ($func_name:ident, $z3_sys_func_name:ident) => {
+        fn $func_name(&self, _r_mode: &RoundingMode, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+            Z3Term::new(&self.context, unsafe {
+                smithril_z3_sys::$z3_sys_func_name(self.context(), term1.term, term2.term)
+            })
         }
-        self
-    }
-
-    fn get_produce_unsat_core(&self) -> bool {
-        let res = unsafe {
-            let param_str =
-                smithril_z3_sys::Z3_params_to_string(self.context.context(), self.options);
-            CStr::from_ptr(param_str)
-                .to_string_lossy()
-                .contains("unsat_core true")
-        };
-        res
-    }
+    };
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -621,7 +614,7 @@ impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
 }
 
-impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
+impl GeneralBitVectorConverter<Z3Sort, Z3Term> for Z3Converter {
     fn mk_bv_sort(&self, size: u64) -> Z3Sort {
         Z3Sort::new(&self.context, unsafe {
             smithril_z3_sys::Z3_mk_bv_sort(self.context(), size as u32)
@@ -933,8 +926,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
 
     fn mk_fp_concat(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
         unsafe {
-            let term =
-                smithril_z3_sys::Z3_mk_concat(self.context(), term1.term, term2.term);
+            let term = smithril_z3_sys::Z3_mk_concat(self.context(), term1.term, term2.term);
             Z3Term::new(&self.context, term)
         }
     }
@@ -954,7 +946,7 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         Some(self)
     }
 
-    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<Z3Sort, Z3Term>> {
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBitVectorConverter<Z3Sort, Z3Term>> {
         Some(self)
     }
 

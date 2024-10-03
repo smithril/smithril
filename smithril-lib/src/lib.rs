@@ -40,8 +40,8 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        Factory, GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
-        Options, Solver, SolverResult, Sort, Term, UnsortedTerm,
+        Factory, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
+        GeneralTerm, Options, RoundingMode, Solver, SolverResult, Sort, Term, UnsortedTerm,
     };
     use crate::z3::Z3Factory;
 
@@ -575,41 +575,45 @@ mod tests {
 
     #[test]
     fn ieee_works() {
-        let bc = converters::mk_bitwuzla_converter();
-        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
-        let zc = converters::mk_z3_converter();
-        let zs = converters::mk_z3_solver(Rc::new(zc));
-        let x = generalized_generate_fp_ieee(bs.converter.as_ref());
-        let y = generalized_generate_fp_ieee(zs.converter.as_ref());
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let x = generalized_generate_fp_ieee(context.as_ref());
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let y = generalized_generate_fp_ieee(context.as_ref());
         assert_eq!(x, y);
     }
 
     #[test]
     fn bitwuzla_fp_works() {
-        let bc = converters::mk_bitwuzla_converter();
-        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
-        generalized_solver_fp_works(bs.converter.as_ref(), &bs);
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_works(context.as_ref(), solver.as_ref());
     }
 
     #[test]
     fn z3_fp_works() {
-        let zc = converters::mk_z3_converter();
-        let zs = converters::mk_z3_solver(Rc::new(zc));
-        generalized_solver_fp_works(zs.converter.as_ref(), &zs);
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_works(context.as_ref(), solver.as_ref());
     }
 
     #[test]
     fn bitwuzla_fp_unsat_works() {
-        let bc = converters::mk_bitwuzla_converter();
-        let bs = converters::mk_bitwuzla_solver(Rc::new(bc));
-        generalized_solver_fp_unsat_works(bs.converter.as_ref(), &bs);
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_unsat_works(context.as_ref(), solver.as_ref());
     }
 
     #[test]
     fn z3_fp_unsat_works() {
-        let zc = converters::mk_z3_converter();
-        let zs = converters::mk_z3_solver(Rc::new(zc));
-        generalized_solver_fp_unsat_works(zs.converter.as_ref(), &zs);
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_unsat_works(context.as_ref(), solver.as_ref());
     }
 
     #[test]
