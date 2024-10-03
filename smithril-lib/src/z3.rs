@@ -3,8 +3,8 @@ use crate::generalized::Factory;
 use crate::generalized::FloatingPointAsBvStr;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
-use crate::generalized::GeneralBitVectorConverter;
 use crate::generalized::GeneralBoolConverter;
+use crate::generalized::GeneralBvConverter;
 use crate::generalized::GeneralConverter;
 use crate::generalized::GeneralFpConverter;
 use crate::generalized::GeneralOptions;
@@ -614,7 +614,7 @@ impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
 }
 
-impl GeneralBitVectorConverter<Z3Sort, Z3Term> for Z3Converter {
+impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
     fn mk_bv_sort(&self, size: u64) -> Z3Sort {
         Z3Sort::new(&self.context, unsafe {
             smithril_z3_sys::Z3_mk_bv_sort(self.context(), size as u32)
@@ -654,6 +654,15 @@ impl GeneralBitVectorConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_bv_ult, Z3_mk_bvult);
     create_converter_binary_function_z3!(mk_bv_umod, Z3_mk_bvurem);
     create_converter_binary_function_z3!(mk_bv_xor, Z3_mk_bvxor);
+    create_converter_binary_function_z3!(mk_concat, Z3_mk_concat);
+
+    fn mk_extract(&self, high: u64, low: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term =
+                smithril_z3_sys::Z3_mk_extract(self.context(), high as u32, low as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
 }
 
 impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -915,21 +924,6 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
             Z3Term::new(&self.context, term)
         }
     }
-
-    fn mk_fp_extract(&self, high: u64, low: u64, term: &Z3Term) -> Z3Term {
-        unsafe {
-            let term =
-                smithril_z3_sys::Z3_mk_extract(self.context(), high as u32, low as u32, term.term);
-            Z3Term::new(&self.context, term)
-        }
-    }
-
-    fn mk_fp_concat(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
-        unsafe {
-            let term = smithril_z3_sys::Z3_mk_concat(self.context(), term1.term, term2.term);
-            Z3Term::new(&self.context, term)
-        }
-    }
 }
 
 impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -946,7 +940,7 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         Some(self)
     }
 
-    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBitVectorConverter<Z3Sort, Z3Term>> {
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<Z3Sort, Z3Term>> {
         Some(self)
     }
 

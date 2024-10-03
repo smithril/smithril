@@ -3,8 +3,8 @@ use crate::generalized::Factory;
 use crate::generalized::FloatingPointAsBvStr;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
-use crate::generalized::GeneralBitVectorConverter;
 use crate::generalized::GeneralBoolConverter;
+use crate::generalized::GeneralBvConverter;
 use crate::generalized::GeneralFpConverter;
 use crate::generalized::GeneralOptions;
 use crate::generalized::Interrupter;
@@ -562,7 +562,7 @@ impl GeneralArrayConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
 
-impl GeneralBitVectorConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+impl GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
         BitwuzlaSort {
             sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager(), size) },
@@ -607,6 +607,20 @@ impl GeneralBitVectorConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter
     create_converter_binary_function_bitwuzla!(mk_bv_umod, BITWUZLA_KIND_BV_UREM);
     create_converter_binary_function_bitwuzla!(mk_bv_xor, BITWUZLA_KIND_BV_XOR);
     create_converter_binary_function_bitwuzla!(mk_bv_mul, BITWUZLA_KIND_BV_MUL);
+    create_converter_binary_function_bitwuzla!(mk_concat, BITWUZLA_KIND_BV_CONCAT);
+
+    fn mk_extract(&self, high: u64, low: u64, term: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_EXTRACT,
+                term.term,
+                high,
+                low,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
 }
 
 impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
@@ -934,31 +948,6 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
             BitwuzlaTerm { term }
         }
     }
-
-    fn mk_fp_extract(&self, high: u64, low: u64, term: &BitwuzlaTerm) -> BitwuzlaTerm {
-        unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed2(
-                self.term_manager(),
-                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_EXTRACT,
-                term.term,
-                high,
-                low,
-            );
-            BitwuzlaTerm { term }
-        }
-    }
-
-    fn mk_fp_concat(&self, term1: &BitwuzlaTerm, term2: &BitwuzlaTerm) -> BitwuzlaTerm {
-        unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2(
-                self.term_manager(),
-                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_CONCAT,
-                term1.term,
-                term2.term,
-            );
-            BitwuzlaTerm { term }
-        }
-    }
 }
 
 impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
@@ -987,9 +976,7 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     ) -> Option<&dyn GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm>> {
         Some(self)
     }
-    fn try_get_bv_converter(
-        &self,
-    ) -> Option<&dyn GeneralBitVectorConverter<BitwuzlaSort, BitwuzlaTerm>> {
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm>> {
         Some(self)
     }
     fn try_get_array_converter(

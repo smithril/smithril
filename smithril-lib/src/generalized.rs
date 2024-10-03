@@ -79,7 +79,7 @@ impl TheoryDefinition for Term {
                     DuoOperationKind::BvUmod => TheoryKind::Bv,
                     DuoOperationKind::BvXor => TheoryKind::Bv,
                     DuoOperationKind::FpEq => TheoryKind::Fp,
-                    DuoOperationKind::FpConcat => TheoryKind::Fp,
+                    DuoOperationKind::Concat => TheoryKind::Bv,
                 },
                 GenOperation::Trio(kind, _, _, _) => match kind {
                     TrioOperationKind::Store => TheoryKind::Array,
@@ -87,6 +87,7 @@ impl TheoryDefinition for Term {
                 },
                 GenOperation::FpUno(_, _, _) => TheoryKind::Fp,
                 GenOperation::FpDuo(_, _, _, _) => TheoryKind::Fp,
+                GenOperation::Extract(_, _, _) => TheoryKind::Bv,
             },
         }
     }
@@ -152,7 +153,7 @@ pub enum DuoOperationKind {
     BvUmod,
     BvXor,
     FpEq,
-    FpConcat,
+    Concat,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
@@ -187,6 +188,7 @@ pub enum FpDuoOperationKind {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum GenOperation {
     Uno(UnoOperationKind, Term),
+    Extract(Term, u64, u64),
     Duo(DuoOperationKind, Term, Term),
     Trio(TrioOperationKind, Term, Term, Term),
     FpUno(FpUnoOperationKind, RoundingMode, Term),
@@ -452,16 +454,9 @@ where
         }
     }
     fn try_get_bool_converter(&self) -> Option<&dyn GeneralBoolConverter<S, T>>;
-    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBitVectorConverter<S, T>>;
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<S, T>>;
     fn try_get_array_converter(&self) -> Option<&dyn GeneralArrayConverter<S, T>>;
     fn try_get_fp_converter(&self) -> Option<&dyn GeneralFpConverter<S, T>>;
-}
-
-pub trait GeneralConverterGetter<S, T>
-where
-    S: GeneralSort,
-    T: GeneralTerm,
-{
 }
 
 pub trait GeneralFpConverter<S, T>: GeneralConverter<S, T>
@@ -475,8 +470,6 @@ where
     fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> T;
     fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> T;
     fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> T;
-    fn mk_fp_extract(&self, high: u64, low: u64, term: &T) -> T;
-    define_converter_binary_function!(mk_fp_concat);
 
     fn fp_get_bv_exp_size(&self, term: &T) -> u64;
     fn fp_get_bv_sig_size(&self, term: &T) -> u64;
@@ -534,7 +527,6 @@ where
                     let t2 = self.convert_term(term2);
                     match kind {
                         DuoOperationKind::FpEq => Some(self.fp_eq(&t1, &t2)),
-                        DuoOperationKind::FpConcat => Some(self.mk_fp_concat(&t1, &t2)),
                         _ => None,
                     }
                 }
@@ -573,6 +565,7 @@ where
                         FpDuoOperationKind::FpRem => Some(self.mk_fp_rem(r_mode, &t1, &t2)),
                     }
                 }
+                GenOperation::Extract(_, _, _) => None,
             },
         }
     }
@@ -635,7 +628,7 @@ where
     }
 }
 
-pub trait GeneralBitVectorConverter<S, T>: GeneralConverter<S, T>
+pub trait GeneralBvConverter<S, T>: GeneralConverter<S, T>
 where
     S: GeneralSort,
     T: GeneralTerm,
@@ -668,6 +661,8 @@ where
     define_converter_binary_function!(mk_bv_ult);
     define_converter_binary_function!(mk_bv_umod);
     define_converter_binary_function!(mk_bv_xor);
+    define_converter_binary_function!(mk_concat);
+    fn mk_extract(&self, high: u64, low: u64, term: &T) -> T;
     fn convert_bv_term(&self, term: &Term) -> Option<T> {
         match &term.term {
             UnsortedTerm::Constant(const_term) => match const_term {
@@ -716,6 +711,7 @@ where
                         DuoOperationKind::BvUlt => Some(self.mk_bv_ult(&t1, &t2)),
                         DuoOperationKind::BvUmod => Some(self.mk_bv_umod(&t1, &t2)),
                         DuoOperationKind::BvXor => Some(self.mk_bv_xor(&t1, &t2)),
+                        DuoOperationKind::Concat => Some(self.mk_concat(&t1, &t2)),
                         _ => None,
                     }
                 }
