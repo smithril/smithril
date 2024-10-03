@@ -22,6 +22,9 @@ use crate::generalized::Term;
 use crate::generalized::UnsortedTerm;
 use std::ffi::c_uint;
 
+use crate::term;
+use crate::term::Sort;
+use crate::term::Term;
 use crate::utils;
 use core::panic;
 use std::collections::HashMap;
@@ -574,6 +577,20 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
             _ => SolverResult::Unknown,
         }
     }
+
+    fn push(&self) {
+        let context = self.context.as_ref();
+        unsafe {
+            smithril_z3_sys::Z3_solver_push(context.context(), self.solver.0);
+        }
+    }
+
+    fn pop(&self) {
+        let context = self.context.as_ref();
+        unsafe {
+            smithril_z3_sys::Z3_solver_pop(context.context(), self.solver.0, 1);
+        }
+    }
 }
 
 impl GeneralArrayConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -968,7 +985,7 @@ impl Solver for Z3Solver {
         u_core
     }
 
-    fn assert(&self, term: &crate::generalized::Term) {
+    fn assert(&self, term: &Term) {
         let context = self.context.as_ref();
         let cur_z3_term = context.convert_term(term);
         GeneralSolver::assert(self, &cur_z3_term);
@@ -990,10 +1007,7 @@ impl Solver for Z3Solver {
                 };
                 let s = unsafe { CStr::from_ptr(z3_string).to_string_lossy().into_owned() };
                 let bv_const = utils::binary2integer(s);
-                let res = Term {
-                    term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
-                    sort: term.sort.clone(),
-                };
+                let res = term::mk_bv_value_uint64(bv_const, &term.sort);
                 Some(res)
             }
             Sort::BoolSort() => {
@@ -1001,17 +1015,11 @@ impl Solver for Z3Solver {
                     unsafe { smithril_z3_sys::Z3_get_bool_value(context.context(), expr.term) };
                 match z3_lbool {
                     smithril_z3_sys::Z3_L_FALSE => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(false);
                         Some(res)
                     }
                     smithril_z3_sys::Z3_L_TRUE => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(true);
                         Some(res)
                     }
                     _ => {
@@ -1026,5 +1034,13 @@ impl Solver for Z3Solver {
 
     fn reset(&self) {
         GeneralSolver::reset(self)
+    }
+
+    fn push(&self) {
+        GeneralSolver::push(self)
+    }
+
+    fn pop(&self) {
+        GeneralSolver::pop(self)
     }
 }

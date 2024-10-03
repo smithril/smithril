@@ -1,7 +1,6 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
 use crate::generalized::FloatingPointAsBinary;
-use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
 use crate::generalized::GeneralBoolConverter;
 use crate::generalized::GeneralBvConverter;
@@ -11,6 +10,7 @@ use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
 use crate::generalized::RoundingMode;
+use crate::term;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -22,9 +22,6 @@ use crate::generalized::GeneralSort;
 use crate::generalized::GeneralTerm;
 use crate::generalized::Solver;
 use crate::generalized::SolverResult;
-use crate::generalized::Sort;
-use crate::generalized::Term;
-use crate::generalized::UnsortedTerm;
 use crate::utils;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -32,6 +29,8 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use term::Sort;
+use term::Term;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BitwuzlaTerm {
@@ -544,6 +543,18 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
             _ => SolverResult::Unknown,
         }
     }
+
+    fn push(&self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_push(self.solver(), 1);
+        }
+    }
+
+    fn pop(&self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_pop(self.solver(), 1);
+        }
+    }
 }
 
 impl GeneralArrayConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
@@ -1003,7 +1014,7 @@ impl Solver for BitwuzlaSolver {
         u_core
     }
 
-    fn assert(&self, term: &crate::generalized::Term) {
+    fn assert(&self, term: &term::Term) {
         let context = self.context.as_ref();
         let cur_bitwuzla_term = context.convert_term(term);
         GeneralSolver::assert(self, &cur_bitwuzla_term);
@@ -1028,10 +1039,7 @@ impl Solver for BitwuzlaSolver {
                         .into_owned()
                 };
                 let bv_const = utils::binary2integer(s);
-                let res = Term {
-                    term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
-                    sort: term.sort.clone(),
-                };
+                let res = term::mk_bv_value_uint64(bv_const, &term.sort);
                 Some(res)
             }
             Sort::BoolSort() => {
@@ -1041,17 +1049,11 @@ impl Solver for BitwuzlaSolver {
                 let s = s_cstr.to_string_lossy().into_owned();
                 match s.as_str() {
                     "true" => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(true);
                         Some(res)
                     }
                     "false" => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(false);
                         Some(res)
                     }
                     _ => {
@@ -1067,5 +1069,13 @@ impl Solver for BitwuzlaSolver {
 
     fn reset(&self) {
         GeneralSolver::reset(self)
+    }
+
+    fn push(&self) {
+        GeneralSolver::push(self)
+    }
+
+    fn pop(&self) {
+        GeneralSolver::pop(self)
     }
 }

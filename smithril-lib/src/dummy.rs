@@ -1,6 +1,8 @@
 use crate::generalized::Context;
 use crate::generalized::Interrupter;
 use crate::generalized::Options;
+use crate::term;
+use crate::term::Term;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -9,7 +11,6 @@ use std::time::Duration;
 use crate::generalized::Factory;
 use crate::generalized::Solver;
 use crate::generalized::SolverResult;
-use crate::generalized::Term;
 use std::collections::HashSet;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -98,7 +99,7 @@ impl Solver for DummySolver {
         Vec::new()
     }
 
-    fn assert(&self, _term: &crate::generalized::Term) {}
+    fn assert(&self, _term: &term::Term) {}
 
     fn check_sat(&self) -> SolverResult {
         sleep(Duration::from_secs(100));
@@ -110,4 +111,8 @@ impl Solver for DummySolver {
     }
 
     fn reset(&self) {}
+
+    fn push(&self) {}
+
+    fn pop(&self) {}
 }
