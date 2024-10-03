@@ -1,6 +1,6 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
-use crate::generalized::FloatingPointAsBvStr;
+use crate::generalized::FloatingPointAsBinary;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
 use crate::generalized::GeneralBoolConverter;
@@ -11,7 +11,6 @@ use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
 use crate::generalized::RoundingMode;
-use crate::generalized::TheoryDefinition;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -682,7 +681,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_sig_size(term.term) }
     }
 
-    fn fp_get_values_ieee(&self, term: &BitwuzlaTerm) -> FloatingPointAsBvStr {
+    fn fp_get_values_ieee(&self, term: &BitwuzlaTerm) -> FloatingPointAsBinary {
         unsafe {
             let sign_s = CString::new(String::new()).unwrap();
             let mut sign_ptr = sign_s.as_ptr();
@@ -707,7 +706,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
                 .to_string_lossy()
                 .into_owned();
 
-            FloatingPointAsBvStr {
+            FloatingPointAsBinary {
                 sign,
                 exponent: exponent.trim_start_matches('0').to_owned(),
                 significand: significand.trim_start_matches('0').to_owned(),
@@ -781,7 +780,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn fp_eq(&self, term1: &BitwuzlaTerm, term2: &BitwuzlaTerm) -> BitwuzlaTerm {
+    fn mk_fp_eq(&self, term1: &BitwuzlaTerm, term2: &BitwuzlaTerm) -> BitwuzlaTerm {
         unsafe {
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2(
                 self.term_manager(),
@@ -988,74 +987,6 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         Some(self)
     }
     create_converter_binary_function_bitwuzla!(mk_eq, BITWUZLA_KIND_EQUAL);
-
-    fn convert_term(&self, term: &Term) -> BitwuzlaTerm {
-        match term.define_theory() {
-            crate::generalized::TheoryKind::Bool => self
-                .try_get_bool_converter()
-                .unwrap()
-                .convert_bool_term(term)
-                .unwrap(),
-            crate::generalized::TheoryKind::Bv => self
-                .try_get_bv_converter()
-                .unwrap()
-                .convert_bv_term(term)
-                .unwrap(),
-
-            crate::generalized::TheoryKind::Array => self
-                .try_get_array_converter()
-                .unwrap()
-                .convert_array_term(term)
-                .unwrap(),
-
-            crate::generalized::TheoryKind::Fp => self
-                .try_get_fp_converter()
-                .unwrap()
-                .convert_fp_term(term)
-                .unwrap(),
-
-            crate::generalized::TheoryKind::Native => match &term.term {
-                UnsortedTerm::Constant(const_term) => match const_term {
-                    GenConstant::Symbol(x) => self.mk_smt_symbol(x, &self.convert_sort(&term.sort)),
-                    _ => std::panic!("Unsupported term type"),
-                },
-                UnsortedTerm::Operation(operation) => match operation.as_ref() {
-                    crate::generalized::GenOperation::Duo(kind, term1, term2) => match kind {
-                        crate::generalized::DuoOperationKind::Eq => {
-                            self.mk_eq(&self.convert_term(term1), &self.convert_term(term2))
-                        }
-                        _ => std::panic!("Unsupported DuoOperation type"),
-                    },
-                    _ => std::panic!("Unsupported GenOperation type"),
-                },
-            },
-        }
-    }
-
-    fn convert_sort(&self, sort: &Sort) -> BitwuzlaSort {
-        match sort {
-            Sort::BvSort(_) => self
-                .try_get_bv_converter()
-                .unwrap()
-                .convert_bv_sort(sort)
-                .unwrap(),
-            Sort::BoolSort() => self
-                .try_get_bool_converter()
-                .unwrap()
-                .convert_bool_sort(sort)
-                .unwrap(),
-            Sort::ArraySort(_, _) => self
-                .try_get_array_converter()
-                .unwrap()
-                .convert_array_sort(sort)
-                .unwrap(),
-            Sort::FpSort(_, _) => self
-                .try_get_fp_converter()
-                .unwrap()
-                .convert_fp_sort(sort)
-                .unwrap(),
-        }
-    }
 }
 
 impl Solver for BitwuzlaSolver {

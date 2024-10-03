@@ -542,7 +542,7 @@ mod tests {
 
     fn generalized_generate_fp_ieee<FP, S, T>(
         converter: &FP,
-    ) -> crate::generalized::FloatingPointAsBvStr
+    ) -> crate::generalized::FloatingPointAsBinary
     where
         FP: GeneralFpConverter<S, T>,
         S: GeneralSort,

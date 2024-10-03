@@ -1,6 +1,6 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
-use crate::generalized::FloatingPointAsBvStr;
+use crate::generalized::FloatingPointAsBinary;
 use crate::generalized::GenConstant;
 use crate::generalized::GeneralArrayConverter;
 use crate::generalized::GeneralBoolConverter;
@@ -703,7 +703,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn fp_get_values_ieee(&self, term1: &Z3Term) -> crate::generalized::FloatingPointAsBvStr {
+    fn fp_get_values_ieee(&self, term1: &Z3Term) -> crate::generalized::FloatingPointAsBinary {
         unsafe {
             let bv_term = smithril_z3_sys::Z3_mk_fpa_to_ieee_bv(self.context(), term1.term);
             let exp_size = self.fp_get_bv_exp_size(term1) as c_uint;
@@ -743,7 +743,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
                 .to_string_lossy()
                 .into_owned();
 
-            FloatingPointAsBvStr {
+            FloatingPointAsBinary {
                 sign,
                 exponent,
                 significand,
@@ -793,7 +793,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn fp_eq(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
+    fn mk_fp_eq(&self, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_eq(self.context(), term1.term, term2.term);
             Z3Term::new(&self.context, term)
