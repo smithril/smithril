@@ -1,10 +1,16 @@
 use crate::generalized::Context;
 use crate::generalized::Factory;
+use crate::generalized::FloatingPointAsBinary;
 use crate::generalized::GenConstant;
+use crate::generalized::GeneralArrayConverter;
+use crate::generalized::GeneralBoolConverter;
+use crate::generalized::GeneralBvConverter;
+use crate::generalized::GeneralFpConverter;
 use crate::generalized::GeneralOptions;
 use crate::generalized::Interrupter;
 use crate::generalized::OptionKind;
 use crate::generalized::Options;
+use crate::generalized::RoundingMode;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -162,6 +168,46 @@ impl Hash for BitwuzlaOptions {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.options.hash(state);
     }
+}
+
+macro_rules! create_converter_fp_binary_function_bitwuzla {
+    ($func_name:ident, $bitwuzla_sys_kind_name:ident) => {
+        fn $func_name(
+            &self,
+            r_mode: &RoundingMode,
+            term1: &BitwuzlaTerm,
+            term2: &BitwuzlaTerm,
+        ) -> BitwuzlaTerm {
+            BitwuzlaTerm {
+                term: unsafe {
+                    smithril_bitwuzla_sys::bitwuzla_mk_term3(
+                        self.term_manager(),
+                        smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
+                        self.get_rouning_mode(r_mode.clone()).term,
+                        term1.term,
+                        term2.term,
+                    )
+                },
+            }
+        }
+    };
+}
+
+macro_rules! create_converter_fp_unary_function_bitwuzla {
+    ($func_name:ident, $bitwuzla_sys_kind_name:ident) => {
+        fn $func_name(&self, r_mode: &RoundingMode, term: &BitwuzlaTerm) -> BitwuzlaTerm {
+            BitwuzlaTerm {
+                term: unsafe {
+                    smithril_bitwuzla_sys::bitwuzla_mk_term2(
+                        self.term_manager(),
+                        smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
+                        self.get_rouning_mode(r_mode.clone()).term,
+                        term.term,
+                    )
+                },
+            }
+        }
+    };
 }
 
 #[derive(Default)]
@@ -500,6 +546,409 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     }
 }
 
+impl GeneralArrayConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    fn mk_array_sort(&self, index: &BitwuzlaSort, element: &BitwuzlaSort) -> BitwuzlaSort {
+        let i = index.sort;
+        let e = element.sort;
+        BitwuzlaSort {
+            sort: unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_array_sort(self.term_manager(), i, e)
+            },
+        }
+    }
+
+    create_converter_binary_function_bitwuzla!(mk_select, BITWUZLA_KIND_ARRAY_SELECT);
+    create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
+}
+
+impl GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
+        BitwuzlaSort {
+            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager(), size) },
+        }
+    }
+
+    fn mk_bv_value_uint64(&self, sort: &BitwuzlaSort, val: u64) -> BitwuzlaTerm {
+        BitwuzlaTerm {
+            term: unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_bv_value_uint64(
+                    self.term_manager(),
+                    sort.sort,
+                    val,
+                )
+            },
+        }
+    }
+
+    create_converter_binary_function_bitwuzla!(mk_bv_add, BITWUZLA_KIND_BV_ADD);
+    create_converter_binary_function_bitwuzla!(mk_bv_and, BITWUZLA_KIND_BV_AND);
+    create_converter_binary_function_bitwuzla!(mk_bv_ashr, BITWUZLA_KIND_BV_ASHR);
+    create_converter_binary_function_bitwuzla!(mk_bv_lshr, BITWUZLA_KIND_BV_SHR);
+    create_converter_binary_function_bitwuzla!(mk_bv_nand, BITWUZLA_KIND_BV_NAND);
+    create_converter_unary_function_bitwuzla!(mk_bv_neg, BITWUZLA_KIND_BV_NEG);
+    create_converter_unary_function_bitwuzla!(mk_bv_not, BITWUZLA_KIND_BV_NOT);
+    create_converter_binary_function_bitwuzla!(mk_bv_or, BITWUZLA_KIND_BV_OR);
+    create_converter_binary_function_bitwuzla!(mk_bv_nor, BITWUZLA_KIND_BV_NOR);
+    create_converter_binary_function_bitwuzla!(mk_bv_nxor, BITWUZLA_KIND_BV_XNOR);
+    create_converter_binary_function_bitwuzla!(mk_bv_sdiv, BITWUZLA_KIND_BV_SDIV);
+    create_converter_binary_function_bitwuzla!(mk_bv_sge, BITWUZLA_KIND_BV_SGE);
+    create_converter_binary_function_bitwuzla!(mk_bv_sgt, BITWUZLA_KIND_BV_SGT);
+    create_converter_binary_function_bitwuzla!(mk_bv_shl, BITWUZLA_KIND_BV_SHL);
+    create_converter_binary_function_bitwuzla!(mk_bv_sle, BITWUZLA_KIND_BV_SLE);
+    create_converter_binary_function_bitwuzla!(mk_bv_slt, BITWUZLA_KIND_BV_SLT);
+    create_converter_binary_function_bitwuzla!(mk_bv_smod, BITWUZLA_KIND_BV_SMOD);
+    create_converter_binary_function_bitwuzla!(mk_bv_sub, BITWUZLA_KIND_BV_SUB);
+    create_converter_binary_function_bitwuzla!(mk_bv_udiv, BITWUZLA_KIND_BV_UDIV);
+    create_converter_binary_function_bitwuzla!(mk_bv_uge, BITWUZLA_KIND_BV_UGE);
+    create_converter_binary_function_bitwuzla!(mk_bv_ugt, BITWUZLA_KIND_BV_UGT);
+    create_converter_binary_function_bitwuzla!(mk_bv_ule, BITWUZLA_KIND_BV_ULE);
+    create_converter_binary_function_bitwuzla!(mk_bv_ult, BITWUZLA_KIND_BV_ULT);
+    create_converter_binary_function_bitwuzla!(mk_bv_umod, BITWUZLA_KIND_BV_UREM);
+    create_converter_binary_function_bitwuzla!(mk_bv_xor, BITWUZLA_KIND_BV_XOR);
+    create_converter_binary_function_bitwuzla!(mk_bv_mul, BITWUZLA_KIND_BV_MUL);
+    create_converter_binary_function_bitwuzla!(mk_concat, BITWUZLA_KIND_BV_CONCAT);
+
+    fn mk_extract(&self, high: u64, low: u64, term: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_EXTRACT,
+                term.term,
+                high,
+                low,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+}
+
+impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    fn mk_bool_sort(&self) -> BitwuzlaSort {
+        BitwuzlaSort {
+            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bool_sort(self.term_manager()) },
+        }
+    }
+
+    fn mk_smt_bool(&self, val: bool) -> BitwuzlaTerm {
+        let term = unsafe {
+            match val {
+                true => smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager()),
+                false => smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager()),
+            }
+        };
+        BitwuzlaTerm { term }
+    }
+
+    create_converter_binary_function_bitwuzla!(mk_implies, BITWUZLA_KIND_IMPLIES);
+    create_converter_binary_function_bitwuzla!(mk_neq, BITWUZLA_KIND_DISTINCT);
+    create_converter_unary_function_bitwuzla!(mk_not, BITWUZLA_KIND_NOT);
+    create_converter_binary_function_bitwuzla!(mk_or, BITWUZLA_KIND_OR);
+    create_converter_binary_function_bitwuzla!(mk_xor, BITWUZLA_KIND_XOR);
+    create_converter_binary_function_bitwuzla!(mk_and, BITWUZLA_KIND_AND);
+}
+
+impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    fn mk_fp_sort(&self, ew: u64, sw: u64) -> BitwuzlaSort {
+        BitwuzlaSort {
+            sort: unsafe {
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw)
+            },
+        }
+    }
+
+    fn mk_fp_value(
+        &self,
+        bv_sign: &BitwuzlaTerm,
+        bv_exponent: &BitwuzlaTerm,
+        bv_significand: &BitwuzlaTerm,
+    ) -> BitwuzlaTerm {
+        let float_term = unsafe {
+            smithril_bitwuzla_sys::bitwuzla_mk_fp_value(
+                self.term_manager(),
+                bv_sign.term,
+                bv_exponent.term,
+                bv_significand.term,
+            )
+        };
+        BitwuzlaTerm { term: float_term }
+    }
+
+    fn fp_get_bv_exp_size(&self, term: &BitwuzlaTerm) -> u64 {
+        unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_exp_size(term.term) }
+    }
+
+    fn fp_get_bv_sig_size(&self, term: &BitwuzlaTerm) -> u64 {
+        unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_sig_size(term.term) }
+    }
+
+    fn fp_get_values_ieee(&self, term: &BitwuzlaTerm) -> FloatingPointAsBinary {
+        unsafe {
+            let sign_s = CString::new(String::new()).unwrap();
+            let mut sign_ptr = sign_s.as_ptr();
+
+            let exponent_s = CString::new(String::new()).unwrap();
+            let mut exponent_ptr = exponent_s.as_ptr();
+
+            let significand_s = CString::new(String::new()).unwrap();
+            let mut significand_ptr = significand_s.as_ptr();
+
+            smithril_bitwuzla_sys::bitwuzla_term_value_get_fp_ieee(
+                term.term,
+                &mut sign_ptr,
+                &mut exponent_ptr,
+                &mut significand_ptr,
+                2,
+            );
+
+            let sign = CStr::from_ptr(sign_ptr).to_string_lossy().into_owned();
+            let exponent = CStr::from_ptr(exponent_ptr).to_string_lossy().into_owned();
+            let significand = CStr::from_ptr(significand_ptr)
+                .to_string_lossy()
+                .into_owned();
+
+            FloatingPointAsBinary {
+                sign,
+                exponent: exponent.trim_start_matches('0').to_owned(),
+                significand: significand.trim_start_matches('0').to_owned(),
+            }
+        }
+    }
+
+    fn fp_is_pos(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_POS,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn fp_is_nan(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_NAN,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn fp_is_inf(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_INF,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn fp_is_normal(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_NORMAL,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn fp_is_subnormal(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_SUBNORMAL,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn fp_is_zero(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_IS_ZERO,
+                term1.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_eq(&self, term1: &BitwuzlaTerm, term2: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_EQUAL,
+                term1.term,
+                term2.term,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_rem, BITWUZLA_KIND_FP_REM);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_min, BITWUZLA_KIND_FP_MIN);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_max, BITWUZLA_KIND_FP_MAX);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_lt, BITWUZLA_KIND_FP_LT);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_leq, BITWUZLA_KIND_FP_LEQ);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_gt, BITWUZLA_KIND_FP_GT);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_geq, BITWUZLA_KIND_FP_GEQ);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_add, BITWUZLA_KIND_FP_ADD);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_sub, BITWUZLA_KIND_FP_SUB);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_mul, BITWUZLA_KIND_FP_MUL);
+    create_converter_fp_binary_function_bitwuzla!(mk_fp_div, BITWUZLA_KIND_FP_DIV);
+    create_converter_fp_unary_function_bitwuzla!(mk_fp_sqrt, BITWUZLA_KIND_FP_SQRT);
+    create_converter_fp_unary_function_bitwuzla!(mk_fp_rti, BITWUZLA_KIND_FP_RTI);
+    create_converter_fp_unary_function_bitwuzla!(mk_fp_abs, BITWUZLA_KIND_FP_ABS);
+    create_converter_fp_unary_function_bitwuzla!(mk_fp_neg, BITWUZLA_KIND_FP_NEG);
+
+    fn get_rouning_mode(&self, r_mode: RoundingMode) -> BitwuzlaTerm {
+        unsafe {
+            let rm = match r_mode {
+                RoundingMode::RNA => smithril_bitwuzla_sys::BITWUZLA_RM_RNA,
+                RoundingMode::RNE => smithril_bitwuzla_sys::BITWUZLA_RM_RNE,
+                RoundingMode::RTN => smithril_bitwuzla_sys::BITWUZLA_RM_RTN,
+                RoundingMode::RTP => smithril_bitwuzla_sys::BITWUZLA_RM_RTP,
+                RoundingMode::RTZ => smithril_bitwuzla_sys::BITWUZLA_RM_RTZ,
+            };
+            let r_mode_term = smithril_bitwuzla_sys::bitwuzla_mk_rm_value(self.term_manager(), rm);
+            BitwuzlaTerm { term: r_mode_term }
+        }
+    }
+
+    fn mk_fp_to_fp_from_fp(
+        &self,
+        rmterm: &BitwuzlaTerm,
+        term1: &BitwuzlaTerm,
+        ew: u64,
+        sw: u64,
+    ) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_FP,
+                rmterm.term,
+                term1.term,
+                ew,
+                sw,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_to_sbv(&self, rmterm: &BitwuzlaTerm, term1: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_SBV,
+                rmterm.term,
+                term1.term,
+                w,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_to_ubv(&self, rmterm: &BitwuzlaTerm, term1: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_UBV,
+                rmterm.term,
+                term1.term,
+                w,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_to_fp_from_sbv(
+        &self,
+        rmterm: &BitwuzlaTerm,
+        term1: &BitwuzlaTerm,
+        ew: u64,
+        sw: u64,
+    ) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_SBV,
+                rmterm.term,
+                term1.term,
+                ew,
+                sw,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_to_fp_from_ubv(
+        &self,
+        rmterm: &BitwuzlaTerm,
+        term1: &BitwuzlaTerm,
+        ew: u64,
+        sw: u64,
+    ) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_UBV,
+                rmterm.term,
+                term1.term,
+                ew,
+                sw,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_pos_zero(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_zero(
+                self.term_manager(),
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_inf(
+                self.term_manager(),
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_zero(
+                self.term_manager(),
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_inf(
+                self.term_manager(),
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+}
+
 impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         let mut sym_table = self.symbol_cache.write().unwrap();
@@ -521,86 +970,23 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         BitwuzlaTerm { term }
     }
 
+    fn try_get_bool_converter(
+        &self,
+    ) -> Option<&dyn GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm>> {
+        Some(self)
+    }
+    fn try_get_bv_converter(&self) -> Option<&dyn GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm>> {
+        Some(self)
+    }
+    fn try_get_array_converter(
+        &self,
+    ) -> Option<&dyn GeneralArrayConverter<BitwuzlaSort, BitwuzlaTerm>> {
+        Some(self)
+    }
+    fn try_get_fp_converter(&self) -> Option<&dyn GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm>> {
+        Some(self)
+    }
     create_converter_binary_function_bitwuzla!(mk_eq, BITWUZLA_KIND_EQUAL);
-
-    fn mk_bv_sort(&self, size: u64) -> BitwuzlaSort {
-        BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bv_sort(self.term_manager(), size) },
-        }
-    }
-
-    fn mk_bool_sort(&self) -> BitwuzlaSort {
-        BitwuzlaSort {
-            sort: unsafe { smithril_bitwuzla_sys::bitwuzla_mk_bool_sort(self.term_manager()) },
-        }
-    }
-
-    fn mk_array_sort(&self, index: &BitwuzlaSort, element: &BitwuzlaSort) -> BitwuzlaSort {
-        let i = index.sort;
-        let e = element.sort;
-        BitwuzlaSort {
-            sort: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_array_sort(self.term_manager(), i, e)
-            },
-        }
-    }
-
-    fn mk_bv_value_uint64(&self, sort: &BitwuzlaSort, val: u64) -> BitwuzlaTerm {
-        BitwuzlaTerm {
-            term: unsafe {
-                smithril_bitwuzla_sys::bitwuzla_mk_bv_value_uint64(
-                    self.term_manager(),
-                    sort.sort,
-                    val,
-                )
-            },
-        }
-    }
-
-    fn mk_smt_bool(&self, val: bool) -> BitwuzlaTerm {
-        let term = unsafe {
-            match val {
-                true => smithril_bitwuzla_sys::bitwuzla_mk_true(self.term_manager()),
-                false => smithril_bitwuzla_sys::bitwuzla_mk_false(self.term_manager()),
-            }
-        };
-        BitwuzlaTerm { term }
-    }
-
-    create_converter_binary_function_bitwuzla!(mk_and, BITWUZLA_KIND_AND);
-    create_converter_binary_function_bitwuzla!(mk_bvadd, BITWUZLA_KIND_BV_ADD);
-    create_converter_binary_function_bitwuzla!(mk_bvand, BITWUZLA_KIND_BV_AND);
-    create_converter_binary_function_bitwuzla!(mk_bvashr, BITWUZLA_KIND_BV_ASHR);
-    create_converter_binary_function_bitwuzla!(mk_bvlshr, BITWUZLA_KIND_BV_SHR);
-    create_converter_binary_function_bitwuzla!(mk_bvnand, BITWUZLA_KIND_BV_NAND);
-    create_converter_unary_function_bitwuzla!(mk_bvneg, BITWUZLA_KIND_BV_NEG);
-    create_converter_unary_function_bitwuzla!(mk_bvnot, BITWUZLA_KIND_BV_NOT);
-    create_converter_binary_function_bitwuzla!(mk_bvor, BITWUZLA_KIND_BV_OR);
-    create_converter_binary_function_bitwuzla!(mk_bvnor, BITWUZLA_KIND_BV_NOR);
-    create_converter_binary_function_bitwuzla!(mk_bvnxor, BITWUZLA_KIND_BV_XNOR);
-    create_converter_binary_function_bitwuzla!(mk_bvsdiv, BITWUZLA_KIND_BV_SDIV);
-    create_converter_binary_function_bitwuzla!(mk_bvsge, BITWUZLA_KIND_BV_SGE);
-    create_converter_binary_function_bitwuzla!(mk_bvsgt, BITWUZLA_KIND_BV_SGT);
-    create_converter_binary_function_bitwuzla!(mk_bvshl, BITWUZLA_KIND_BV_SHL);
-    create_converter_binary_function_bitwuzla!(mk_bvsle, BITWUZLA_KIND_BV_SLE);
-    create_converter_binary_function_bitwuzla!(mk_bvslt, BITWUZLA_KIND_BV_SLT);
-    create_converter_binary_function_bitwuzla!(mk_bvsmod, BITWUZLA_KIND_BV_SMOD);
-    create_converter_binary_function_bitwuzla!(mk_bvsub, BITWUZLA_KIND_BV_SUB);
-    create_converter_binary_function_bitwuzla!(mk_bvudiv, BITWUZLA_KIND_BV_UDIV);
-    create_converter_binary_function_bitwuzla!(mk_bvuge, BITWUZLA_KIND_BV_UGE);
-    create_converter_binary_function_bitwuzla!(mk_bvugt, BITWUZLA_KIND_BV_UGT);
-    create_converter_binary_function_bitwuzla!(mk_bvule, BITWUZLA_KIND_BV_ULE);
-    create_converter_binary_function_bitwuzla!(mk_bvult, BITWUZLA_KIND_BV_ULT);
-    create_converter_binary_function_bitwuzla!(mk_bvumod, BITWUZLA_KIND_BV_UREM);
-    create_converter_binary_function_bitwuzla!(mk_bvxor, BITWUZLA_KIND_BV_XOR);
-    create_converter_binary_function_bitwuzla!(mk_implies, BITWUZLA_KIND_IMPLIES);
-    create_converter_binary_function_bitwuzla!(mk_neq, BITWUZLA_KIND_DISTINCT);
-    create_converter_unary_function_bitwuzla!(mk_not, BITWUZLA_KIND_NOT);
-    create_converter_binary_function_bitwuzla!(mk_or, BITWUZLA_KIND_OR);
-    create_converter_binary_function_bitwuzla!(mk_xor, BITWUZLA_KIND_XOR);
-    create_converter_binary_function_bitwuzla!(mk_bvmul, BITWUZLA_KIND_BV_MUL);
-    create_converter_binary_function_bitwuzla!(mk_select, BITWUZLA_KIND_ARRAY_SELECT);
-    create_converter_ternary_function_bitwuzla!(mk_store, BITWUZLA_KIND_ARRAY_STORE);
 }
 
 impl Solver for BitwuzlaSolver {
@@ -675,6 +1061,7 @@ impl Solver for BitwuzlaSolver {
             }
 
             Sort::ArraySort(_, _) => panic!("Unexpected sort"),
+            Sort::FpSort(_, _) => panic!("Unexpected sort"),
         }
     }
 

@@ -40,8 +40,8 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        Factory, GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
-        Options, Solver, SolverResult, Sort, Term, UnsortedTerm,
+        Factory, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
+        GeneralTerm, Options, RoundingMode, Solver, SolverResult, Sort, Term, UnsortedTerm,
     };
     use crate::z3::Z3Factory;
 
@@ -220,7 +220,6 @@ mod tests {
         };
 
         solver.assert(&converter.convert_term(&eq));
-
         let result = solver.check_sat();
         assert_eq!(SolverResult::Sat, result);
     }
@@ -400,6 +399,221 @@ mod tests {
         solver_unsat_works(solver);
         let u_core = solver.unsat_core();
         assert_eq!(u_core.len(), 2);
+    }
+
+    fn generalized_solver_fp_works<C, SL, S, T, O>(converter: &C, solver: &SL)
+    where
+        C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
+        S: GeneralSort,
+        T: GeneralTerm,
+        O: GeneralOptions,
+    {
+        let x1 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            sort: Sort::BvSort(1),
+        };
+        let x2 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(5),
+        };
+        let x3 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            sort: Sort::BvSort(5),
+        };
+        let y1 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            sort: Sort::BvSort(1),
+        };
+        let y2 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(3)),
+            sort: Sort::BvSort(5),
+        };
+        let y3 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(3)),
+            sort: Sort::BvSort(5),
+        };
+        let x = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
+                crate::generalized::TrioOperationKind::MkFpValue,
+                x1,
+                x2,
+                x3,
+            ))),
+            sort: Sort::FpSort(5, 5),
+        };
+        let y = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
+                crate::generalized::TrioOperationKind::MkFpValue,
+                y1,
+                y2,
+                y3,
+            ))),
+            sort: Sort::FpSort(5, 5),
+        };
+        let xy = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpDuo(
+                crate::generalized::FpDuoOperationKind::FpAdd,
+                RoundingMode::RNA,
+                x.clone(),
+                y.clone(),
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+        let yx = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpDuo(
+                crate::generalized::FpDuoOperationKind::FpAdd,
+                RoundingMode::RNA,
+                y.clone(),
+                x.clone(),
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+        let t = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::FpEq,
+                xy,
+                yx,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        solver.assert(&converter.convert_term(&t));
+        let result = solver.check_sat();
+        assert_eq!(SolverResult::Sat, result);
+    }
+
+    fn generalized_solver_fp_unsat_works<C, SL, S, T, O>(converter: &C, solver: &SL)
+    where
+        C: GeneralConverter<S, T>,
+        SL: GeneralSolver<S, T, O, C>,
+        S: GeneralSort,
+        T: GeneralTerm,
+        O: GeneralOptions,
+    {
+        let x1 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            sort: Sort::BvSort(1),
+        };
+        let x2 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(10),
+        };
+        let x3 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            sort: Sort::BvSort(10),
+        };
+        let x = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
+                crate::generalized::TrioOperationKind::MkFpValue,
+                x1,
+                x2,
+                x3,
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+        let sqrtx_rna = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpUno(
+                crate::generalized::FpUnoOperationKind::FpSqrt,
+                RoundingMode::RNA,
+                x.clone(),
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+        let sqrtx_rtz = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpUno(
+                crate::generalized::FpUnoOperationKind::FpSqrt,
+                RoundingMode::RTZ,
+                x.clone(),
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+        let t = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
+                crate::generalized::DuoOperationKind::FpEq,
+                sqrtx_rna,
+                sqrtx_rtz,
+            ))),
+            sort: Sort::BoolSort(),
+        };
+        solver.assert(&converter.convert_term(&t));
+        let result = solver.check_sat();
+        assert_eq!(SolverResult::Unsat, result);
+    }
+
+    fn generalized_generate_fp_ieee<FP, S, T>(
+        converter: &FP,
+    ) -> crate::generalized::FloatingPointAsBinary
+    where
+        FP: GeneralFpConverter<S, T>,
+        S: GeneralSort,
+        T: GeneralTerm,
+    {
+        let x1 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            sort: Sort::BvSort(1),
+        };
+        let x2 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            sort: Sort::BvSort(10),
+        };
+        let x3 = Term {
+            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            sort: Sort::BvSort(10),
+        };
+        let x = Term {
+            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
+                crate::generalized::TrioOperationKind::MkFpValue,
+                x1,
+                x2,
+                x3,
+            ))),
+            sort: Sort::FpSort(10, 10),
+        };
+
+        converter.fp_get_values_ieee(&converter.convert_term(&x))
+    }
+
+    #[test]
+    fn ieee_works() {
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let x = generalized_generate_fp_ieee(context.as_ref());
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let y = generalized_generate_fp_ieee(context.as_ref());
+        assert_eq!(x, y);
+    }
+
+    #[test]
+    fn bitwuzla_fp_works() {
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_works(context.as_ref(), solver.as_ref());
+    }
+
+    #[test]
+    fn z3_fp_works() {
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_works(context.as_ref(), solver.as_ref());
+    }
+
+    #[test]
+    fn bitwuzla_fp_unsat_works() {
+        let mut factory = BitwuzlaFactory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_unsat_works(context.as_ref(), solver.as_ref());
+    }
+
+    #[test]
+    fn z3_fp_unsat_works() {
+        let mut factory = Z3Factory::default();
+        let context = factory.new_context();
+        let solver = factory.new_default_solver(context.clone());
+        generalized_solver_fp_unsat_works(context.as_ref(), solver.as_ref());
     }
 
     #[test]
