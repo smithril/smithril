@@ -723,25 +723,3 @@ pub trait GeneralOptions {
     fn set_produce_unsat_core(&self, val: bool);
     fn get_produce_unsat_core(&self) -> bool;
 }
-
-pub struct SolverOptions {
-    pub unsat_core_enabled: bool,
-    pub max_time: i32,
-    pub max_memory: i32,
-}
-
-impl SolverOptions {
-    pub fn new() -> Self {
-        Self {
-            unsat_core_enabled: false,
-            max_time: 0,
-            max_memory: 0,
-        }
-    }
-}
-
-impl Default for SolverOptions {
-    fn default() -> Self {
-        Self::new()
-    }
-}
