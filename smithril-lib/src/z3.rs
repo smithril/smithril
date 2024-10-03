@@ -33,7 +33,7 @@ use std::ptr;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash)]
 pub struct Z3Context {
     context: smithril_z3_sys::Z3_context,
 }
