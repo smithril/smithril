@@ -41,12 +41,10 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        Factory, Factory, GeneralConverter, GeneralConverter, GeneralFpConverter, GeneralOptions,
-        GeneralOptions, GeneralSolver, GeneralSolver, GeneralSort, GeneralSort, GeneralTerm,
-        GeneralTerm, Options, Options, RoundingMode, Solver, Solver, SolverResult, SolverResult,
-        Sort, Term, UnsortedTerm,
+        Factory, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
+        GeneralTerm, Options, Solver, SolverResult,
     };
-    use crate::term::{self};
+    use crate::term::{self, RoundingMode, Sort, Term, UnsortedTerm};
     use crate::z3::Z3Factory;
 
     fn solver_sat_works<SL: Solver>(solver: &SL) {
@@ -164,8 +162,8 @@ mod tests {
         let bv_sort = term::mk_bv_sort(3);
         let x = term::mk_smt_symbol("x", &bv_sort);
         let y = term::mk_bv_value_uint64(2, &bv_sort);
-        let bvor1 = term::mk_bvor(&x, &y);
-        let bvor2 = term::mk_bvor(&y, &x);
+        let bvor1 = term::mk_bv_or(&x, &y);
+        let bvor2 = term::mk_bv_or(&y, &x);
         let eq = term::mk_eq(&bvor1, &bvor2);
         solver.assert(&converter.convert_term(&eq));
         let result = solver.check_sat();
@@ -205,32 +203,32 @@ mod tests {
         O: GeneralOptions,
     {
         let x1 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(0)),
             sort: Sort::BvSort(1),
         };
         let x2 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(2)),
             sort: Sort::BvSort(5),
         };
         let x3 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(5)),
             sort: Sort::BvSort(5),
         };
         let y1 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(0)),
             sort: Sort::BvSort(1),
         };
         let y2 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(3)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(3)),
             sort: Sort::BvSort(5),
         };
         let y3 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(3)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(3)),
             sort: Sort::BvSort(5),
         };
         let x = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
-                crate::generalized::TrioOperationKind::MkFpValue,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
+                term::TrioOperationKind::MkFpValue,
                 x1,
                 x2,
                 x3,
@@ -238,8 +236,8 @@ mod tests {
             sort: Sort::FpSort(5, 5),
         };
         let y = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
-                crate::generalized::TrioOperationKind::MkFpValue,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
+                term::TrioOperationKind::MkFpValue,
                 y1,
                 y2,
                 y3,
@@ -247,8 +245,8 @@ mod tests {
             sort: Sort::FpSort(5, 5),
         };
         let xy = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpDuo(
-                crate::generalized::FpDuoOperationKind::FpAdd,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::FpDuo(
+                term::FpDuoOperationKind::FpAdd,
                 RoundingMode::RNA,
                 x.clone(),
                 y.clone(),
@@ -256,8 +254,8 @@ mod tests {
             sort: Sort::FpSort(10, 10),
         };
         let yx = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpDuo(
-                crate::generalized::FpDuoOperationKind::FpAdd,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::FpDuo(
+                term::FpDuoOperationKind::FpAdd,
                 RoundingMode::RNA,
                 y.clone(),
                 x.clone(),
@@ -265,8 +263,8 @@ mod tests {
             sort: Sort::FpSort(10, 10),
         };
         let t = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-                crate::generalized::DuoOperationKind::FpEq,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Duo(
+                term::DuoOperationKind::FpEq,
                 xy,
                 yx,
             ))),
@@ -286,20 +284,20 @@ mod tests {
         O: GeneralOptions,
     {
         let x1 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(0)),
             sort: Sort::BvSort(1),
         };
         let x2 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(2)),
             sort: Sort::BvSort(10),
         };
         let x3 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(5)),
             sort: Sort::BvSort(10),
         };
         let x = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
-                crate::generalized::TrioOperationKind::MkFpValue,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
+                term::TrioOperationKind::MkFpValue,
                 x1,
                 x2,
                 x3,
@@ -307,24 +305,24 @@ mod tests {
             sort: Sort::FpSort(10, 10),
         };
         let sqrtx_rna = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpUno(
-                crate::generalized::FpUnoOperationKind::FpSqrt,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::FpUno(
+                term::FpUnoOperationKind::FpSqrt,
                 RoundingMode::RNA,
                 x.clone(),
             ))),
             sort: Sort::FpSort(10, 10),
         };
         let sqrtx_rtz = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::FpUno(
-                crate::generalized::FpUnoOperationKind::FpSqrt,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::FpUno(
+                term::FpUnoOperationKind::FpSqrt,
                 RoundingMode::RTZ,
                 x.clone(),
             ))),
             sort: Sort::FpSort(10, 10),
         };
         let t = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-                crate::generalized::DuoOperationKind::FpEq,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Duo(
+                term::DuoOperationKind::FpEq,
                 sqrtx_rna,
                 sqrtx_rtz,
             ))),
@@ -344,20 +342,20 @@ mod tests {
         T: GeneralTerm,
     {
         let x1 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(0)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(0)),
             sort: Sort::BvSort(1),
         };
         let x2 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(2)),
             sort: Sort::BvSort(10),
         };
         let x3 = Term {
-            term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(5)),
+            term: UnsortedTerm::Constant(term::GenConstant::Numeral(5)),
             sort: Sort::BvSort(10),
         };
         let x = Term {
-            term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Trio(
-                crate::generalized::TrioOperationKind::MkFpValue,
+            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
+                term::TrioOperationKind::MkFpValue,
                 x1,
                 x2,
                 x3,
