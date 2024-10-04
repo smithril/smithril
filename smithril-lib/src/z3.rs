@@ -1,37 +1,17 @@
-use crate::generalized::Context;
-use crate::generalized::Factory;
-use crate::generalized::FloatingPointAsBinary;
-use crate::generalized::GenConstant;
-use crate::generalized::GeneralArrayConverter;
-use crate::generalized::GeneralBoolConverter;
-use crate::generalized::GeneralBvConverter;
-use crate::generalized::GeneralConverter;
-use crate::generalized::GeneralFpConverter;
-use crate::generalized::GeneralOptions;
-use crate::generalized::GeneralSolver;
-use crate::generalized::GeneralSort;
-use crate::generalized::GeneralTerm;
-use crate::generalized::Interrupter;
-use crate::generalized::OptionKind;
-use crate::generalized::Options;
-use crate::generalized::RoundingMode;
-use crate::generalized::Solver;
-use crate::generalized::SolverResult;
-use crate::generalized::Sort;
-use crate::generalized::Term;
-use crate::generalized::UnsortedTerm;
-use std::ffi::c_uint;
-
-use crate::utils;
-use core::panic;
-use std::collections::HashMap;
 use std::collections::HashSet;
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{c_uint, CString};
 use std::hash::Hash;
 use std::ptr;
-use std::sync::Arc;
 use std::sync::RwLock;
+use std::{collections::HashMap, ffi::CStr, sync::Arc};
+
+use crate::generalized::{
+    Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
+    GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
+    GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+};
+use crate::term::{self, RoundingMode, Sort, Term};
+use crate::utils;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Z3Context {
@@ -256,6 +236,10 @@ impl Factory<Z3Converter, Z3Solver, Z3Interrupter> for Z3Factory {
             solver: solver.solver.0,
         }
     }
+
+    fn new_default_solver(&mut self, context: Arc<Z3Converter>) -> Arc<Z3Solver> {
+        self.new_solver(context, &Default::default())
+    }
 }
 
 macro_rules! create_converter_fp_unary_function_z3 {
@@ -264,7 +248,7 @@ macro_rules! create_converter_fp_unary_function_z3 {
             Z3Term::new(&self.context, unsafe {
                 smithril_z3_sys::$z3_sys_func_name(
                     self.context(),
-                    self.get_rouning_mode(r_mode.clone()).term,
+                    self.get_rouning_mode(r_mode).term,
                     term.term,
                 )
             })
@@ -278,7 +262,7 @@ macro_rules! create_converter_fp_binary_function_z3 {
             Z3Term::new(&self.context, unsafe {
                 smithril_z3_sys::$z3_sys_func_name(
                     self.context(),
-                    self.get_rouning_mode(r_mode.clone()).term,
+                    self.get_rouning_mode(r_mode).term,
                     term1.term,
                     term2.term,
                 )
@@ -574,6 +558,20 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
             _ => SolverResult::Unknown,
         }
     }
+
+    fn push(&self) {
+        let context = self.context.as_ref();
+        unsafe {
+            smithril_z3_sys::Z3_solver_push(context.context(), self.solver.0);
+        }
+    }
+
+    fn pop(&self) {
+        let context = self.context.as_ref();
+        unsafe {
+            smithril_z3_sys::Z3_solver_pop(context.context(), self.solver.0, 1);
+        }
+    }
 }
 
 impl GeneralArrayConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -817,7 +815,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_fp_unary_no_rm_function_z3!(mk_fp_abs, Z3_mk_fpa_abs);
     create_converter_fp_unary_no_rm_function_z3!(mk_fp_neg, Z3_mk_fpa_neg);
 
-    fn get_rouning_mode(&self, r_mode: RoundingMode) -> Z3Term {
+    fn get_rouning_mode(&self, r_mode: &RoundingMode) -> Z3Term {
         unsafe {
             let rm = match r_mode {
                 RoundingMode::RNA => smithril_z3_sys::Z3_mk_fpa_rna(self.context()),
@@ -830,95 +828,106 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp_pos_zero(&self, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_pos_zero(&self, sort: &Z3Sort) -> Z3Term {
         unsafe {
-            let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_zero(self.context(), sort.sort, false);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_pos_inf(&self, sort: &Z3Sort) -> Z3Term {
         unsafe {
-            let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_inf(self.context(), sort.sort, false);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_neg_zero(&self, sort: &Z3Sort) -> Z3Term {
         unsafe {
-            let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_zero(self.context(), sort.sort, true);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_neg_inf(&self, sort: &Z3Sort) -> Z3Term {
         unsafe {
-            let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_inf(self.context(), sort.sort, true);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_to_fp_from_fp(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_to_fp_from_fp(
+        &self,
+        r_mode: &RoundingMode,
+        term: &Z3Term,
+        ew: u64,
+        sw: u64,
+    ) -> Z3Term {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_to_fp_float(
                 self.context(),
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 sort.sort,
             );
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_to_sbv(&self, rmterm: &Z3Term, term1: &Z3Term, w: u64) -> Z3Term {
+    fn mk_fp_to_sbv(&self, r_mode: &RoundingMode, term: &Z3Term, w: u64) -> Z3Term {
         unsafe {
-            let term = smithril_z3_sys::Z3_mk_fpa_to_sbv(
-                self.context(),
-                rmterm.term,
-                term1.term,
-                w as u32,
-            );
+            let r_mode = self.get_rouning_mode(r_mode);
+            let term =
+                smithril_z3_sys::Z3_mk_fpa_to_sbv(self.context(), r_mode.term, term.term, w as u32);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_to_ubv(&self, rmterm: &Z3Term, term1: &Z3Term, w: u64) -> Z3Term {
+    fn mk_fp_to_ubv(&self, r_mode: &RoundingMode, term: &Z3Term, w: u64) -> Z3Term {
         unsafe {
-            let term = smithril_z3_sys::Z3_mk_fpa_to_ubv(
-                self.context(),
-                rmterm.term,
-                term1.term,
-                w as u32,
-            );
+            let r_mode = self.get_rouning_mode(r_mode);
+            let term =
+                smithril_z3_sys::Z3_mk_fpa_to_ubv(self.context(), r_mode.term, term.term, w as u32);
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_to_fp_from_sbv(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_to_fp_from_sbv(
+        &self,
+        r_mode: &RoundingMode,
+        term: &Z3Term,
+        ew: u64,
+        sw: u64,
+    ) -> Z3Term {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_to_fp_signed(
                 self.context(),
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 sort.sort,
             );
             Z3Term::new(&self.context, term)
         }
     }
 
-    fn mk_fp_to_fp_from_ubv(&self, rmterm: &Z3Term, term1: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+    fn mk_fp_to_fp_from_ubv(
+        &self,
+        r_mode: &RoundingMode,
+        term: &Z3Term,
+        ew: u64,
+        sw: u64,
+    ) -> Z3Term {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let sort = self.mk_fp_sort(ew, sw);
             let term = smithril_z3_sys::Z3_mk_fpa_to_fp_unsigned(
                 self.context(),
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 sort.sort,
             );
             Z3Term::new(&self.context, term)
@@ -968,7 +977,7 @@ impl Solver for Z3Solver {
         u_core
     }
 
-    fn assert(&self, term: &crate::generalized::Term) {
+    fn assert(&self, term: &Term) {
         let context = self.context.as_ref();
         let cur_z3_term = context.convert_term(term);
         GeneralSolver::assert(self, &cur_z3_term);
@@ -990,10 +999,7 @@ impl Solver for Z3Solver {
                 };
                 let s = unsafe { CStr::from_ptr(z3_string).to_string_lossy().into_owned() };
                 let bv_const = utils::binary2integer(s);
-                let res = Term {
-                    term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
-                    sort: term.sort.clone(),
-                };
+                let res = term::mk_bv_value_uint64(bv_const, &term.sort);
                 Some(res)
             }
             Sort::BoolSort() => {
@@ -1001,17 +1007,11 @@ impl Solver for Z3Solver {
                     unsafe { smithril_z3_sys::Z3_get_bool_value(context.context(), expr.term) };
                 match z3_lbool {
                     smithril_z3_sys::Z3_L_FALSE => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(false);
                         Some(res)
                     }
                     smithril_z3_sys::Z3_L_TRUE => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(true);
                         Some(res)
                     }
                     _ => {
@@ -1026,5 +1026,13 @@ impl Solver for Z3Solver {
 
     fn reset(&self) {
         GeneralSolver::reset(self)
+    }
+
+    fn push(&self) {
+        GeneralSolver::push(self)
+    }
+
+    fn pop(&self) {
+        GeneralSolver::pop(self)
     }
 }

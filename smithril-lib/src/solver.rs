@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -17,8 +18,9 @@ use tokio_util::sync::CancellationToken;
 use crate::converters::Converter;
 use crate::generalized::{
     AsyncContext, AsyncFactory, AsyncResultFactory, AsyncResultSolver, AsyncSolver, Options,
-    SolverResult, Term,
+    SolverResult,
 };
+use crate::term::Term;
 
 pub struct RemoteFactory {
     worker: Arc<RemoteWorker>,
@@ -97,6 +99,8 @@ pub enum RemoteSolverCommand {
     CheckSat(SolverLabel),
     UnsatCore(SolverLabel),
     Eval(SolverLabel, Term),
+    Push(SolverLabel),
+    Pop(SolverLabel),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -133,6 +137,22 @@ pub struct RemoteSolver {
     label: SolverLabel,
     timeout: Option<Duration>,
     worker: Arc<RemoteWorker>,
+}
+
+impl PartialEq for RemoteSolver {
+    fn eq(&self, other: &Self) -> bool {
+        self.context == other.context && self.label == other.label && self.timeout == other.timeout
+    }
+}
+
+impl Eq for RemoteSolver {}
+
+impl Hash for RemoteSolver {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.context.hash(state);
+        self.label.hash(state);
+        self.timeout.hash(state);
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -179,11 +199,21 @@ impl AsyncResultSolver for RemoteSolver {
         let command_response = self.worker.eval(self.label, term).await?;
         Ok(command_response)
     }
+
+    async fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.push(self.label).await?;
+        Ok(())
+    }
+
+    async fn pop(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.pop(self.label).await?;
+        Ok(())
+    }
 }
 
 impl RemoteSolver {}
 
-#[derive(Debug)]
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct RemoteContext {
     label: ContextLabel,
 }
@@ -407,6 +437,26 @@ impl RemoteWorkerLockingCommunicator {
         };
         Ok(state)
     }
+
+    pub async fn push(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Push(solver);
+        self.send_solver_command(command).await?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    pub async fn pop(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Pop(solver);
+        self.send_solver_command(command).await?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -491,6 +541,12 @@ impl RemoteWorker {
                 }
                 RemoteSolverCommand::Eval(solver, term) => {
                     let _ = self.communicator().await.eval(solver, &term).await?;
+                }
+                RemoteSolverCommand::Push(solver) => {
+                    self.communicator().await.push(solver).await?;
+                }
+                RemoteSolverCommand::Pop(solver) => {
+                    self.communicator().await.pop(solver).await?;
                 }
             },
             RemoteCommand::Factory(command) => match command {
@@ -811,6 +867,34 @@ impl RemoteWorker {
         let command_response = self.communicator().await.check_sat(solver).await?;
         Ok(command_response)
     }
+
+    pub async fn push(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Push(solver);
+        self.save_solver_command(solver, command.clone()).await?;
+        if !self.try_resend_postponed_commands().await? {
+            self.postpone_command(RemoteCommand::Solver(command));
+        } else {
+            self.communicator().await.push(solver).await?;
+        };
+        Ok(())
+    }
+
+    pub async fn pop(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Pop(solver);
+        self.save_solver_command(solver, command.clone()).await?;
+        if !self.try_resend_postponed_commands().await? {
+            self.postpone_command(RemoteCommand::Solver(command));
+        } else {
+            self.communicator().await.pop(solver).await?;
+        };
+        Ok(())
+    }
 }
 
 impl RemoteSolver {
@@ -898,14 +982,14 @@ impl SmithrilFactory {
     }
 }
 
-#[derive(Debug)]
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct SmithrilContext {
     contexts: Vec<RemoteContext>,
 }
 
 impl AsyncContext for SmithrilContext {}
 
-#[derive(Debug)]
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct SmithrilSolver {
     solvers: Vec<Arc<RemoteSolver>>,
 }
@@ -1067,66 +1151,51 @@ impl AsyncSolver for SmithrilSolver {
         }
         result
     }
+
+    async fn push(&self) {
+        let mut handles = Vec::new();
+        for solver in self.solvers.iter() {
+            let handler = solver.push();
+            handles.push(handler);
+        }
+        for handler in handles {
+            handler.await.unwrap();
+        }
+    }
+
+    async fn pop(&self) {
+        let mut handles = Vec::new();
+        for solver in self.solvers.iter() {
+            let handler = solver.pop();
+            handles.push(handler);
+        }
+        for handler in handles {
+            handler.await.unwrap();
+        }
+    }
 }
 
 #[cfg(test)]
 fn sat_works(seed: &str) -> Term {
-    use crate::generalized::{Sort, UnsortedTerm};
+    use crate::term::{self};
 
     let x_name = format!("x{}", seed).to_string();
-    let x = Term {
-        term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol(x_name)),
-        sort: Sort::BvSort(3),
-    };
-    let y = Term {
-        term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
-        sort: Sort::BvSort(3),
-    };
-    Term {
-        term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-            crate::generalized::DuoOperationKind::Eq,
-            x,
-            y,
-        ))),
-        sort: Sort::BoolSort(),
-    }
+    let bv_sort = term::mk_bv_sort(3);
+    let x = term::mk_smt_symbol(&x_name, &bv_sort);
+    let y = term::mk_bv_value_uint64(2, &bv_sort);
+    term::mk_eq(&x, &y)
 }
 
 #[cfg(test)]
 fn unsat_works() -> Term {
-    use crate::generalized::{Sort, UnsortedTerm};
+    use crate::term::{self};
 
-    let x = Term {
-        term: UnsortedTerm::Constant(crate::generalized::GenConstant::Symbol("x".to_string())),
-        sort: Sort::BvSort(3),
-    };
-    let y = Term {
-        term: UnsortedTerm::Constant(crate::generalized::GenConstant::Numeral(2)),
-        sort: Sort::BvSort(3),
-    };
-    let eq = Term {
-        term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-            crate::generalized::DuoOperationKind::Eq,
-            x,
-            y,
-        ))),
-        sort: Sort::BoolSort(),
-    };
-    let n = Term {
-        term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Uno(
-            crate::generalized::UnoOperationKind::Not,
-            eq.clone(),
-        ))),
-        sort: Sort::BoolSort(),
-    };
-    Term {
-        term: UnsortedTerm::Operation(Box::new(crate::generalized::GenOperation::Duo(
-            crate::generalized::DuoOperationKind::And,
-            eq,
-            n,
-        ))),
-        sort: Sort::BoolSort(),
-    }
+    let bv_sort = term::mk_bv_sort(3);
+    let x = term::mk_smt_symbol("x", &bv_sort);
+    let y = term::mk_bv_value_uint64(2, &bv_sort);
+    let eq = term::mk_eq(&x, &y);
+    let n = term::mk_not(&eq);
+    term::mk_and(&eq, &n)
 }
 
 #[tokio::test(flavor = "multi_thread")]

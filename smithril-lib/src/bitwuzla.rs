@@ -1,37 +1,24 @@
-use crate::generalized::Context;
-use crate::generalized::Factory;
-use crate::generalized::FloatingPointAsBinary;
-use crate::generalized::GenConstant;
-use crate::generalized::GeneralArrayConverter;
-use crate::generalized::GeneralBoolConverter;
-use crate::generalized::GeneralBvConverter;
-use crate::generalized::GeneralFpConverter;
-use crate::generalized::GeneralOptions;
-use crate::generalized::Interrupter;
-use crate::generalized::OptionKind;
-use crate::generalized::Options;
-use crate::generalized::RoundingMode;
-use std::hash::Hash;
-use std::sync::Arc;
-use std::sync::RwLock;
+use crate::{
+    generalized::{
+        Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
+        GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
+        GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+    },
+    term::{self, Sort, Term},
+};
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::{CStr, CString},
+    hash::Hash,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, RwLock,
+    },
+};
+use term::RoundingMode;
 use termination_callback::termination_callback;
 
-use crate::generalized::GeneralConverter;
-use crate::generalized::GeneralSolver;
-use crate::generalized::GeneralSort;
-use crate::generalized::GeneralTerm;
-use crate::generalized::Solver;
-use crate::generalized::SolverResult;
-use crate::generalized::Sort;
-use crate::generalized::Term;
-use crate::generalized::UnsortedTerm;
 use crate::utils;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::ffi::CStr;
-use std::ffi::CString;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct BitwuzlaTerm {
@@ -183,7 +170,7 @@ macro_rules! create_converter_fp_binary_function_bitwuzla {
                     smithril_bitwuzla_sys::bitwuzla_mk_term3(
                         self.term_manager(),
                         smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
-                        self.get_rouning_mode(r_mode.clone()).term,
+                        self.get_rouning_mode(r_mode).term,
                         term1.term,
                         term2.term,
                     )
@@ -201,7 +188,7 @@ macro_rules! create_converter_fp_unary_function_bitwuzla {
                     smithril_bitwuzla_sys::bitwuzla_mk_term2(
                         self.term_manager(),
                         smithril_bitwuzla_sys::$bitwuzla_sys_kind_name,
-                        self.get_rouning_mode(r_mode.clone()).term,
+                        self.get_rouning_mode(r_mode).term,
                         term.term,
                     )
                 },
@@ -544,6 +531,18 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
             _ => SolverResult::Unknown,
         }
     }
+
+    fn push(&self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_push(self.solver(), 1);
+        }
+    }
+
+    fn pop(&self) {
+        unsafe {
+            smithril_bitwuzla_sys::bitwuzla_pop(self.solver(), 1);
+        }
+    }
 }
 
 impl GeneralArrayConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
@@ -808,7 +807,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_fp_unary_function_bitwuzla!(mk_fp_abs, BITWUZLA_KIND_FP_ABS);
     create_converter_fp_unary_function_bitwuzla!(mk_fp_neg, BITWUZLA_KIND_FP_NEG);
 
-    fn get_rouning_mode(&self, r_mode: RoundingMode) -> BitwuzlaTerm {
+    fn get_rouning_mode(&self, r_mode: &RoundingMode) -> BitwuzlaTerm {
         unsafe {
             let rm = match r_mode {
                 RoundingMode::RNA => smithril_bitwuzla_sys::BITWUZLA_RM_RNA,
@@ -824,17 +823,18 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
 
     fn mk_fp_to_fp_from_fp(
         &self,
-        rmterm: &BitwuzlaTerm,
-        term1: &BitwuzlaTerm,
+        r_mode: &RoundingMode,
+        term: &BitwuzlaTerm,
         ew: u64,
         sw: u64,
     ) -> BitwuzlaTerm {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_FP,
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 ew,
                 sw,
             );
@@ -842,26 +842,28 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp_to_sbv(&self, rmterm: &BitwuzlaTerm, term1: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
+    fn mk_fp_to_sbv(&self, r_mode: &RoundingMode, term: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed1(
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_SBV,
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 w,
             );
             BitwuzlaTerm { term }
         }
     }
 
-    fn mk_fp_to_ubv(&self, rmterm: &BitwuzlaTerm, term1: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
+    fn mk_fp_to_ubv(&self, r_mode: &RoundingMode, term: &BitwuzlaTerm, w: u64) -> BitwuzlaTerm {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed1(
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_UBV,
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 w,
             );
             BitwuzlaTerm { term }
@@ -870,17 +872,18 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
 
     fn mk_fp_to_fp_from_sbv(
         &self,
-        rmterm: &BitwuzlaTerm,
-        term1: &BitwuzlaTerm,
+        r_mode: &RoundingMode,
+        term: &BitwuzlaTerm,
         ew: u64,
         sw: u64,
     ) -> BitwuzlaTerm {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_SBV,
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 ew,
                 sw,
             );
@@ -890,17 +893,18 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
 
     fn mk_fp_to_fp_from_ubv(
         &self,
-        rmterm: &BitwuzlaTerm,
-        term1: &BitwuzlaTerm,
+        r_mode: &RoundingMode,
+        term: &BitwuzlaTerm,
         ew: u64,
         sw: u64,
     ) -> BitwuzlaTerm {
         unsafe {
+            let r_mode = self.get_rouning_mode(r_mode);
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term2_indexed2(
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_UBV,
-                rmterm.term,
-                term1.term,
+                r_mode.term,
+                term.term,
                 ew,
                 sw,
             );
@@ -908,42 +912,34 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp_pos_zero(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+    fn mk_fp_pos_zero(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_zero(
-                self.term_manager(),
-                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
-            );
+            let term =
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_zero(self.term_manager(), sort.sort);
             BitwuzlaTerm { term }
         }
     }
 
-    fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+    fn mk_fp_pos_inf(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_inf(
-                self.term_manager(),
-                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
-            );
+            let term =
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_pos_inf(self.term_manager(), sort.sort);
             BitwuzlaTerm { term }
         }
     }
 
-    fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+    fn mk_fp_neg_zero(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_zero(
-                self.term_manager(),
-                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
-            );
+            let term =
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_zero(self.term_manager(), sort.sort);
             BitwuzlaTerm { term }
         }
     }
 
-    fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> BitwuzlaTerm {
+    fn mk_fp_neg_inf(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         unsafe {
-            let term = smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_inf(
-                self.term_manager(),
-                smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw),
-            );
+            let term =
+                smithril_bitwuzla_sys::bitwuzla_mk_fp_neg_inf(self.term_manager(), sort.sort);
             BitwuzlaTerm { term }
         }
     }
@@ -1003,7 +999,7 @@ impl Solver for BitwuzlaSolver {
         u_core
     }
 
-    fn assert(&self, term: &crate::generalized::Term) {
+    fn assert(&self, term: &term::Term) {
         let context = self.context.as_ref();
         let cur_bitwuzla_term = context.convert_term(term);
         GeneralSolver::assert(self, &cur_bitwuzla_term);
@@ -1028,10 +1024,7 @@ impl Solver for BitwuzlaSolver {
                         .into_owned()
                 };
                 let bv_const = utils::binary2integer(s);
-                let res = Term {
-                    term: UnsortedTerm::Constant(GenConstant::Numeral(bv_const)),
-                    sort: term.sort.clone(),
-                };
+                let res = term::mk_bv_value_uint64(bv_const, &term.sort);
                 Some(res)
             }
             Sort::BoolSort() => {
@@ -1041,17 +1034,11 @@ impl Solver for BitwuzlaSolver {
                 let s = s_cstr.to_string_lossy().into_owned();
                 match s.as_str() {
                     "true" => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(true)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(true);
                         Some(res)
                     }
                     "false" => {
-                        let res = Term {
-                            term: UnsortedTerm::Constant(GenConstant::Boolean(false)),
-                            sort: term.sort.clone(),
-                        };
+                        let res = term::mk_smt_bool(false);
                         Some(res)
                     }
                     _ => {
@@ -1067,5 +1054,13 @@ impl Solver for BitwuzlaSolver {
 
     fn reset(&self) {
         GeneralSolver::reset(self)
+    }
+
+    fn push(&self) {
+        GeneralSolver::push(self)
+    }
+
+    fn pop(&self) {
+        GeneralSolver::pop(self)
     }
 }

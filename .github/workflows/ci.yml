@@ -37,7 +37,6 @@ jobs:
         path: ~/.smithril
         key: ${{ runner.os }}-sys-solvers
 
-
     - name: Format
       run: cargo fmt --check
 
@@ -49,4 +48,3 @@ jobs:
 
     - name: Run tests
       run: cargo test --verbose
-

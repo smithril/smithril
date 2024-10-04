@@ -6,7 +6,9 @@ extern crate dirs;
 extern crate pkg_config;
 
 fn main() {
-    let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(".smithril");
+    let smithrill_install_path =
+        env::var("SMITHRIL_INSTALL_PATH").unwrap_or(".smithril".to_string());
+    let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(smithrill_install_path);
     fs::create_dir_all(&dir_smithril).unwrap();
     let dir_bitwuzla: PathBuf = dir_smithril.join("bitwuzla");
     if !dir_bitwuzla.exists() {

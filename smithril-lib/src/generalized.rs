@@ -2,26 +2,21 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use crate::term::DuoOperationKind;
+use crate::term::FpDuoOperationKind;
+use crate::term::FpUnoOperationKind;
+use crate::term::GenConstant;
+use crate::term::GenOperation;
+use crate::term::RoundingMode;
+use crate::term::Sort;
+use crate::term::Term;
+use crate::term::TrioOperationKind;
+use crate::term::UnoOperationKind;
+use crate::term::UnsortedTerm;
+
 pub trait GeneralSort {}
 
 pub trait GeneralTerm {}
-
-pub enum TheoryKind {
-    Bool,
-    Fp,
-    Bv,
-    Array,
-    Native,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum RoundingMode {
-    RNA,
-    RNE,
-    RTN,
-    RTP,
-    RTZ,
-}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub struct FloatingPointAsBinary {
@@ -30,121 +25,7 @@ pub struct FloatingPointAsBinary {
     pub significand: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum GenConstant {
-    Numeral(u64),
-    Boolean(bool),
-    Symbol(String),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum UnoOperationKind {
-    Not,
-    BvNeg,
-    BvNot,
-    FpIsInf,
-    FpIsNan,
-    FpIsNorm,
-    FpIsSubnorm,
-    FpIsZero,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum DuoOperationKind {
-    Eq,
-    And,
-    Implies,
-    Neq,
-    Or,
-    Xor,
-    Select,
-    BvAdd,
-    BvAnd,
-    BvAshr,
-    BvLshr,
-    BvMul,
-    BvNand,
-    BvNor,
-    BvNxor,
-    BvOr,
-    BvSdiv,
-    BvSge,
-    BvSgt,
-    BvShl,
-    BvSle,
-    BvSlt,
-    BvSmod,
-    BvSub,
-    BvUdiv,
-    BvUge,
-    BvUgt,
-    BvUle,
-    BvUlt,
-    BvUmod,
-    BvXor,
-    FpEq,
-    Concat,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum TrioOperationKind {
-    Store,
-    MkFpValue,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum FpUnoOperationKind {
-    FpSqrt,
-    FpRti,
-    FpAbs,
-    FpNeg,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum FpDuoOperationKind {
-    FpMin,
-    FpMax,
-    FpLT,
-    FpLEQ,
-    FpGT,
-    FpGEQ,
-    FpAdd,
-    FpSub,
-    FpMul,
-    FpDiv,
-    FpRem,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum GenOperation {
-    Uno(UnoOperationKind, Term),
-    Extract(u64, u64, Term),
-    Duo(DuoOperationKind, Term, Term),
-    Trio(TrioOperationKind, Term, Term, Term),
-    FpUno(FpUnoOperationKind, RoundingMode, Term),
-    FpDuo(FpDuoOperationKind, RoundingMode, Term, Term),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum UnsortedTerm {
-    Constant(GenConstant),
-    Operation(Box<GenOperation>),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub enum Sort {
-    BvSort(u64),
-    BoolSort(),
-    ArraySort(Box<Sort>, Box<Sort>),
-    FpSort(u64, u64),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub struct Term {
-    pub term: UnsortedTerm,
-    pub sort: Sort,
-}
-
+#[repr(C)]
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
 pub enum SolverResult {
     Sat,
@@ -237,6 +118,8 @@ where
     fn interrupt(&self);
     fn check_sat(&self) -> SolverResult;
     fn unsat_core(&self) -> Vec<T>;
+    fn push(&self);
+    fn pop(&self);
 }
 
 pub trait AsyncResultSolver {
@@ -265,6 +148,12 @@ pub trait AsyncResultSolver {
     ) -> impl std::future::Future<
         Output = Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>,
     > + Send;
+    fn push(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn pop(
+        &self,
+    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
 }
 
 pub trait AsyncSolver {
@@ -274,6 +163,8 @@ pub trait AsyncSolver {
     fn check_sat(&self) -> impl std::future::Future<Output = SolverResult> + Send;
     fn unsat_core(&self) -> impl std::future::Future<Output = Vec<Term>> + Send;
     fn eval(&self, term: &Term) -> impl std::future::Future<Output = Option<Term>> + Send;
+    fn push(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn pop(&self) -> impl std::future::Future<Output = ()> + Send;
 }
 
 macro_rules! define_converter_unary_function {
@@ -325,6 +216,24 @@ where
                     .mk_bv_value_uint64(&self.convert_sort(&term.sort), *x),
                 GenConstant::Boolean(x) => self.try_get_bool_converter().unwrap().mk_smt_bool(*x),
                 GenConstant::Symbol(x) => self.mk_smt_symbol(x, &self.convert_sort(&term.sort)),
+                GenConstant::Fp(x) => {
+                    let sort = self.convert_sort(&term.sort);
+
+                    match x {
+                        crate::term::FpConstant::PosZero => {
+                            self.try_get_fp_converter().unwrap().mk_fp_pos_zero(&sort)
+                        }
+                        crate::term::FpConstant::PosInf => {
+                            self.try_get_fp_converter().unwrap().mk_fp_pos_inf(&sort)
+                        }
+                        crate::term::FpConstant::NegZero => {
+                            self.try_get_fp_converter().unwrap().mk_fp_neg_zero(&sort)
+                        }
+                        crate::term::FpConstant::NegInf => {
+                            self.try_get_fp_converter().unwrap().mk_fp_neg_inf(&sort)
+                        }
+                    }
+                }
             },
             UnsortedTerm::Operation(operation) => match operation.as_ref() {
                 GenOperation::Uno(kind, term1) => {
@@ -351,6 +260,9 @@ where
                         }
                         UnoOperationKind::FpIsZero => {
                             self.try_get_fp_converter().unwrap().fp_is_zero(&t1)
+                        }
+                        UnoOperationKind::FpIsPos => {
+                            self.try_get_fp_converter().unwrap().fp_is_pos(&t1)
                         }
                     }
                 }
@@ -545,6 +457,36 @@ where
                             .mk_fp_rem(rmode, &t1, &t2),
                     }
                 }
+                GenOperation::FpToFp(kind, rmode, ew, sw, term) => {
+                    let t = self.convert_term(term);
+                    match kind {
+                        crate::term::FpToFpOperationKind::FromFp => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_to_fp_from_fp(rmode, &t, *ew, *sw),
+                        crate::term::FpToFpOperationKind::FromSBv => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_to_fp_from_sbv(rmode, &t, *ew, *sw),
+                        crate::term::FpToFpOperationKind::FromUBv => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_to_fp_from_ubv(rmode, &t, *ew, *sw),
+                    }
+                }
+                GenOperation::FpTo(kind, rmode, w, term) => {
+                    let t = self.convert_term(term);
+                    match kind {
+                        crate::term::FpToOperationKind::SBv => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_to_sbv(rmode, &t, *w),
+                        crate::term::FpToOperationKind::UBv => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_to_ubv(rmode, &t, *w),
+                    }
+                }
             },
         }
     }
@@ -574,10 +516,10 @@ where
 {
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> S;
     fn mk_fp_value(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
-    fn mk_fp_pos_zero(&self, ew: u64, sw: u64) -> T;
-    fn mk_fp_pos_inf(&self, ew: u64, sw: u64) -> T;
-    fn mk_fp_neg_zero(&self, ew: u64, sw: u64) -> T;
-    fn mk_fp_neg_inf(&self, ew: u64, sw: u64) -> T;
+    fn mk_fp_pos_zero(&self, sort: &S) -> T;
+    fn mk_fp_pos_inf(&self, sort: &S) -> T;
+    fn mk_fp_neg_zero(&self, sort: &S) -> T;
+    fn mk_fp_neg_inf(&self, sort: &S) -> T;
 
     fn fp_get_bv_exp_size(&self, term: &T) -> u64;
     fn fp_get_bv_sig_size(&self, term: &T) -> u64;
@@ -607,13 +549,13 @@ where
     define_converter_fp_unary_function!(mk_fp_abs);
     define_converter_fp_unary_function!(mk_fp_neg);
 
-    fn get_rouning_mode(&self, r_mode: RoundingMode) -> T;
+    fn get_rouning_mode(&self, r_mode: &RoundingMode) -> T;
 
-    fn mk_fp_to_fp_from_fp(&self, rmterm: &T, term1: &T, ew: u64, sw: u64) -> T;
-    fn mk_fp_to_sbv(&self, rmterm: &T, term1: &T, w: u64) -> T;
-    fn mk_fp_to_ubv(&self, rmterm: &T, term1: &T, w: u64) -> T;
-    fn mk_fp_to_fp_from_sbv(&self, rmterm: &T, term1: &T, ew: u64, sw: u64) -> T;
-    fn mk_fp_to_fp_from_ubv(&self, rmterm: &T, term1: &T, ew: u64, sw: u64) -> T;
+    fn mk_fp_to_fp_from_fp(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
+    fn mk_fp_to_sbv(&self, r_mode: &RoundingMode, term: &T, w: u64) -> T;
+    fn mk_fp_to_ubv(&self, r_mode: &RoundingMode, term: &T, w: u64) -> T;
+    fn mk_fp_to_fp_from_sbv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
+    fn mk_fp_to_fp_from_ubv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
 }
 
 pub trait GeneralBoolConverter<S, T>: GeneralConverter<S, T>
@@ -688,6 +630,8 @@ pub trait Solver {
     fn check_sat(&self) -> SolverResult;
     fn eval(&self, term: &Term) -> Option<Term>;
     fn unsat_core(&self) -> Vec<Term>;
+    fn push(&self);
+    fn pop(&self);
 }
 
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]

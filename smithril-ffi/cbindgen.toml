@@ -1,0 +1,9 @@
+language = "C"
+pragma_once = true
+
+[parse]
+parse_deps = true
+include = ["smithril-lib"]
+
+[parse.expand]
+crates = ["smithril-ffi"]

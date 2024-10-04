@@ -1,11 +1,12 @@
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
 use smithril_lib::{
     converters::{self, Converter},
-    generalized::{Context, Factory, Interrupter, Solver, SolverResult, Term},
+    generalized::{Context, Factory, Interrupter, Solver, SolverResult},
     solver::{
         ContextLabel, RemoteCommand, RemoteFactoryCommand, RemoteSolverCommand, RemoteState,
         RemoteWorkerCommunicator, SolverLabel,
     },
+    term::Term,
 };
 use std::{
     collections::HashMap,
@@ -170,6 +171,16 @@ fn start<
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     let result = Solver::eval(solver.as_ref(), &term);
                     remote_commander.eval_sender.send(result).unwrap();
+                }
+                RemoteSolverCommand::Push(solver_label) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
+                    Solver::push(solver.as_ref());
+                    remote_commander.confirmation_sender.send(()).unwrap();
+                }
+                RemoteSolverCommand::Pop(solver_label) => {
+                    let solver = solvers.get(&solver_label).unwrap().clone();
+                    Solver::pop(solver.as_ref());
+                    remote_commander.confirmation_sender.send(()).unwrap();
                 }
             },
             RemoteCommand::Factory(command) => match command {
