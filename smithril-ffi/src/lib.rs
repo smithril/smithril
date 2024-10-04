@@ -19,6 +19,7 @@ use smithril_lib::{
 };
 
 pub use smithril_lib::generalized::SolverResult;
+pub use smithril_lib::term::RoundingMode;
 
 use once_cell::sync::Lazy;
 use smithril_lib::converters::Converter;
@@ -243,6 +244,109 @@ macro_rules! binary_function {
     };
 }
 
+macro_rules! rm_unary_function {
+    ($smithril_func_name:ident, $func_name:ident) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $smithril_func_name(
+            context: SmithrilContext,
+            r_mode: RoundingMode,
+            term1: SmithrilTerm,
+        ) -> SmithrilTerm {
+            let context = context.0 as *const solver::SmithrilContext;
+            Arc::increment_strong_count(context);
+            let smithril_context = Arc::from_raw(context);
+            let term1 = term1.0 as *const Term;
+            Arc::increment_strong_count(term1);
+            let smithril_term1 = Arc::from_raw(term1);
+            let term = Arc::new(term::$func_name(&r_mode, smithril_term1.as_ref()));
+            let term = intern_term(smithril_context, term);
+            let term = Arc::into_raw(term);
+            Arc::decrement_strong_count(term);
+            SmithrilTerm(term as *const c_void)
+        }
+    };
+}
+
+macro_rules! rm_binary_function {
+    ($smithril_func_name:ident, $func_name:ident) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $smithril_func_name(
+            context: SmithrilContext,
+            r_mode: RoundingMode,
+            term1: SmithrilTerm,
+            term2: SmithrilTerm,
+        ) -> SmithrilTerm {
+            let context = context.0 as *const solver::SmithrilContext;
+            Arc::increment_strong_count(context);
+            let smithril_context = Arc::from_raw(context);
+            let term1 = term1.0 as *const Term;
+            Arc::increment_strong_count(term1);
+            let smithril_term1 = Arc::from_raw(term1);
+            let term2 = term2.0 as *const Term;
+            Arc::increment_strong_count(term2);
+            let smithril_term2 = Arc::from_raw(term2);
+            let term = Arc::new(term::$func_name(
+                &r_mode,
+                smithril_term1.as_ref(),
+                smithril_term2.as_ref(),
+            ));
+            let term = intern_term(smithril_context, term);
+            let term = Arc::into_raw(term);
+            Arc::decrement_strong_count(term);
+            SmithrilTerm(term as *const c_void)
+        }
+    };
+}
+
+macro_rules! fp_to_function {
+    ($smithril_func_name:ident, $func_name:ident) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $smithril_func_name(
+            context: SmithrilContext,
+            r_mode: RoundingMode,
+            term1: SmithrilTerm,
+            w: u64,
+        ) -> SmithrilTerm {
+            let context = context.0 as *const solver::SmithrilContext;
+            Arc::increment_strong_count(context);
+            let smithril_context = Arc::from_raw(context);
+            let term1 = term1.0 as *const Term;
+            Arc::increment_strong_count(term1);
+            let smithril_term1 = Arc::from_raw(term1);
+            let term = Arc::new(term::$func_name(&r_mode, smithril_term1.as_ref(), w));
+            let term = intern_term(smithril_context, term);
+            let term = Arc::into_raw(term);
+            Arc::decrement_strong_count(term);
+            SmithrilTerm(term as *const c_void)
+        }
+    };
+}
+
+macro_rules! fp_to_fp_function {
+    ($smithril_func_name:ident, $func_name:ident) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $smithril_func_name(
+            context: SmithrilContext,
+            r_mode: RoundingMode,
+            term1: SmithrilTerm,
+            ew: u64,
+            sw: u64,
+        ) -> SmithrilTerm {
+            let context = context.0 as *const solver::SmithrilContext;
+            Arc::increment_strong_count(context);
+            let smithril_context = Arc::from_raw(context);
+            let term1 = term1.0 as *const Term;
+            Arc::increment_strong_count(term1);
+            let smithril_term1 = Arc::from_raw(term1);
+            let term = Arc::new(term::$func_name(&r_mode, smithril_term1.as_ref(), ew, sw));
+            let term = intern_term(smithril_context, term);
+            let term = Arc::into_raw(term);
+            Arc::decrement_strong_count(term);
+            SmithrilTerm(term as *const c_void)
+        }
+    };
+}
+
 binary_function!(smithril_mk_and, mk_and);
 binary_function!(smithril_mk_bvadd, mk_bv_add);
 binary_function!(smithril_mk_or, mk_or);
@@ -276,6 +380,37 @@ binary_function!(smithril_mk_bvult, mk_bv_ult);
 binary_function!(smithril_mk_bvumod, mk_bv_umod);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
 unary_function!(smithril_mk_not, mk_not);
+
+unary_function!(smithril_fp_is_nan, fp_is_nan);
+unary_function!(smithril_fp_is_inf, fp_is_inf);
+unary_function!(smithril_fp_is_normal, fp_is_normal);
+unary_function!(smithril_fp_is_subnormal, fp_is_subnormal);
+unary_function!(smithril_fp_is_zero, fp_is_zero);
+unary_function!(smithril_fp_is_pos, fp_is_pos);
+binary_function!(smithril_mk_fp_eq, mk_fp_eq);
+
+rm_binary_function!(smithril_mk_fp_rem, mk_fp_rem);
+rm_binary_function!(smithril_mk_fp_min, mk_fp_min);
+rm_binary_function!(smithril_mk_fp_max, mk_fp_max);
+rm_binary_function!(smithril_mk_fp_lt, mk_fp_lt);
+rm_binary_function!(smithril_mk_fp_leq, mk_fp_leq);
+rm_binary_function!(smithril_mk_fp_gt, mk_fp_gt);
+rm_binary_function!(smithril_mk_fp_geq, mk_fp_geq);
+rm_binary_function!(smithril_mk_fp_add, mk_fp_add);
+rm_binary_function!(smithril_mk_fp_sub, mk_fp_sub);
+rm_binary_function!(smithril_mk_fp_mul, mk_fp_mul);
+rm_binary_function!(smithril_mk_fp_div, mk_fp_div);
+
+rm_unary_function!(smithril_mk_fp_sqrt, mk_fp_sqrt);
+rm_unary_function!(smithril_mk_fp_rti, mk_fp_rti);
+rm_unary_function!(smithril_mk_fp_abs, mk_fp_abs);
+rm_unary_function!(smithril_mk_fp_neg, mk_fp_neg);
+
+fp_to_fp_function!(smithril_mk_fp_to_fp_from_sbv, mk_fp_to_fp_from_sbv);
+fp_to_fp_function!(smithril_mk_fp_to_fp_from_fp, mk_fp_to_fp_from_fp);
+fp_to_fp_function!(smithril_mk_fp_to_fp_from_ubv, mk_fp_to_fp_from_ubv);
+fp_to_function!(smithril_mk_fp_to_sbv, mk_fp_to_sbv);
+fp_to_function!(smithril_mk_fp_to_ubv, mk_fp_to_ubv);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_store(

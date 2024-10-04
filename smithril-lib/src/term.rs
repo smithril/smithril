@@ -95,6 +95,7 @@ pub enum FpDuoOperationKind {
     FpRem,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum RoundingMode {
     RNA,
@@ -103,28 +104,6 @@ pub enum RoundingMode {
     RTP,
     RTZ,
 }
-
-// pub fn mk_fp_to_fp_from_fp(r_mode: &RoundingMode, term: &Term, ew: u64, sw: u64) -> Term {
-//     Term {
-//         term: UnsortedTerm::Operation(),
-//         sort: mk_fp_sort(ew, sw),
-//     }
-// }
-// pub fn mk_fp_to_sbv(r_mode: &RoundingMode, term: &Term, w: u64) -> Term {
-//     todo!()
-// }
-
-// pub fn mk_fp_to_ubv(r_mode: &RoundingMode, term: &Term, w: u64) -> Term {
-//     todo!()
-// }
-
-// pub fn mk_fp_to_fp_from_sbv(r_mode: &RoundingMode, term: &Term, ew: u64, sw: u64) -> Term {
-//     todo!()
-// }
-
-// pub fn mk_fp_to_fp_from_ubv(r_mode: &RoundingMode, term: &Term, ew: u64, sw: u64) -> Term {
-//     todo!()
-// }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum FpToFpOperationKind {

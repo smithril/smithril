@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef enum RoundingMode {
+  RNA,
+  RNE,
+  RTN,
+  RTP,
+  RTZ,
+} RoundingMode;
+
 typedef enum SolverResult {
   Sat,
   Unsat,
@@ -176,6 +184,123 @@ struct SmithrilTerm smithril_mk_bvxor(struct SmithrilContext context,
                                       struct SmithrilTerm term2);
 
 struct SmithrilTerm smithril_mk_not(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_nan(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_inf(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_normal(struct SmithrilContext context,
+                                          struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_subnormal(struct SmithrilContext context,
+                                             struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_zero(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_fp_is_pos(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_fp_eq(struct SmithrilContext context,
+                                      struct SmithrilTerm term1,
+                                      struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_rem(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_min(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_max(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_lt(struct SmithrilContext context,
+                                      enum RoundingMode r_mode,
+                                      struct SmithrilTerm term1,
+                                      struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_leq(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_gt(struct SmithrilContext context,
+                                      enum RoundingMode r_mode,
+                                      struct SmithrilTerm term1,
+                                      struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_geq(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_add(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_sub(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_mul(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_div(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_fp_sqrt(struct SmithrilContext context,
+                                        enum RoundingMode r_mode,
+                                        struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_fp_rti(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_fp_abs(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_fp_neg(struct SmithrilContext context,
+                                       enum RoundingMode r_mode,
+                                       struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_fp_to_fp_from_sbv(struct SmithrilContext context,
+                                                  enum RoundingMode r_mode,
+                                                  struct SmithrilTerm term1,
+                                                  uint64_t ew,
+                                                  uint64_t sw);
+
+struct SmithrilTerm smithril_mk_fp_to_fp_from_fp(struct SmithrilContext context,
+                                                 enum RoundingMode r_mode,
+                                                 struct SmithrilTerm term1,
+                                                 uint64_t ew,
+                                                 uint64_t sw);
+
+struct SmithrilTerm smithril_mk_fp_to_fp_from_ubv(struct SmithrilContext context,
+                                                  enum RoundingMode r_mode,
+                                                  struct SmithrilTerm term1,
+                                                  uint64_t ew,
+                                                  uint64_t sw);
+
+struct SmithrilTerm smithril_mk_fp_to_sbv(struct SmithrilContext context,
+                                          enum RoundingMode r_mode,
+                                          struct SmithrilTerm term1,
+                                          uint64_t w);
+
+struct SmithrilTerm smithril_mk_fp_to_ubv(struct SmithrilContext context,
+                                          enum RoundingMode r_mode,
+                                          struct SmithrilTerm term1,
+                                          uint64_t w);
 
 struct SmithrilTerm smithril_mk_store(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
