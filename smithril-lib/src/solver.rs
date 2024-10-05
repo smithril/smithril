@@ -227,6 +227,7 @@ pub struct RemoteWorker {
     context_id: RwLock<u64>,
     solver_id: RwLock<u64>,
     process: RwLock<Child>,
+    count_ready: Mutex<u64>,
     is_alive: Mutex<bool>,
     active_contexts: RwLock<HashSet<ContextLabel>>,
     active_solvers: RwLock<HashSet<(ContextLabel, SolverLabel)>>,
@@ -485,6 +486,7 @@ impl RemoteWorker {
         let converter = converter.clone();
         let context_id = RwLock::new(context_id);
         let solver_id = RwLock::new(solver_id);
+        let count_ready = Mutex::new(0);
         let is_alive = Mutex::new(true);
 
         Ok(RemoteWorker {
@@ -499,6 +501,7 @@ impl RemoteWorker {
             converter,
             context_id,
             solver_id,
+            count_ready,
             is_alive,
         })
     }
@@ -581,9 +584,7 @@ impl RemoteWorker {
     }
 
     pub async fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        {
-            *self.is_alive.lock().unwrap() = false;
-        }
+        self.wait_ready_to_lock_alive();
         self.terminate().await?;
         let context_id = *self.context_id.read().unwrap();
         let solver_id = *self.solver_id.read().unwrap();
@@ -647,14 +648,45 @@ impl RemoteWorker {
         {
             *self.is_alive.lock().unwrap() = true;
         }
+        self.free_ready();
         Ok(())
+    }
+
+    fn wait_ready_to_lock_alive(&self) {
+        loop {
+            let lock = self.count_ready.lock().unwrap();
+            if *lock == 0 {
+                *self.is_alive.lock().unwrap() = false;
+            }
+        }
+    }
+
+    fn lock_ready(&self) {
+        loop {
+            let lock = self.is_alive.lock().unwrap();
+            if *lock {
+                *self.count_ready.lock().unwrap() += 1;
+                break;
+            }
+        }
+    }
+
+    fn free_ready(&self) {
+        loop {
+            let lock = self.is_alive.lock().unwrap();
+            if *lock {
+                *self.count_ready.lock().unwrap() -= 1;
+                break;
+            }
+        }
     }
 
     pub async fn check_state(
         &self,
     ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
-        while !*self.is_alive.lock().unwrap() {}
+        self.lock_ready();
         let state = self.communicator().await.check_state().await?;
+        self.free_ready();
         Ok(state)
     }
 
@@ -708,6 +740,7 @@ impl RemoteWorker {
     pub async fn new_context(
         &self,
     ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         let command_response = if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewContext()));
             let context_id = { *self.context_id.read().unwrap() } + 1;
@@ -716,6 +749,7 @@ impl RemoteWorker {
         } else {
             self.communicator().await.new_context().await?
         };
+        self.free_ready();
 
         self.active_contexts
             .write()
@@ -729,6 +763,7 @@ impl RemoteWorker {
         context: ContextLabel,
         options: &Options,
     ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         let command_response = if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewSolver(
                 context,
@@ -743,6 +778,7 @@ impl RemoteWorker {
                 .new_solver(context, options)
                 .await?
         };
+        self.free_ready();
         self.active_solvers
             .write()
             .unwrap()
@@ -758,6 +794,7 @@ impl RemoteWorker {
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteContext(
                 context,
@@ -765,6 +802,7 @@ impl RemoteWorker {
         } else {
             self.communicator().await.delete_context(context).await?
         };
+        self.free_ready();
         self.active_contexts.write().unwrap().remove(&context);
         Ok(())
     }
@@ -774,6 +812,7 @@ impl RemoteWorker {
         context: ContextLabel,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteSolver(
                 solver,
@@ -781,6 +820,7 @@ impl RemoteWorker {
         } else {
             self.communicator().await.delete_solver(solver).await?
         };
+        self.free_ready();
         self.active_solvers
             .write()
             .unwrap()
@@ -796,11 +836,13 @@ impl RemoteWorker {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Assert(solver, term.clone());
         self.save_solver_command(solver, command.clone()).await?;
+        self.lock_ready();
         if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.communicator().await.assert(solver, term).await?;
         };
+        self.free_ready();
         Ok(())
     }
 
@@ -810,11 +852,13 @@ impl RemoteWorker {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Reset(solver);
         self.save_solver_command(solver, command.clone()).await?;
+        self.lock_ready();
         if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.communicator().await.reset(solver).await?;
         };
+        self.free_ready();
         Ok(())
     }
 
@@ -823,11 +867,14 @@ impl RemoteWorker {
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
+            self.free_ready();
             Err(Box::new(WorkerError {}))
         } else {
             let command_response = self.communicator().await.eval(solver, term).await?;
+            self.free_ready();
             Ok(command_response)
         }
     }
@@ -836,12 +883,14 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
+            self.free_ready();
             Err(Box::new(WorkerError {}))
         } else {
-            dbg!("UNSAT CORE!");
             let command_response = self.communicator().await.unsat_core(solver).await?;
+            self.free_ready();
             Ok(command_response)
         }
     }
@@ -860,11 +909,15 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        self.lock_ready();
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
+            self.free_ready();
             self.restart().await?;
+            self.lock_ready();
         }
         let command_response = self.communicator().await.check_sat(solver).await?;
+        self.free_ready();
         Ok(command_response)
     }
 
