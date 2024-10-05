@@ -777,12 +777,13 @@ impl RemoteWorker {
             SolverLabel(solver_id)
         } else {
             self.inc_ready();
-            let solver = self.communicator()
+            let solver = self
+                .communicator()
                 .await
                 .new_solver(context, options)
                 .await?;
-                self.dec_ready();
-                solver
+            self.dec_ready();
+            solver
         };
         self.active_solvers
             .write()
