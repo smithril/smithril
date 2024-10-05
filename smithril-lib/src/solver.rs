@@ -657,6 +657,7 @@ impl RemoteWorker {
             let lock = self.count_ready.lock().unwrap();
             if *lock == 0 {
                 *self.is_alive.lock().unwrap() = false;
+                break;
             }
         }
     }
