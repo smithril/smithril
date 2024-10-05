@@ -913,9 +913,7 @@ impl RemoteWorker {
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
-            self.free_ready();
             self.restart().await?;
-            self.lock_ready();
         }
         self.lock_ready();
         let command_response = self.communicator().await.check_sat(solver).await?;
