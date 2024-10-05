@@ -584,6 +584,9 @@ impl RemoteWorker {
     }
 
     pub async fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if !*self.is_alive.lock().unwrap() {
+            return Ok(());
+        }
         self.wait_ready_to_lock_alive();
         self.terminate().await?;
         let context_id = *self.context_id.read().unwrap();
@@ -648,7 +651,6 @@ impl RemoteWorker {
         {
             *self.is_alive.lock().unwrap() = true;
         }
-        self.free_ready();
         Ok(())
     }
 
@@ -868,12 +870,11 @@ impl RemoteWorker {
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        self.lock_ready();
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
-            self.free_ready();
             Err(Box::new(WorkerError {}))
         } else {
+            self.lock_ready();
             let command_response = self.communicator().await.eval(solver, term).await?;
             self.free_ready();
             Ok(command_response)
@@ -910,13 +911,13 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        self.lock_ready();
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
             self.free_ready();
             self.restart().await?;
             self.lock_ready();
         }
+        self.lock_ready();
         let command_response = self.communicator().await.check_sat(solver).await?;
         self.free_ready();
         Ok(command_response)
