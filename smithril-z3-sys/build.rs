@@ -37,19 +37,21 @@ fn main() {
         env::var("SMITHRIL_INSTALL_PATH").unwrap_or(".smithril".to_string());
     let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(smithrill_install_path);
     fs::create_dir_all(&dir_smithril).unwrap();
-    let dir_z3: PathBuf = dir_smithril.join("z3");
+    let z3_version = "z3-4.13.2";
+    let dir_z3: PathBuf = dir_smithril.join(z3_version);
     if !dir_z3.exists() {
         let mut _my_command = Command::new("git")
             .arg("clone")
             .arg("https://github.com/Z3Prover/z3.git")
+            .arg(z3_version)
             .current_dir(&dir_smithril)
             .status()
             .unwrap();
         let mut _my_command = Command::new("git")
             .arg("checkout")
-            .arg("tags/z3-4.13.0")
+            .arg(format!("tags/{}", z3_version))
             .arg("-b")
-            .arg("branch-z3-4.13.0")
+            .arg(format!("branch-{}", z3_version))
             .current_dir(&dir_z3)
             .status()
             .unwrap();
