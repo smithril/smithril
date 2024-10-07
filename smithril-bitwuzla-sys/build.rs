@@ -10,19 +10,22 @@ fn main() {
         env::var("SMITHRIL_INSTALL_PATH").unwrap_or(".smithril".to_string());
     let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(smithrill_install_path);
     fs::create_dir_all(&dir_smithril).unwrap();
-    let dir_bitwuzla: PathBuf = dir_smithril.join("bitwuzla");
+    let bitwuzla_version = "0.5.0";
+    let folder_name = format!("bitwuzla-{}", bitwuzla_version);
+    let dir_bitwuzla: PathBuf = dir_smithril.join(&folder_name);
     if !dir_bitwuzla.exists() {
         let mut _my_command = Command::new("git")
             .arg("clone")
             .arg("https://github.com/bitwuzla/bitwuzla.git")
+            .arg(&folder_name)
             .current_dir(&dir_smithril)
             .status()
             .unwrap();
         let mut _my_command = Command::new("git")
             .arg("checkout")
-            .arg("tags/0.4.0")
+            .arg(format!("tags/{}", bitwuzla_version))
             .arg("-b")
-            .arg("branch-0.4.0")
+            .arg(format!("branch-{}", bitwuzla_version))
             .current_dir(&dir_bitwuzla)
             .status()
             .unwrap();
