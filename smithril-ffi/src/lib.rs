@@ -463,11 +463,17 @@ pub unsafe extern "C" fn smithril_new_context() -> SmithrilContext {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn smithril_new_solver(context: SmithrilContext) -> SmithrilSolver {
-    let options = Options::default();
+pub unsafe extern "C" fn smithril_new_solver(
+    context: SmithrilContext,
+    options: SmithrilOptions,
+) -> SmithrilSolver {
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);
     let smithril_context = Arc::from_raw(context);
+    let options = options.0 as *const LockingOptions;
+    Arc::increment_strong_count(options);
+    let smithril_options = Arc::from_raw(options);
+    let options = smithril_options.options.read().unwrap();
     let smithril_solver = RUNTIME.block_on(
         FACTORY
             .write()
