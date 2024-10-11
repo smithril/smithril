@@ -5,27 +5,28 @@ use std::process::Command;
 extern crate dirs;
 extern crate pkg_config;
 
+static SOLVER_VERSION: &str = "0.5.0";
+
 fn main() {
     let smithrill_install_path =
         env::var("SMITHRIL_INSTALL_PATH").unwrap_or(".smithril".to_string());
     let dir_smithril: PathBuf = dirs::home_dir().unwrap().join(smithrill_install_path);
     fs::create_dir_all(&dir_smithril).unwrap();
-    let bitwuzla_version = "0.5.0";
-    let folder_name = format!("bitwuzla-{}", bitwuzla_version);
-    let dir_bitwuzla: PathBuf = dir_smithril.join(&folder_name);
+    let bitwuzla_version = format!("bitwuzla-{}", SOLVER_VERSION);
+    let dir_bitwuzla: PathBuf = dir_smithril.join(&bitwuzla_version);
     if !dir_bitwuzla.exists() {
         let mut _my_command = Command::new("git")
             .arg("clone")
             .arg("https://github.com/bitwuzla/bitwuzla.git")
-            .arg(&folder_name)
+            .arg(&bitwuzla_version)
             .current_dir(&dir_smithril)
             .status()
             .unwrap();
         let mut _my_command = Command::new("git")
             .arg("checkout")
-            .arg(format!("tags/{}", bitwuzla_version))
+            .arg(format!("tags/{}", SOLVER_VERSION))
             .arg("-b")
-            .arg(format!("branch-{}", bitwuzla_version))
+            .arg(format!("branch-{}", SOLVER_VERSION))
             .current_dir(&dir_bitwuzla)
             .status()
             .unwrap();
