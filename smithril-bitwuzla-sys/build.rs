@@ -50,7 +50,7 @@ fn main() {
     }
 
     let old_pkg_config_path = env::var("PKG_CONFIG_PATH");
-    let pkg_config_dir: PathBuf = dir_bitwuzla.join("build/install/lib/x86_64-linux-gnu/pkgconfig");
+    let pkg_config_dir: PathBuf = dir_bitwuzla.join("build/install/lib/pkgconfig");
 
     let pkg_config_paths = vec![pkg_config_dir];
     let pkg_config_path = env::join_paths(pkg_config_paths).unwrap();
@@ -63,7 +63,7 @@ fn main() {
         old_pkg_config_path.unwrap_or_else(|_| "".into()),
     );
 
-    println!("cargo:rustc-link-lib=stdc++");
+    println!("cargo:rustc-link-lib=c++");
 
     let bindings = bindgen::builder()
         .header("wrapper.h")
