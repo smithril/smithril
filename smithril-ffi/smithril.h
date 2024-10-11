@@ -311,7 +311,8 @@ struct SmithrilOptions smithril_new_options(void);
 
 struct SmithrilContext smithril_new_context(void);
 
-struct SmithrilSolver smithril_new_solver(struct SmithrilContext context);
+struct SmithrilSolver smithril_new_solver(struct SmithrilContext context,
+                                          struct SmithrilOptions options);
 
 enum SolverResult smithril_check_sat(struct SmithrilSolver solver);
 
