@@ -43,6 +43,7 @@ static FACTORY: Lazy<RwLock<solver::SmithrilFactory>> = Lazy::new(|| {
 
 type Terms = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Term>>>;
 type Sorts = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Sort>>>;
+type Symbols = HashMap<Arc<solver::SmithrilContext>, HashSet<String>>;
 
 struct LockingOptions {
     options: RwLock<Options>,
@@ -63,8 +64,10 @@ static CONTEXTS: Lazy<RwLock<HashSet<Arc<solver::SmithrilContext>>>> =
 static OPTIONS: Lazy<RwLock<Vec<Arc<LockingOptions>>>> = Lazy::new(|| RwLock::new(Vec::new()));
 static TERMS: Lazy<RwLock<Terms>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static SORTS: Lazy<RwLock<Sorts>> = Lazy::new(|| RwLock::new(HashMap::new()));
+static SYMBOLS: Lazy<RwLock<Symbols>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static LAST_EVALUATED_TERM: Lazy<RwLock<Arc<String>>> = Lazy::new(|| RwLock::new(Arc::default()));
 static LAST_UNSAT_CORE: Lazy<RwLock<Arc<Vec<Term>>>> = Lazy::new(|| RwLock::new(Arc::default()));
+static FRESH_SYMBOLS_COUNT: Lazy<RwLock<u64>> = Lazy::new(|| RwLock::new(1));
 
 #[repr(C)]
 pub struct SmithrilSolver(*const c_void);
@@ -106,6 +109,12 @@ fn intern_term(smithril_context: Arc<solver::SmithrilContext>, term: Arc<Term>) 
             term
         }
     }
+}
+
+fn is_symbol_used(smithril_context: Arc<solver::SmithrilContext>, name: &str) -> bool {
+    let mut lock = SYMBOLS.write().unwrap();
+    let symbols = lock.entry(smithril_context.clone()).or_default();
+    symbols.contains(name)
 }
 
 #[no_mangle]
@@ -173,13 +182,11 @@ pub unsafe extern "C" fn smithril_mk_bv_value_uint64(
     SmithrilTerm(term as *const c_void)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn smithril_mk_smt_symbol(
+pub unsafe fn smithril_mk_smt_symbol_inner(
     context: SmithrilContext,
-    name: *const c_char,
+    name: &str,
     sort: SmithrilSort,
 ) -> SmithrilTerm {
-    let name = unsafe { CStr::from_ptr(name).to_string_lossy().into_owned() };
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);
     let smithril_context = Arc::from_raw(context);
@@ -191,6 +198,36 @@ pub unsafe extern "C" fn smithril_mk_smt_symbol(
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
     SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_smt_symbol(
+    context: SmithrilContext,
+    name: *const c_char,
+    sort: SmithrilSort,
+) -> SmithrilTerm {
+    let name = unsafe { CStr::from_ptr(name).to_string_lossy().into_owned() };
+    smithril_mk_smt_symbol_inner(context, &name, sort)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_fresh_smt_symbol(
+    context: SmithrilContext,
+    sort: SmithrilSort,
+) -> SmithrilTerm {
+    let mut name = "fresh".to_string();
+    {
+        let context = context.0 as *const solver::SmithrilContext;
+        Arc::increment_strong_count(context);
+        let smithril_context = Arc::from_raw(context);
+        let mut count = { FRESH_SYMBOLS_COUNT.read().unwrap().clone() };
+        while is_symbol_used(smithril_context.clone(), &name) {
+            name = format!("{}{}", name, count);
+            count += 1;
+        }
+        *FRESH_SYMBOLS_COUNT.write().unwrap() = count;
+    }
+    smithril_mk_smt_symbol_inner(context, &name, sort)
 }
 
 macro_rules! unary_function {

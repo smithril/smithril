@@ -20,7 +20,7 @@ use termination_callback::termination_callback;
 
 use crate::utils;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct BitwuzlaTerm {
     pub term: smithril_bitwuzla_sys::BitwuzlaTerm,
 }
@@ -949,7 +949,7 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     fn mk_smt_symbol(&self, name: &str, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         let mut sym_table = self.symbol_cache.write().unwrap();
         let term = if let Some(term2) = sym_table.get(name) {
-            term2.term
+            term2.clone()
         } else {
             let name_cstr = CString::new(name).unwrap();
             let term = unsafe {
@@ -959,11 +959,12 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
                     name_cstr.as_ptr(),
                 )
             };
-            let old_term = sym_table.insert(name.to_string(), BitwuzlaTerm { term });
+            let term = BitwuzlaTerm { term };
+            let old_term = sym_table.insert(name.to_string(), term.clone());
             assert!(old_term.is_none());
             term
         };
-        BitwuzlaTerm { term }
+        term
     }
 
     fn try_get_bool_converter(

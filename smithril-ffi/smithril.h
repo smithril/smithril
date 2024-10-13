@@ -59,6 +59,9 @@ struct SmithrilTerm smithril_mk_smt_symbol(struct SmithrilContext context,
                                            const char *name,
                                            struct SmithrilSort sort);
 
+struct SmithrilTerm smithril_mk_fresh_smt_symbol(struct SmithrilContext context,
+                                                 struct SmithrilSort sort);
+
 struct SmithrilTerm smithril_mk_and(struct SmithrilContext context,
                                     struct SmithrilTerm term1,
                                     struct SmithrilTerm term2);
