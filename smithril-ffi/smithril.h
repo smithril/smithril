@@ -19,6 +19,13 @@ typedef enum SolverResult {
   Unknown,
 } SolverResult;
 
+typedef enum SortKind {
+  Bv,
+  Bool,
+  Array,
+  Fp,
+} SortKind;
+
 typedef struct SmithrilSort {
   const void *_0;
 } SmithrilSort;
@@ -42,6 +49,10 @@ typedef struct SmithrilSolver {
 typedef struct SmithrilTermVector {
   const void *_0;
 } SmithrilTermVector;
+
+struct SmithrilSort smithril_get_sort(struct SmithrilContext context, struct SmithrilTerm term);
+
+enum SortKind smithril_get_sort_kind(struct SmithrilSort sort);
 
 struct SmithrilSort smithril_mk_bv_sort(struct SmithrilContext context, uint64_t size);
 

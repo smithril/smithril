@@ -144,20 +144,40 @@ pub enum Sort {
     FpSort(u64, u64),
 }
 
+#[repr(C)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
+pub enum SortKind {
+    Bv,
+    Bool,
+    Array,
+    Fp,
+}
+
 impl Sort {
     fn is_array(&self) -> bool {
         matches!(self, Sort::ArraySort(_, _))
     }
+
     fn try_get_elem_sort(&self) -> Option<&Sort> {
         match self {
             Sort::ArraySort(_, elem) => Some(elem.as_ref()),
             _ => None,
         }
     }
+
     fn try_get_bv_size(&self) -> Option<u64> {
         match self {
             Sort::BvSort(size) => Some(*size),
             _ => None,
+        }
+    }
+
+    pub fn get_kind(&self) -> SortKind {
+        match self {
+            Sort::BvSort(_) => SortKind::Bv,
+            Sort::BoolSort() => SortKind::Bool,
+            Sort::ArraySort(_, _) => SortKind::Array,
+            Sort::FpSort(_, _) => SortKind::Fp,
         }
     }
 }
@@ -166,6 +186,12 @@ impl Sort {
 pub struct Term {
     pub term: UnsortedTerm,
     pub sort: Sort,
+}
+
+impl Term {
+    pub fn get_sort(&self) -> Sort {
+        self.sort.clone()
+    }
 }
 
 pub fn mk_bv_sort(size: u64) -> Sort {

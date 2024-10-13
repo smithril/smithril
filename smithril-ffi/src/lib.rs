@@ -11,7 +11,7 @@ use std::{
 use duration_string::DurationString;
 use smithril_lib::{
     generalized::Options,
-    term::{self, Sort, Term},
+    term::{self, Sort, SortKind, Term},
 };
 use smithril_lib::{
     generalized::{AsyncFactory, AsyncSolver},
@@ -115,6 +115,32 @@ fn is_symbol_used(smithril_context: Arc<solver::SmithrilContext>, name: &str) ->
     let mut lock = SYMBOLS.write().unwrap();
     let symbols = lock.entry(smithril_context.clone()).or_default();
     symbols.contains(name)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_get_sort(
+    context: SmithrilContext,
+    term: SmithrilTerm,
+) -> SmithrilSort {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let sort = Arc::new(smithril_term.get_sort());
+    let sort = intern_sort(smithril_context, sort);
+    let sort = Arc::into_raw(sort);
+    Arc::decrement_strong_count(sort);
+    SmithrilSort(sort as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_get_sort_kind(sort: SmithrilSort) -> SortKind {
+    let sort = sort.0 as *const Sort;
+    Arc::increment_strong_count(sort);
+    let smithril_sort = Arc::from_raw(sort);
+    smithril_sort.get_kind()
 }
 
 #[no_mangle]
