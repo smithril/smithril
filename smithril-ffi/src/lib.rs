@@ -231,7 +231,7 @@ pub unsafe fn smithril_mk_smt_symbol_inner(
     let sort = sort.0 as *const Sort;
     Arc::increment_strong_count(sort);
     let smithril_sort = &*sort;
-    let term = Arc::new(term::mk_smt_symbol(&name, smithril_sort));
+    let term = Arc::new(term::mk_smt_symbol(name, smithril_sort));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn smithril_mk_fresh_smt_symbol(
         let context = context.0 as *const solver::SmithrilContext;
         Arc::increment_strong_count(context);
         let smithril_context = Arc::from_raw(context);
-        let mut count = { FRESH_SYMBOLS_COUNT.read().unwrap().clone() };
+        let mut count = { *FRESH_SYMBOLS_COUNT.read().unwrap() };
         while is_symbol_used(smithril_context.clone(), &name) {
             name = format!("{}{}", name, count);
             count += 1;
