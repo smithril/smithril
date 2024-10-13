@@ -114,5 +114,5 @@ impl Solver for DummySolver {
 
     fn push(&self) {}
 
-    fn pop(&self) {}
+    fn pop(&self, _size: u64) {}
 }

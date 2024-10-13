@@ -144,20 +144,40 @@ pub enum Sort {
     FpSort(u64, u64),
 }
 
+#[repr(C)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
+pub enum SortKind {
+    Bv,
+    Bool,
+    Array,
+    Fp,
+}
+
 impl Sort {
     fn is_array(&self) -> bool {
         matches!(self, Sort::ArraySort(_, _))
     }
+
     fn try_get_elem_sort(&self) -> Option<&Sort> {
         match self {
             Sort::ArraySort(_, elem) => Some(elem.as_ref()),
             _ => None,
         }
     }
+
     fn try_get_bv_size(&self) -> Option<u64> {
         match self {
             Sort::BvSort(size) => Some(*size),
             _ => None,
+        }
+    }
+
+    pub fn get_kind(&self) -> SortKind {
+        match self {
+            Sort::BvSort(_) => SortKind::Bv,
+            Sort::BoolSort() => SortKind::Bool,
+            Sort::ArraySort(_, _) => SortKind::Array,
+            Sort::FpSort(_, _) => SortKind::Fp,
         }
     }
 }
@@ -166,6 +186,12 @@ impl Sort {
 pub struct Term {
     pub term: UnsortedTerm,
     pub sort: Sort,
+}
+
+impl Term {
+    pub fn get_sort(&self) -> Sort {
+        self.sort.clone()
+    }
 }
 
 pub fn mk_bv_sort(size: u64) -> Sort {
@@ -501,5 +527,25 @@ pub fn try_constant_to_string(term: &Term) -> Option<String> {
             GenConstant::Fp(_) => None,
         },
         UnsortedTerm::Operation(_) => None,
+    }
+}
+
+pub fn mk_concat(term1: &Term, term2: &Term) -> Term {
+    let size = term1.sort.try_get_bv_size().unwrap() + term2.sort.try_get_bv_size().unwrap();
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
+            DuoOperationKind::Concat,
+            term1.clone(),
+            term2.clone(),
+        ))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_extract(high: u64, low: u64, term: &Term) -> Term {
+    let size = high - low + 1;
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extract(high, low, term.clone()))),
+        sort: mk_bv_sort(size),
     }
 }

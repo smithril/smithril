@@ -177,9 +177,9 @@ fn start<
                     Solver::push(solver.as_ref());
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
-                RemoteSolverCommand::Pop(solver_label) => {
+                RemoteSolverCommand::Pop(solver_label, size) => {
                     let solver = solvers.get(&solver_label).unwrap().clone();
-                    Solver::pop(solver.as_ref());
+                    Solver::pop(solver.as_ref(), size);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
             },

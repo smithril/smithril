@@ -19,6 +19,13 @@ typedef enum SolverResult {
   Unknown,
 } SolverResult;
 
+typedef enum SortKind {
+  Bv,
+  Bool,
+  Array,
+  Fp,
+} SortKind;
+
 typedef struct SmithrilSort {
   const void *_0;
 } SmithrilSort;
@@ -43,6 +50,10 @@ typedef struct SmithrilTermVector {
   const void *_0;
 } SmithrilTermVector;
 
+struct SmithrilSort smithril_get_sort(struct SmithrilContext context, struct SmithrilTerm term);
+
+enum SortKind smithril_get_sort_kind(struct SmithrilSort sort);
+
 struct SmithrilSort smithril_mk_bv_sort(struct SmithrilContext context, uint64_t size);
 
 struct SmithrilSort smithril_mk_array_sort(struct SmithrilContext context,
@@ -55,9 +66,14 @@ struct SmithrilTerm smithril_mk_bv_value_uint64(struct SmithrilContext context,
                                                 struct SmithrilSort sort,
                                                 uint64_t val);
 
+struct SmithrilTerm smithril_mk_smt_bool(struct SmithrilContext context, bool val);
+
 struct SmithrilTerm smithril_mk_smt_symbol(struct SmithrilContext context,
                                            const char *name,
                                            struct SmithrilSort sort);
+
+struct SmithrilTerm smithril_mk_fresh_smt_symbol(struct SmithrilContext context,
+                                                 struct SmithrilSort sort);
 
 struct SmithrilTerm smithril_mk_and(struct SmithrilContext context,
                                     struct SmithrilTerm term1,
@@ -183,6 +199,10 @@ struct SmithrilTerm smithril_mk_bvxor(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
                                       struct SmithrilTerm term2);
 
+struct SmithrilTerm smithril_mk_concat(struct SmithrilContext context,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
 struct SmithrilTerm smithril_mk_not(struct SmithrilContext context, struct SmithrilTerm term1);
 
 struct SmithrilTerm smithril_fp_is_nan(struct SmithrilContext context, struct SmithrilTerm term1);
@@ -307,6 +327,11 @@ struct SmithrilTerm smithril_mk_store(struct SmithrilContext context,
                                       struct SmithrilTerm term2,
                                       struct SmithrilTerm term3);
 
+struct SmithrilTerm smithril_mk_extract(struct SmithrilContext context,
+                                        uint64_t high,
+                                        uint64_t low,
+                                        struct SmithrilTerm term);
+
 struct SmithrilOptions smithril_new_options(void);
 
 struct SmithrilContext smithril_new_context(void);
@@ -320,7 +345,7 @@ void smithril_reset(struct SmithrilSolver solver);
 
 void smithril_push(struct SmithrilSolver solver);
 
-void smithril_pop(struct SmithrilSolver solver);
+void smithril_pop(struct SmithrilSolver solver, uint64_t size);
 
 void smithril_assert(struct SmithrilSolver solver, struct SmithrilTerm term);
 
