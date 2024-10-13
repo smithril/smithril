@@ -100,7 +100,7 @@ pub enum RemoteSolverCommand {
     UnsatCore(SolverLabel),
     Eval(SolverLabel, Term),
     Push(SolverLabel),
-    Pop(SolverLabel),
+    Pop(SolverLabel, u64),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -205,8 +205,8 @@ impl AsyncResultSolver for RemoteSolver {
         Ok(())
     }
 
-    async fn pop(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.pop(self.label).await?;
+    async fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.pop(self.label, size).await?;
         Ok(())
     }
 }
@@ -452,8 +452,9 @@ impl RemoteWorkerLockingCommunicator {
     pub async fn pop(
         &self,
         solver: SolverLabel,
+        size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let command = RemoteSolverCommand::Pop(solver);
+        let command = RemoteSolverCommand::Pop(solver, size);
         self.send_solver_command(command).await?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
@@ -548,8 +549,8 @@ impl RemoteWorker {
                 RemoteSolverCommand::Push(solver) => {
                     self.communicator().await.push(solver).await?;
                 }
-                RemoteSolverCommand::Pop(solver) => {
-                    self.communicator().await.pop(solver).await?;
+                RemoteSolverCommand::Pop(solver, size) => {
+                    self.communicator().await.pop(solver, size).await?;
                 }
             },
             RemoteCommand::Factory(command) => match command {
@@ -940,14 +941,15 @@ impl RemoteWorker {
     pub async fn pop(
         &self,
         solver: SolverLabel,
+        size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let command = RemoteSolverCommand::Pop(solver);
+        let command = RemoteSolverCommand::Pop(solver, size);
         self.save_solver_command(solver, command.clone()).await?;
         if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.inc_communication();
-            self.communicator().await.pop(solver).await?;
+            self.communicator().await.pop(solver, size).await?;
             self.dec_communication();
         };
         Ok(())
@@ -1220,10 +1222,10 @@ impl AsyncSolver for SmithrilSolver {
         }
     }
 
-    async fn pop(&self) {
+    async fn pop(&self, size: u64) {
         let mut handles = Vec::new();
         for solver in self.solvers.iter() {
-            let handler = solver.pop();
+            let handler = solver.pop(size);
             handles.push(handler);
         }
         for handler in handles {

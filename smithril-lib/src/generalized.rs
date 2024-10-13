@@ -119,7 +119,7 @@ where
     fn check_sat(&self) -> SolverResult;
     fn unsat_core(&self) -> Vec<T>;
     fn push(&self);
-    fn pop(&self);
+    fn pop(&self, size: u64);
 }
 
 pub trait AsyncResultSolver {
@@ -153,6 +153,7 @@ pub trait AsyncResultSolver {
     ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
     fn pop(
         &self,
+        size: u64,
     ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
 }
 
@@ -164,7 +165,7 @@ pub trait AsyncSolver {
     fn unsat_core(&self) -> impl std::future::Future<Output = Vec<Term>> + Send;
     fn eval(&self, term: &Term) -> impl std::future::Future<Output = Option<Term>> + Send;
     fn push(&self) -> impl std::future::Future<Output = ()> + Send;
-    fn pop(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn pop(&self, size: u64) -> impl std::future::Future<Output = ()> + Send;
 }
 
 macro_rules! define_converter_unary_function {
@@ -631,7 +632,7 @@ pub trait Solver {
     fn eval(&self, term: &Term) -> Option<Term>;
     fn unsat_core(&self) -> Vec<Term>;
     fn push(&self);
-    fn pop(&self);
+    fn pop(&self, size: u64);
 }
 
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Debug, Clone)]

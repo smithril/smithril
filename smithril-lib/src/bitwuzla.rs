@@ -538,9 +538,9 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
         }
     }
 
-    fn pop(&self) {
+    fn pop(&self, size: u64) {
         unsafe {
-            smithril_bitwuzla_sys::bitwuzla_pop(self.solver(), 1);
+            smithril_bitwuzla_sys::bitwuzla_pop(self.solver(), size);
         }
     }
 }
@@ -1060,7 +1060,7 @@ impl Solver for BitwuzlaSolver {
         GeneralSolver::push(self)
     }
 
-    fn pop(&self) {
-        GeneralSolver::pop(self)
+    fn pop(&self, size: u64) {
+        GeneralSolver::pop(self, size)
     }
 }

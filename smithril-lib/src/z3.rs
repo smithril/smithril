@@ -566,10 +566,10 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
         }
     }
 
-    fn pop(&self) {
+    fn pop(&self, size: u64) {
         let context = self.context.as_ref();
         unsafe {
-            smithril_z3_sys::Z3_solver_pop(context.context(), self.solver.0, 1);
+            smithril_z3_sys::Z3_solver_pop(context.context(), self.solver.0, size as u32);
         }
     }
 }
@@ -1032,7 +1032,7 @@ impl Solver for Z3Solver {
         GeneralSolver::push(self)
     }
 
-    fn pop(&self) {
-        GeneralSolver::pop(self)
+    fn pop(&self, size: u64) {
+        GeneralSolver::pop(self, size)
     }
 }

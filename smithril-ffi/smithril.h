@@ -320,7 +320,7 @@ void smithril_reset(struct SmithrilSolver solver);
 
 void smithril_push(struct SmithrilSolver solver);
 
-void smithril_pop(struct SmithrilSolver solver);
+void smithril_pop(struct SmithrilSolver solver, uint64_t size);
 
 void smithril_assert(struct SmithrilSolver solver, struct SmithrilTerm term);
 

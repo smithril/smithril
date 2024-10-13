@@ -511,11 +511,11 @@ pub unsafe extern "C" fn smithril_push(solver: SmithrilSolver) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn smithril_pop(solver: SmithrilSolver) {
+pub unsafe extern "C" fn smithril_pop(solver: SmithrilSolver, size: u64) {
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    RUNTIME.block_on(smithril_solver.pop())
+    RUNTIME.block_on(smithril_solver.pop(size))
 }
 
 #[no_mangle]
