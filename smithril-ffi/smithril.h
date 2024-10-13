@@ -55,6 +55,8 @@ struct SmithrilTerm smithril_mk_bv_value_uint64(struct SmithrilContext context,
                                                 struct SmithrilSort sort,
                                                 uint64_t val);
 
+struct SmithrilTerm smithril_mk_smt_bool(struct SmithrilContext context, bool val);
+
 struct SmithrilTerm smithril_mk_smt_symbol(struct SmithrilContext context,
                                            const char *name,
                                            struct SmithrilSort sort);

@@ -182,6 +182,18 @@ pub unsafe extern "C" fn smithril_mk_bv_value_uint64(
     SmithrilTerm(term as *const c_void)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_smt_bool(context: SmithrilContext, val: bool) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = Arc::new(term::mk_smt_bool(val));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
 pub unsafe fn smithril_mk_smt_symbol_inner(
     context: SmithrilContext,
     name: &str,
