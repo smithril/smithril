@@ -188,6 +188,10 @@ struct SmithrilTerm smithril_mk_bvxor(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
                                       struct SmithrilTerm term2);
 
+struct SmithrilTerm smithril_mk_concat(struct SmithrilContext context,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
 struct SmithrilTerm smithril_mk_not(struct SmithrilContext context, struct SmithrilTerm term1);
 
 struct SmithrilTerm smithril_fp_is_nan(struct SmithrilContext context, struct SmithrilTerm term1);
@@ -311,6 +315,11 @@ struct SmithrilTerm smithril_mk_store(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
                                       struct SmithrilTerm term2,
                                       struct SmithrilTerm term3);
+
+struct SmithrilTerm smithril_mk_extract(struct SmithrilContext context,
+                                        uint64_t high,
+                                        uint64_t low,
+                                        struct SmithrilTerm term);
 
 struct SmithrilOptions smithril_new_options(void);
 

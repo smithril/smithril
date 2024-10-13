@@ -503,3 +503,23 @@ pub fn try_constant_to_string(term: &Term) -> Option<String> {
         UnsortedTerm::Operation(_) => None,
     }
 }
+
+pub fn mk_concat(term1: &Term, term2: &Term) -> Term {
+    let size = term1.sort.try_get_bv_size().unwrap() + term2.sort.try_get_bv_size().unwrap();
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
+            DuoOperationKind::Concat,
+            term1.clone(),
+            term2.clone(),
+        ))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_extract(high: u64, low: u64, term: &Term) -> Term {
+    let size = high - low + 1;
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extract(high, low, term.clone()))),
+        sort: mk_bv_sort(size),
+    }
+}

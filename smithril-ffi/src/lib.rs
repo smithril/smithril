@@ -428,6 +428,7 @@ binary_function!(smithril_mk_bvule, mk_bv_ule);
 binary_function!(smithril_mk_bvult, mk_bv_ult);
 binary_function!(smithril_mk_bvumod, mk_bv_umod);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
+binary_function!(smithril_mk_concat, mk_concat);
 unary_function!(smithril_mk_not, mk_not);
 
 unary_function!(smithril_fp_is_nan, fp_is_nan);
@@ -485,6 +486,26 @@ pub unsafe extern "C" fn smithril_mk_store(
         smithril_term2.as_ref(),
         smithril_term3.as_ref(),
     ));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_extract(
+    context: SmithrilContext,
+    high: u64,
+    low: u64,
+    term: SmithrilTerm,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let term = Arc::new(term::mk_extract(high, low, smithril_term.as_ref()));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
