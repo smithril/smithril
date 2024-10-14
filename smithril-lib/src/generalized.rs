@@ -206,6 +206,7 @@ where
     T: GeneralTerm,
 {
     fn mk_smt_symbol(&self, name: &str, sort: &S) -> T;
+    fn mk_smt_const_symbol(&self, term: &T, sort: &S) -> T;
     define_converter_binary_function!(mk_eq);
 
     fn convert_term(&self, term: &Term) -> T {
@@ -217,6 +218,7 @@ where
                     .mk_bv_value_uint64(&self.convert_sort(&term.sort), *x),
                 GenConstant::Boolean(x) => self.try_get_bool_converter().unwrap().mk_smt_bool(*x),
                 GenConstant::Symbol(x) => self.mk_smt_symbol(x, &self.convert_sort(&term.sort)),
+                GenConstant::ConstantSymbol(_) => todo!(),
                 GenConstant::Fp(x) => {
                     let sort = self.convert_sort(&term.sort);
 
@@ -286,6 +288,9 @@ where
                         }
                         DuoOperationKind::Xor => {
                             self.try_get_bool_converter().unwrap().mk_xor(&t1, &t2)
+                        }
+                        DuoOperationKind::Iff => {
+                            self.try_get_bool_converter().unwrap().mk_iff(&t1, &t2)
                         }
                         DuoOperationKind::Select => {
                             self.try_get_array_converter().unwrap().mk_select(&t1, &t2)
@@ -379,10 +384,12 @@ where
                             .try_get_array_converter()
                             .unwrap()
                             .mk_store(&t1, &t2, &t3),
-                        TrioOperationKind::MkFpValue => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_value(&t1, &t2, &t3),
+                        TrioOperationKind::Fp => {
+                            self.try_get_fp_converter().unwrap().mk_fp(&t1, &t2, &t3)
+                        }
+                        TrioOperationKind::Ite => {
+                            self.try_get_bool_converter().unwrap().mk_ite(&t1, &t2, &t3)
+                        }
                     }
                 }
                 GenOperation::Extract(high, low, term) => {
@@ -488,6 +495,19 @@ where
                             .mk_fp_to_ubv(rmode, &t, *w),
                     }
                 }
+                GenOperation::Extend(kind, size, term) => {
+                    let t = self.convert_term(term);
+                    match kind {
+                        crate::term::ExtendOperationKind::Sign => self
+                            .try_get_bv_converter()
+                            .unwrap()
+                            .mk_sign_extend(*size, &t),
+                        crate::term::ExtendOperationKind::Zero => self
+                            .try_get_bv_converter()
+                            .unwrap()
+                            .mk_zero_extend(*size, &t),
+                    }
+                }
             },
         }
     }
@@ -516,7 +536,7 @@ where
     T: GeneralTerm,
 {
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> S;
-    fn mk_fp_value(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
+    fn mk_fp(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
     fn mk_fp_pos_zero(&self, sort: &S) -> T;
     fn mk_fp_pos_inf(&self, sort: &S) -> T;
     fn mk_fp_neg_zero(&self, sort: &S) -> T;
@@ -572,6 +592,8 @@ where
     define_converter_binary_function!(mk_and);
     define_converter_binary_function!(mk_or);
     define_converter_binary_function!(mk_xor);
+    define_converter_binary_function!(mk_iff);
+    define_converter_ternary_function!(mk_ite);
 }
 
 pub trait GeneralBvConverter<S, T>: GeneralConverter<S, T>
@@ -609,6 +631,8 @@ where
     define_converter_binary_function!(mk_bv_xor);
     define_converter_binary_function!(mk_concat);
     fn mk_extract(&self, high: u64, low: u64, term: &T) -> T;
+    fn mk_sign_extend(&self, size: u64, term: &T) -> T;
+    fn mk_zero_extend(&self, size: u64, term: &T) -> T;
 }
 
 pub trait GeneralArrayConverter<S, T>: GeneralConverter<S, T>

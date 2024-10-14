@@ -13,6 +13,7 @@ pub enum GenConstant {
     Boolean(bool),
     Numeral(u64),
     Symbol(String),
+    ConstantSymbol(Box<Term>),
     Fp(FpConstant),
 }
 
@@ -37,6 +38,7 @@ pub enum DuoOperationKind {
     Neq,
     Or,
     Xor,
+    Iff,
     Select,
     BvAdd,
     BvAnd,
@@ -69,7 +71,14 @@ pub enum DuoOperationKind {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum TrioOperationKind {
     Store,
-    MkFpValue,
+    Ite,
+    Fp,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
+pub enum ExtendOperationKind {
+    Sign,
+    Zero,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
@@ -122,6 +131,7 @@ pub enum FpToOperationKind {
 pub enum GenOperation {
     Uno(UnoOperationKind, Term),
     Extract(u64, u64, Term),
+    Extend(ExtendOperationKind, u64, Term),
     FpToFp(FpToFpOperationKind, RoundingMode, u64, u64, Term),
     FpTo(FpToOperationKind, RoundingMode, u64, Term),
     Duo(DuoOperationKind, Term, Term),
@@ -154,7 +164,7 @@ pub enum SortKind {
 }
 
 impl Sort {
-    fn is_array(&self) -> bool {
+    fn is_array_sort(&self) -> bool {
         matches!(self, Sort::ArraySort(_, _))
     }
 
@@ -165,7 +175,7 @@ impl Sort {
         }
     }
 
-    fn try_get_bv_size(&self) -> Option<u64> {
+    pub fn try_get_bv_sort_size(&self) -> Option<u64> {
         match self {
             Sort::BvSort(size) => Some(*size),
             _ => None,
@@ -178,6 +188,20 @@ impl Sort {
             Sort::BoolSort() => SortKind::Bool,
             Sort::ArraySort(_, _) => SortKind::Array,
             Sort::FpSort(_, _) => SortKind::Fp,
+        }
+    }
+
+    pub fn try_fp_get_bv_exp_size(&self) -> Option<u64> {
+        match self {
+            Sort::FpSort(exp, _) => Some(*exp),
+            _ => None,
+        }
+    }
+
+    pub fn try_fp_get_bv_sig_size(&self) -> Option<u64> {
+        match self {
+            Sort::FpSort(_, sig) => Some(*sig),
+            _ => None,
         }
     }
 }
@@ -214,11 +238,11 @@ pub fn mk_fp_sort(ew: u64, sw: u64) -> Sort {
 }
 
 pub fn mk_fp_value(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) -> Term {
-    let exp_size = bv_exponent.sort.try_get_bv_size().unwrap();
-    let sign_size = bv_significand.sort.try_get_bv_size().unwrap();
+    let exp_size = bv_exponent.sort.try_get_bv_sort_size().unwrap();
+    let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
-            TrioOperationKind::MkFpValue,
+            TrioOperationKind::Fp,
             bv_sign.clone(),
             bv_exponent.clone(),
             bv_significand.clone(),
@@ -477,6 +501,7 @@ boolean_binary_function!(mk_implies, Implies);
 boolean_binary_function!(mk_neq, Neq);
 boolean_unary_function!(mk_not, Not);
 boolean_binary_function!(mk_or, Or);
+boolean_binary_function!(mk_iff, Iff);
 pub fn mk_smt_bool(val: bool) -> Term {
     Term {
         term: UnsortedTerm::Constant(GenConstant::Boolean(val)),
@@ -489,12 +514,18 @@ pub fn mk_smt_symbol(name: &str, sort: &Sort) -> Term {
         sort: sort.clone(),
     }
 }
+pub fn mk_smt_const_symbol(term: &Term, sort: &Sort) -> Term {
+    Term {
+        term: UnsortedTerm::Constant(GenConstant::ConstantSymbol(Box::new(term.clone()))),
+        sort: sort.clone(),
+    }
+}
 boolean_binary_function!(mk_xor, Xor);
 pub fn mk_array_sort(index: &Sort, element: &Sort) -> Sort {
     Sort::ArraySort(Box::new(index.clone()), Box::new(element.clone()))
 }
 pub fn mk_select(term1: &Term, term2: &Term) -> Term {
-    assert!(term1.sort.is_array());
+    assert!(term1.sort.is_array_sort());
     let elem_sort = term1.sort.try_get_elem_sort().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
@@ -518,6 +549,33 @@ pub fn mk_store(term1: &Term, term2: &Term, term3: &Term) -> Term {
     }
 }
 
+pub fn mk_ite(term1: &Term, term2: &Term, term3: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
+            TrioOperationKind::Ite,
+            term1.clone(),
+            term2.clone(),
+            term3.clone(),
+        ))),
+        sort: term2.sort.clone(),
+    }
+}
+
+pub fn mk_fp(term1: &Term, term2: &Term, term3: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
+            TrioOperationKind::Fp,
+            term1.clone(),
+            term2.clone(),
+            term3.clone(),
+        ))),
+        sort: mk_fp_sort(
+            term2.sort.try_get_bv_sort_size().unwrap(),
+            term3.sort.try_get_bv_sort_size().unwrap(),
+        ),
+    }
+}
+
 pub fn try_constant_to_string(term: &Term) -> Option<String> {
     match &term.term {
         UnsortedTerm::Constant(constant) => match constant {
@@ -525,13 +583,15 @@ pub fn try_constant_to_string(term: &Term) -> Option<String> {
             GenConstant::Numeral(val) => Some(format!("{}", val)),
             GenConstant::Symbol(_) => None,
             GenConstant::Fp(_) => None,
+            GenConstant::ConstantSymbol(_) => None,
         },
         UnsortedTerm::Operation(_) => None,
     }
 }
 
 pub fn mk_concat(term1: &Term, term2: &Term) -> Term {
-    let size = term1.sort.try_get_bv_size().unwrap() + term2.sort.try_get_bv_size().unwrap();
+    let size =
+        term1.sort.try_get_bv_sort_size().unwrap() + term2.sort.try_get_bv_sort_size().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
             DuoOperationKind::Concat,
@@ -546,6 +606,28 @@ pub fn mk_extract(high: u64, low: u64, term: &Term) -> Term {
     let size = high - low + 1;
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Extract(high, low, term.clone()))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_sing_extend(size: u64, term: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extend(
+            ExtendOperationKind::Sign,
+            size,
+            term.clone(),
+        ))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_zero_extend(size: u64, term: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extend(
+            ExtendOperationKind::Zero,
+            size,
+            term.clone(),
+        ))),
         sort: mk_bv_sort(size),
     }
 }

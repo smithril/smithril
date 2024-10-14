@@ -610,6 +610,8 @@ impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
     create_converter_unary_function_z3!(mk_not, Z3_mk_not);
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
+    create_converter_binary_function_z3!(mk_iff, Z3_mk_iff);
+    create_converter_ternary_function_z3!(mk_ite, Z3_mk_ite);
 }
 
 impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -661,6 +663,20 @@ impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
             Z3Term::new(&self.context, term)
         }
     }
+
+    fn mk_sign_extend(&self, size: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_sign_ext(self.context(), size as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_zero_extend(&self, size: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_zero_ext(self.context(), size as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
 }
 
 impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -670,12 +686,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp_value(
-        &self,
-        bv_sign: &Z3Term,
-        bv_exponent: &Z3Term,
-        bv_significand: &Z3Term,
-    ) -> Z3Term {
+    fn mk_fp(&self, bv_sign: &Z3Term, bv_exponent: &Z3Term, bv_significand: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_fp(
                 self.context(),
@@ -942,6 +953,12 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
             let symbol = smithril_z3_sys::Z3_mk_string_symbol(self.context(), name_cstr.as_ptr());
             smithril_z3_sys::Z3_mk_const(self.context(), symbol, sort.sort)
         };
+        Z3Term::new(&self.context, term)
+    }
+
+    fn mk_smt_const_symbol(&self, term: &Z3Term, sort: &Z3Sort) -> Z3Term {
+        let term =
+            unsafe { smithril_z3_sys::Z3_mk_const_array(self.context(), sort.sort, term.term) };
         Z3Term::new(&self.context, term)
     }
 

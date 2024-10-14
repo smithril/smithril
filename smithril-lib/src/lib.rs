@@ -228,7 +228,7 @@ mod tests {
         };
         let x = Term {
             term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
-                term::TrioOperationKind::MkFpValue,
+                term::TrioOperationKind::Fp,
                 x1,
                 x2,
                 x3,
@@ -237,7 +237,7 @@ mod tests {
         };
         let y = Term {
             term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
-                term::TrioOperationKind::MkFpValue,
+                term::TrioOperationKind::Fp,
                 y1,
                 y2,
                 y3,
@@ -297,7 +297,7 @@ mod tests {
         };
         let x = Term {
             term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
-                term::TrioOperationKind::MkFpValue,
+                term::TrioOperationKind::Fp,
                 x1,
                 x2,
                 x3,
@@ -355,7 +355,7 @@ mod tests {
         };
         let x = Term {
             term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
-                term::TrioOperationKind::MkFpValue,
+                term::TrioOperationKind::Fp,
                 x1,
                 x2,
                 x3,

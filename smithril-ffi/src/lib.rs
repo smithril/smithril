@@ -144,6 +144,36 @@ pub unsafe extern "C" fn smithril_get_sort_kind(sort: SmithrilSort) -> SortKind 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn smithril_get_bv_sort_size(sort: SmithrilSort) -> u64 {
+    let sort = sort.0 as *const Sort;
+    Arc::increment_strong_count(sort);
+    let smithril_sort = Arc::from_raw(sort);
+    smithril_sort.try_get_bv_sort_size().unwrap_or_default()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_fp_get_bv_exp_size(term: SmithrilTerm) -> u64 {
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    smithril_term
+        .sort
+        .try_fp_get_bv_exp_size()
+        .unwrap_or_default()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_fp_get_bv_sig_size(term: SmithrilTerm) -> u64 {
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    smithril_term
+        .sort
+        .try_fp_get_bv_sig_size()
+        .unwrap_or_default()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn smithril_mk_bv_sort(context: SmithrilContext, size: u64) -> SmithrilSort {
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);
@@ -273,6 +303,28 @@ pub unsafe extern "C" fn smithril_mk_fresh_smt_symbol(
     smithril_mk_smt_symbol_inner(context, &name, sort)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_smt_const_symbol(
+    context: SmithrilContext,
+    term: SmithrilTerm,
+    sort: SmithrilSort,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = &*term;
+    let sort = sort.0 as *const Sort;
+    Arc::increment_strong_count(sort);
+    let smithril_sort = &*sort;
+    let term = Arc::new(term::mk_smt_const_symbol(smithril_term, smithril_sort));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
 macro_rules! unary_function {
     ($smithril_func_name:ident, $func_name:ident) => {
         #[no_mangle]
@@ -315,6 +367,40 @@ macro_rules! binary_function {
             let term = Arc::new(term::$func_name(
                 smithril_term1.as_ref(),
                 smithril_term2.as_ref(),
+            ));
+            let term = intern_term(smithril_context, term);
+            let term = Arc::into_raw(term);
+            Arc::decrement_strong_count(term);
+            SmithrilTerm(term as *const c_void)
+        }
+    };
+}
+
+macro_rules! ternary_function {
+    ($smithril_func_name:ident, $func_name:ident) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $smithril_func_name(
+            context: SmithrilContext,
+            term1: SmithrilTerm,
+            term2: SmithrilTerm,
+            term3: SmithrilTerm,
+        ) -> SmithrilTerm {
+            let context = context.0 as *const solver::SmithrilContext;
+            Arc::increment_strong_count(context);
+            let smithril_context = Arc::from_raw(context);
+            let term1 = term1.0 as *const Term;
+            Arc::increment_strong_count(term1);
+            let smithril_term1 = Arc::from_raw(term1);
+            let term2 = term2.0 as *const Term;
+            Arc::increment_strong_count(term2);
+            let smithril_term2 = Arc::from_raw(term2);
+            let term3 = term3.0 as *const Term;
+            Arc::increment_strong_count(term3);
+            let smithril_term3 = Arc::from_raw(term3);
+            let term = Arc::new(term::$func_name(
+                smithril_term1.as_ref(),
+                smithril_term2.as_ref(),
+                smithril_term3.as_ref(),
             ));
             let term = intern_term(smithril_context, term);
             let term = Arc::into_raw(term);
@@ -434,6 +520,7 @@ binary_function!(smithril_mk_eq, mk_eq);
 binary_function!(smithril_mk_implies, mk_implies);
 binary_function!(smithril_mk_neq, mk_neq);
 binary_function!(smithril_mk_xor, mk_xor);
+binary_function!(smithril_mk_iff, mk_iff);
 binary_function!(smithril_mk_bvand, mk_bv_and);
 binary_function!(smithril_mk_bvashr, mk_bv_ashr);
 binary_function!(smithril_mk_bvlshr, mk_bv_lshr);
@@ -461,6 +548,7 @@ binary_function!(smithril_mk_bvumod, mk_bv_umod);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
 binary_function!(smithril_mk_concat, mk_concat);
 unary_function!(smithril_mk_not, mk_not);
+binary_function!(smithril_mk_select, mk_select);
 
 unary_function!(smithril_fp_is_nan, fp_is_nan);
 unary_function!(smithril_fp_is_inf, fp_is_inf);
@@ -493,35 +581,9 @@ fp_to_fp_function!(smithril_mk_fp_to_fp_from_ubv, mk_fp_to_fp_from_ubv);
 fp_to_function!(smithril_mk_fp_to_sbv, mk_fp_to_sbv);
 fp_to_function!(smithril_mk_fp_to_ubv, mk_fp_to_ubv);
 
-#[no_mangle]
-pub unsafe extern "C" fn smithril_mk_store(
-    context: SmithrilContext,
-    term1: SmithrilTerm,
-    term2: SmithrilTerm,
-    term3: SmithrilTerm,
-) -> SmithrilTerm {
-    let context = context.0 as *const solver::SmithrilContext;
-    Arc::increment_strong_count(context);
-    let smithril_context = Arc::from_raw(context);
-    let term1 = term1.0 as *const Term;
-    Arc::increment_strong_count(term1);
-    let smithril_term1 = Arc::from_raw(term1);
-    let term2 = term2.0 as *const Term;
-    Arc::increment_strong_count(term2);
-    let smithril_term2 = Arc::from_raw(term2);
-    let term3 = term3.0 as *const Term;
-    Arc::increment_strong_count(term3);
-    let smithril_term3 = Arc::from_raw(term3);
-    let term = Arc::new(term::mk_store(
-        smithril_term1.as_ref(),
-        smithril_term2.as_ref(),
-        smithril_term3.as_ref(),
-    ));
-    let term = intern_term(smithril_context, term);
-    let term = Arc::into_raw(term);
-    Arc::decrement_strong_count(term);
-    SmithrilTerm(term as *const c_void)
-}
+ternary_function!(smithril_mk_store, mk_store);
+ternary_function!(smithril_mk_ite, mk_ite);
+ternary_function!(smithril_mk_fp, mk_fp);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_extract(
@@ -537,6 +599,44 @@ pub unsafe extern "C" fn smithril_mk_extract(
     Arc::increment_strong_count(term);
     let smithril_term = Arc::from_raw(term);
     let term = Arc::new(term::mk_extract(high, low, smithril_term.as_ref()));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_sign_extend(
+    context: SmithrilContext,
+    size: u64,
+    term: SmithrilTerm,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let term = Arc::new(term::mk_sing_extend(size, smithril_term.as_ref()));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_zero_extend(
+    context: SmithrilContext,
+    size: u64,
+    term: SmithrilTerm,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let term = Arc::new(term::mk_zero_extend(size, smithril_term.as_ref()));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);

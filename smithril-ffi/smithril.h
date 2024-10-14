@@ -54,6 +54,12 @@ struct SmithrilSort smithril_get_sort(struct SmithrilContext context, struct Smi
 
 enum SortKind smithril_get_sort_kind(struct SmithrilSort sort);
 
+uint64_t smithril_get_bv_sort_size(struct SmithrilSort sort);
+
+uint64_t smithril_fp_get_bv_exp_size(struct SmithrilTerm term);
+
+uint64_t smithril_fp_get_bv_sig_size(struct SmithrilTerm term);
+
 struct SmithrilSort smithril_mk_bv_sort(struct SmithrilContext context, uint64_t size);
 
 struct SmithrilSort smithril_mk_array_sort(struct SmithrilContext context,
@@ -73,6 +79,10 @@ struct SmithrilTerm smithril_mk_smt_symbol(struct SmithrilContext context,
                                            struct SmithrilSort sort);
 
 struct SmithrilTerm smithril_mk_fresh_smt_symbol(struct SmithrilContext context,
+                                                 struct SmithrilSort sort);
+
+struct SmithrilTerm smithril_mk_smt_const_symbol(struct SmithrilContext context,
+                                                 struct SmithrilTerm term,
                                                  struct SmithrilSort sort);
 
 struct SmithrilTerm smithril_mk_and(struct SmithrilContext context,
@@ -100,6 +110,10 @@ struct SmithrilTerm smithril_mk_neq(struct SmithrilContext context,
                                     struct SmithrilTerm term2);
 
 struct SmithrilTerm smithril_mk_xor(struct SmithrilContext context,
+                                    struct SmithrilTerm term1,
+                                    struct SmithrilTerm term2);
+
+struct SmithrilTerm smithril_mk_iff(struct SmithrilContext context,
                                     struct SmithrilTerm term1,
                                     struct SmithrilTerm term2);
 
@@ -204,6 +218,10 @@ struct SmithrilTerm smithril_mk_concat(struct SmithrilContext context,
                                        struct SmithrilTerm term2);
 
 struct SmithrilTerm smithril_mk_not(struct SmithrilContext context, struct SmithrilTerm term1);
+
+struct SmithrilTerm smithril_mk_select(struct SmithrilContext context,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
 
 struct SmithrilTerm smithril_fp_is_nan(struct SmithrilContext context, struct SmithrilTerm term1);
 
@@ -327,10 +345,28 @@ struct SmithrilTerm smithril_mk_store(struct SmithrilContext context,
                                       struct SmithrilTerm term2,
                                       struct SmithrilTerm term3);
 
+struct SmithrilTerm smithril_mk_ite(struct SmithrilContext context,
+                                    struct SmithrilTerm term1,
+                                    struct SmithrilTerm term2,
+                                    struct SmithrilTerm term3);
+
+struct SmithrilTerm smithril_mk_fp(struct SmithrilContext context,
+                                   struct SmithrilTerm term1,
+                                   struct SmithrilTerm term2,
+                                   struct SmithrilTerm term3);
+
 struct SmithrilTerm smithril_mk_extract(struct SmithrilContext context,
                                         uint64_t high,
                                         uint64_t low,
                                         struct SmithrilTerm term);
+
+struct SmithrilTerm smithril_mk_sign_extend(struct SmithrilContext context,
+                                            uint64_t size,
+                                            struct SmithrilTerm term);
+
+struct SmithrilTerm smithril_mk_zero_extend(struct SmithrilContext context,
+                                            uint64_t size,
+                                            struct SmithrilTerm term);
 
 struct SmithrilOptions smithril_new_options(void);
 
