@@ -152,6 +152,28 @@ pub unsafe extern "C" fn smithril_get_bv_sort_size(sort: SmithrilSort) -> u64 {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn smithril_fp_get_bv_exp_size(term: SmithrilTerm) -> u64 {
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    smithril_term
+        .sort
+        .try_fp_get_bv_exp_size()
+        .unwrap_or_default()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_fp_get_bv_sig_size(term: SmithrilTerm) -> u64 {
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    smithril_term
+        .sort
+        .try_fp_get_bv_sig_size()
+        .unwrap_or_default()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn smithril_mk_bv_sort(context: SmithrilContext, size: u64) -> SmithrilSort {
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);

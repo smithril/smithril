@@ -190,6 +190,20 @@ impl Sort {
             Sort::FpSort(_, _) => SortKind::Fp,
         }
     }
+
+    pub fn try_fp_get_bv_exp_size(&self) -> Option<u64> {
+        match self {
+            Sort::FpSort(exp, _) => Some(*exp),
+            _ => None,
+        }
+    }
+
+    pub fn try_fp_get_bv_sig_size(&self) -> Option<u64> {
+        match self {
+            Sort::FpSort(_, sig) => Some(*sig),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
