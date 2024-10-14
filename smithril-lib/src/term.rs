@@ -28,6 +28,8 @@ pub enum UnoOperationKind {
     FpIsSubnorm,
     FpIsZero,
     FpIsPos,
+    FpAbs,
+    FpNeg,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
@@ -66,6 +68,13 @@ pub enum DuoOperationKind {
     BvXor,
     FpEq,
     Concat,
+    FpRem,
+    FpMin,
+    FpMax,
+    FpLT,
+    FpLEQ,
+    FpGT,
+    FpGEQ,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
@@ -85,23 +94,14 @@ pub enum ExtendOperationKind {
 pub enum FpUnoOperationKind {
     FpSqrt,
     FpRti,
-    FpAbs,
-    FpNeg,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum FpDuoOperationKind {
-    FpMin,
-    FpMax,
-    FpLT,
-    FpLEQ,
-    FpGT,
-    FpGEQ,
     FpAdd,
     FpSub,
     FpMul,
     FpDiv,
-    FpRem,
 }
 
 #[repr(C)]
@@ -365,22 +365,6 @@ macro_rules! rm_binary_function {
     };
 }
 
-macro_rules! rm_boolean_binary_function {
-    ($func_name:ident, $kind:ident) => {
-        pub fn $func_name(r_mode: &RoundingMode, term1: &Term, term2: &Term) -> Term {
-            Term {
-                term: UnsortedTerm::Operation(Box::new(GenOperation::FpDuo(
-                    FpDuoOperationKind::$kind,
-                    r_mode.clone(),
-                    term1.clone(),
-                    term2.clone(),
-                ))),
-                sort: mk_bool_sort(),
-            }
-        }
-    };
-}
-
 boolean_unary_function!(fp_is_nan, FpIsNan);
 boolean_unary_function!(fp_is_inf, FpIsInf);
 boolean_unary_function!(fp_is_normal, FpIsNorm);
@@ -389,13 +373,13 @@ boolean_unary_function!(fp_is_zero, FpIsZero);
 boolean_unary_function!(fp_is_pos, FpIsPos);
 boolean_binary_function!(mk_fp_eq, FpEq);
 
-rm_binary_function!(mk_fp_rem, FpRem);
-rm_binary_function!(mk_fp_min, FpMin);
-rm_binary_function!(mk_fp_max, FpMax);
-rm_boolean_binary_function!(mk_fp_lt, FpLT);
-rm_boolean_binary_function!(mk_fp_leq, FpLEQ);
-rm_boolean_binary_function!(mk_fp_gt, FpGT);
-rm_boolean_binary_function!(mk_fp_geq, FpGEQ);
+binary_function!(mk_fp_rem, FpRem);
+binary_function!(mk_fp_min, FpMin);
+binary_function!(mk_fp_max, FpMax);
+boolean_binary_function!(mk_fp_lt, FpLT);
+boolean_binary_function!(mk_fp_leq, FpLEQ);
+boolean_binary_function!(mk_fp_gt, FpGT);
+boolean_binary_function!(mk_fp_geq, FpGEQ);
 rm_binary_function!(mk_fp_add, FpAdd);
 rm_binary_function!(mk_fp_sub, FpSub);
 rm_binary_function!(mk_fp_mul, FpMul);
@@ -403,8 +387,8 @@ rm_binary_function!(mk_fp_div, FpDiv);
 
 rm_unary_function!(mk_fp_sqrt, FpSqrt);
 rm_unary_function!(mk_fp_rti, FpRti);
-rm_unary_function!(mk_fp_abs, FpAbs);
-rm_unary_function!(mk_fp_neg, FpNeg);
+unary_function!(mk_fp_abs, FpAbs);
+unary_function!(mk_fp_neg, FpNeg);
 
 pub fn mk_fp_to_fp_from_fp(r_mode: &RoundingMode, term: &Term, ew: u64, sw: u64) -> Term {
     Term {

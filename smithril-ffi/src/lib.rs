@@ -558,13 +558,13 @@ unary_function!(smithril_fp_is_zero, fp_is_zero);
 unary_function!(smithril_fp_is_pos, fp_is_pos);
 binary_function!(smithril_mk_fp_eq, mk_fp_eq);
 
-rm_binary_function!(smithril_mk_fp_rem, mk_fp_rem);
-rm_binary_function!(smithril_mk_fp_min, mk_fp_min);
-rm_binary_function!(smithril_mk_fp_max, mk_fp_max);
-rm_binary_function!(smithril_mk_fp_lt, mk_fp_lt);
-rm_binary_function!(smithril_mk_fp_leq, mk_fp_leq);
-rm_binary_function!(smithril_mk_fp_gt, mk_fp_gt);
-rm_binary_function!(smithril_mk_fp_geq, mk_fp_geq);
+binary_function!(smithril_mk_fp_rem, mk_fp_rem);
+binary_function!(smithril_mk_fp_min, mk_fp_min);
+binary_function!(smithril_mk_fp_max, mk_fp_max);
+binary_function!(smithril_mk_fp_lt, mk_fp_lt);
+binary_function!(smithril_mk_fp_leq, mk_fp_leq);
+binary_function!(smithril_mk_fp_gt, mk_fp_gt);
+binary_function!(smithril_mk_fp_geq, mk_fp_geq);
 rm_binary_function!(smithril_mk_fp_add, mk_fp_add);
 rm_binary_function!(smithril_mk_fp_sub, mk_fp_sub);
 rm_binary_function!(smithril_mk_fp_mul, mk_fp_mul);
@@ -572,8 +572,8 @@ rm_binary_function!(smithril_mk_fp_div, mk_fp_div);
 
 rm_unary_function!(smithril_mk_fp_sqrt, mk_fp_sqrt);
 rm_unary_function!(smithril_mk_fp_rti, mk_fp_rti);
-rm_unary_function!(smithril_mk_fp_abs, mk_fp_abs);
-rm_unary_function!(smithril_mk_fp_neg, mk_fp_neg);
+unary_function!(smithril_mk_fp_abs, mk_fp_abs);
+unary_function!(smithril_mk_fp_neg, mk_fp_neg);
 
 fp_to_fp_function!(smithril_mk_fp_to_fp_from_sbv, mk_fp_to_fp_from_sbv);
 fp_to_fp_function!(smithril_mk_fp_to_fp_from_fp, mk_fp_to_fp_from_fp);
