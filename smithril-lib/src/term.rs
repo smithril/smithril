@@ -156,7 +156,7 @@ pub enum SortKind {
 }
 
 impl Sort {
-    fn is_array(&self) -> bool {
+    fn is_array_sort(&self) -> bool {
         matches!(self, Sort::ArraySort(_, _))
     }
 
@@ -167,7 +167,7 @@ impl Sort {
         }
     }
 
-    fn try_get_bv_size(&self) -> Option<u64> {
+    pub fn try_get_bv_sort_size(&self) -> Option<u64> {
         match self {
             Sort::BvSort(size) => Some(*size),
             _ => None,
@@ -216,8 +216,8 @@ pub fn mk_fp_sort(ew: u64, sw: u64) -> Sort {
 }
 
 pub fn mk_fp_value(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) -> Term {
-    let exp_size = bv_exponent.sort.try_get_bv_size().unwrap();
-    let sign_size = bv_significand.sort.try_get_bv_size().unwrap();
+    let exp_size = bv_exponent.sort.try_get_bv_sort_size().unwrap();
+    let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
             TrioOperationKind::MkFpValue,
@@ -503,7 +503,7 @@ pub fn mk_array_sort(index: &Sort, element: &Sort) -> Sort {
     Sort::ArraySort(Box::new(index.clone()), Box::new(element.clone()))
 }
 pub fn mk_select(term1: &Term, term2: &Term) -> Term {
-    assert!(term1.sort.is_array());
+    assert!(term1.sort.is_array_sort());
     let elem_sort = term1.sort.try_get_elem_sort().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
@@ -541,7 +541,8 @@ pub fn try_constant_to_string(term: &Term) -> Option<String> {
 }
 
 pub fn mk_concat(term1: &Term, term2: &Term) -> Term {
-    let size = term1.sort.try_get_bv_size().unwrap() + term2.sort.try_get_bv_size().unwrap();
+    let size =
+        term1.sort.try_get_bv_sort_size().unwrap() + term2.sort.try_get_bv_sort_size().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
             DuoOperationKind::Concat,

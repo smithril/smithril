@@ -54,6 +54,8 @@ struct SmithrilSort smithril_get_sort(struct SmithrilContext context, struct Smi
 
 enum SortKind smithril_get_sort_kind(struct SmithrilSort sort);
 
+uint64_t smithril_get_bv_sort_size(struct SmithrilSort sort);
+
 struct SmithrilSort smithril_mk_bv_sort(struct SmithrilContext context, uint64_t size);
 
 struct SmithrilSort smithril_mk_array_sort(struct SmithrilContext context,

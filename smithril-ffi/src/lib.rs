@@ -144,6 +144,14 @@ pub unsafe extern "C" fn smithril_get_sort_kind(sort: SmithrilSort) -> SortKind 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn smithril_get_bv_sort_size(sort: SmithrilSort) -> u64 {
+    let sort = sort.0 as *const Sort;
+    Arc::increment_strong_count(sort);
+    let smithril_sort = Arc::from_raw(sort);
+    smithril_sort.try_get_bv_sort_size().unwrap_or_default()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn smithril_mk_bv_sort(context: SmithrilContext, size: u64) -> SmithrilSort {
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);
