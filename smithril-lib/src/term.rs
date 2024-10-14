@@ -543,7 +543,7 @@ pub fn mk_ite(term1: &Term, term2: &Term, term3: &Term) -> Term {
             term2.clone(),
             term3.clone(),
         ))),
-        sort: term1.sort.clone(),
+        sort: term2.sort.clone(),
     }
 }
 
