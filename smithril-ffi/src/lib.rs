@@ -228,6 +228,9 @@ pub unsafe fn smithril_mk_smt_symbol_inner(
     let context = context.0 as *const solver::SmithrilContext;
     Arc::increment_strong_count(context);
     let smithril_context = Arc::from_raw(context);
+    {
+        SYMBOLS.write().unwrap().insert(smithril_context, name);
+    }
     let sort = sort.0 as *const Sort;
     Arc::increment_strong_count(sort);
     let smithril_sort = &*sort;
