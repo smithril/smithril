@@ -206,6 +206,7 @@ where
     T: GeneralTerm,
 {
     fn mk_smt_symbol(&self, name: &str, sort: &S) -> T;
+    fn mk_smt_const_symbol(&self, term: &T, sort: &S) -> T;
     define_converter_binary_function!(mk_eq);
 
     fn convert_term(&self, term: &Term) -> T {
@@ -217,6 +218,7 @@ where
                     .mk_bv_value_uint64(&self.convert_sort(&term.sort), *x),
                 GenConstant::Boolean(x) => self.try_get_bool_converter().unwrap().mk_smt_bool(*x),
                 GenConstant::Symbol(x) => self.mk_smt_symbol(x, &self.convert_sort(&term.sort)),
+                GenConstant::ConstantSymbol(_) => todo!(),
                 GenConstant::Fp(x) => {
                     let sort = self.convert_sort(&term.sort);
 

@@ -273,6 +273,28 @@ pub unsafe extern "C" fn smithril_mk_fresh_smt_symbol(
     smithril_mk_smt_symbol_inner(context, &name, sort)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_smt_const_symbol(
+    context: SmithrilContext,
+    term: SmithrilTerm,
+    sort: SmithrilSort,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = &*term;
+    let sort = sort.0 as *const Sort;
+    Arc::increment_strong_count(sort);
+    let smithril_sort = &*sort;
+    let term = Arc::new(term::mk_smt_const_symbol(smithril_term, smithril_sort));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
 macro_rules! unary_function {
     ($smithril_func_name:ident, $func_name:ident) => {
         #[no_mangle]

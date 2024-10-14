@@ -13,6 +13,7 @@ pub enum GenConstant {
     Boolean(bool),
     Numeral(u64),
     Symbol(String),
+    ConstantSymbol(Box<Term>),
     Fp(FpConstant),
 }
 
@@ -489,6 +490,12 @@ pub fn mk_smt_symbol(name: &str, sort: &Sort) -> Term {
         sort: sort.clone(),
     }
 }
+pub fn mk_smt_const_symbol(term: &Term, sort: &Sort) -> Term {
+    Term {
+        term: UnsortedTerm::Constant(GenConstant::ConstantSymbol(Box::new(term.clone()))),
+        sort: sort.clone(),
+    }
+}
 boolean_binary_function!(mk_xor, Xor);
 pub fn mk_array_sort(index: &Sort, element: &Sort) -> Sort {
     Sort::ArraySort(Box::new(index.clone()), Box::new(element.clone()))
@@ -525,6 +532,7 @@ pub fn try_constant_to_string(term: &Term) -> Option<String> {
             GenConstant::Numeral(val) => Some(format!("{}", val)),
             GenConstant::Symbol(_) => None,
             GenConstant::Fp(_) => None,
+            GenConstant::ConstantSymbol(_) => None,
         },
         UnsortedTerm::Operation(_) => None,
     }

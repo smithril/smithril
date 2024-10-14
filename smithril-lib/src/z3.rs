@@ -945,6 +945,12 @@ impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
         Z3Term::new(&self.context, term)
     }
 
+    fn mk_smt_const_symbol(&self, term: &Z3Term, sort: &Z3Sort) -> Z3Term {
+        let term =
+            unsafe { smithril_z3_sys::Z3_mk_const_array(self.context(), sort.sort, term.term) };
+        Z3Term::new(&self.context, term)
+    }
+
     fn try_get_bool_converter(&self) -> Option<&dyn GeneralBoolConverter<Z3Sort, Z3Term>> {
         Some(self)
     }

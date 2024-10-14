@@ -967,6 +967,17 @@ impl GeneralConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         term
     }
 
+    fn mk_smt_const_symbol(&self, term: &BitwuzlaTerm, sort: &BitwuzlaSort) -> BitwuzlaTerm {
+        let term = unsafe {
+            smithril_bitwuzla_sys::bitwuzla_mk_const_array(
+                self.term_manager(),
+                sort.sort,
+                term.term,
+            )
+        };
+        BitwuzlaTerm { term }
+    }
+
     fn try_get_bool_converter(
         &self,
     ) -> Option<&dyn GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm>> {
