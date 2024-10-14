@@ -619,6 +619,30 @@ impl GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
             BitwuzlaTerm { term }
         }
     }
+
+    fn mk_sign_extend(&self, size: u64, term: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_SIGN_EXTEND,
+                term.term,
+                size,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_zero_extend(&self, size: u64, term: &BitwuzlaTerm) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed1(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_BV_ZERO_EXTEND,
+                term.term,
+                size,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
 }
 
 impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {

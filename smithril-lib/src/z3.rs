@@ -662,6 +662,20 @@ impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
             Z3Term::new(&self.context, term)
         }
     }
+
+    fn mk_sign_extend(&self, size: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_sign_ext(self.context(), size as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_zero_extend(&self, size: u64, term: &Z3Term) -> Z3Term {
+        unsafe {
+            let term = smithril_z3_sys::Z3_mk_zero_ext(self.context(), size as u32, term.term);
+            Z3Term::new(&self.context, term)
+        }
+    }
 }
 
 impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {

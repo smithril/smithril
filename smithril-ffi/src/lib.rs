@@ -575,6 +575,44 @@ pub unsafe extern "C" fn smithril_mk_extract(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn smithril_mk_sign_extend(
+    context: SmithrilContext,
+    size: u64,
+    term: SmithrilTerm,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let term = Arc::new(term::mk_sing_extend(size, smithril_term.as_ref()));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_zero_extend(
+    context: SmithrilContext,
+    size: u64,
+    term: SmithrilTerm,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term = term.0 as *const Term;
+    Arc::increment_strong_count(term);
+    let smithril_term = Arc::from_raw(term);
+    let term = Arc::new(term::mk_zero_extend(size, smithril_term.as_ref()));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn smithril_new_options() -> SmithrilOptions {
     let options = Arc::new(LockingOptions {
         options: RwLock::new(Options::default()),

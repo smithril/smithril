@@ -75,6 +75,12 @@ pub enum TrioOperationKind {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
+pub enum ExtendOperationKind {
+    Sign,
+    Zero,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum FpUnoOperationKind {
     FpSqrt,
     FpRti,
@@ -124,6 +130,7 @@ pub enum FpToOperationKind {
 pub enum GenOperation {
     Uno(UnoOperationKind, Term),
     Extract(u64, u64, Term),
+    Extend(ExtendOperationKind, u64, Term),
     FpToFp(FpToFpOperationKind, RoundingMode, u64, u64, Term),
     FpTo(FpToOperationKind, RoundingMode, u64, Term),
     Duo(DuoOperationKind, Term, Term),
@@ -557,6 +564,28 @@ pub fn mk_extract(high: u64, low: u64, term: &Term) -> Term {
     let size = high - low + 1;
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Extract(high, low, term.clone()))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_sing_extend(size: u64, term: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extend(
+            ExtendOperationKind::Sign,
+            size,
+            term.clone(),
+        ))),
+        sort: mk_bv_sort(size),
+    }
+}
+
+pub fn mk_zero_extend(size: u64, term: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Extend(
+            ExtendOperationKind::Zero,
+            size,
+            term.clone(),
+        ))),
         sort: mk_bv_sort(size),
     }
 }

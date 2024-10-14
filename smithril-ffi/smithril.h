@@ -342,6 +342,14 @@ struct SmithrilTerm smithril_mk_extract(struct SmithrilContext context,
                                         uint64_t low,
                                         struct SmithrilTerm term);
 
+struct SmithrilTerm smithril_mk_sign_extend(struct SmithrilContext context,
+                                            uint64_t size,
+                                            struct SmithrilTerm term);
+
+struct SmithrilTerm smithril_mk_zero_extend(struct SmithrilContext context,
+                                            uint64_t size,
+                                            struct SmithrilTerm term);
+
 struct SmithrilOptions smithril_new_options(void);
 
 struct SmithrilContext smithril_new_context(void);

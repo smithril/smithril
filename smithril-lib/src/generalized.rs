@@ -493,6 +493,19 @@ where
                             .mk_fp_to_ubv(rmode, &t, *w),
                     }
                 }
+                GenOperation::Extend(kind, size, term) => {
+                    let t = self.convert_term(term);
+                    match kind {
+                        crate::term::ExtendOperationKind::Sign => self
+                            .try_get_bv_converter()
+                            .unwrap()
+                            .mk_sign_extend(*size, &t),
+                        crate::term::ExtendOperationKind::Zero => self
+                            .try_get_bv_converter()
+                            .unwrap()
+                            .mk_zero_extend(*size, &t),
+                    }
+                }
             },
         }
     }
@@ -615,6 +628,8 @@ where
     define_converter_binary_function!(mk_bv_xor);
     define_converter_binary_function!(mk_concat);
     fn mk_extract(&self, high: u64, low: u64, term: &T) -> T;
+    fn mk_sign_extend(&self, size: u64, term: &T) -> T;
+    fn mk_zero_extend(&self, size: u64, term: &T) -> T;
 }
 
 pub trait GeneralArrayConverter<S, T>: GeneralConverter<S, T>
