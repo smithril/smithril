@@ -611,6 +611,7 @@ impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_unary_function_z3!(mk_not, Z3_mk_not);
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
     create_converter_binary_function_z3!(mk_iff, Z3_mk_iff);
+    create_converter_ternary_function_z3!(mk_ite, Z3_mk_ite);
 }
 
 impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
@@ -685,12 +686,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp_value(
-        &self,
-        bv_sign: &Z3Term,
-        bv_exponent: &Z3Term,
-        bv_significand: &Z3Term,
-    ) -> Z3Term {
+    fn mk_fp(&self, bv_sign: &Z3Term, bv_exponent: &Z3Term, bv_significand: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_fp(
                 self.context(),

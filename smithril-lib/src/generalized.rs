@@ -384,10 +384,12 @@ where
                             .try_get_array_converter()
                             .unwrap()
                             .mk_store(&t1, &t2, &t3),
-                        TrioOperationKind::MkFpValue => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_value(&t1, &t2, &t3),
+                        TrioOperationKind::Fp => {
+                            self.try_get_fp_converter().unwrap().mk_fp(&t1, &t2, &t3)
+                        }
+                        TrioOperationKind::Ite => {
+                            self.try_get_bool_converter().unwrap().mk_ite(&t1, &t2, &t3)
+                        }
                     }
                 }
                 GenOperation::Extract(high, low, term) => {
@@ -534,7 +536,7 @@ where
     T: GeneralTerm,
 {
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> S;
-    fn mk_fp_value(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
+    fn mk_fp(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
     fn mk_fp_pos_zero(&self, sort: &S) -> T;
     fn mk_fp_pos_inf(&self, sort: &S) -> T;
     fn mk_fp_neg_zero(&self, sort: &S) -> T;
@@ -591,6 +593,7 @@ where
     define_converter_binary_function!(mk_or);
     define_converter_binary_function!(mk_xor);
     define_converter_binary_function!(mk_iff);
+    define_converter_ternary_function!(mk_ite);
 }
 
 pub trait GeneralBvConverter<S, T>: GeneralConverter<S, T>

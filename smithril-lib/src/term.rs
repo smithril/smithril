@@ -71,7 +71,8 @@ pub enum DuoOperationKind {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
 pub enum TrioOperationKind {
     Store,
-    MkFpValue,
+    Ite,
+    Fp,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
@@ -227,7 +228,7 @@ pub fn mk_fp_value(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) ->
     let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap();
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
-            TrioOperationKind::MkFpValue,
+            TrioOperationKind::Fp,
             bv_sign.clone(),
             bv_exponent.clone(),
             bv_significand.clone(),
@@ -526,6 +527,18 @@ pub fn mk_store(term1: &Term, term2: &Term, term3: &Term) -> Term {
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
             TrioOperationKind::Store,
+            term1.clone(),
+            term2.clone(),
+            term3.clone(),
+        ))),
+        sort: term1.sort.clone(),
+    }
+}
+
+pub fn mk_ite(term1: &Term, term2: &Term, term3: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
+            TrioOperationKind::Ite,
             term1.clone(),
             term2.clone(),
             term3.clone(),

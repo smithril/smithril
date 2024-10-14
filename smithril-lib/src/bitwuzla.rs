@@ -669,6 +669,7 @@ impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_binary_function_bitwuzla!(mk_xor, BITWUZLA_KIND_XOR);
     create_converter_binary_function_bitwuzla!(mk_and, BITWUZLA_KIND_AND);
     create_converter_binary_function_bitwuzla!(mk_iff, BITWUZLA_KIND_IFF);
+    create_converter_ternary_function_bitwuzla!(mk_ite, BITWUZLA_KIND_ITE);
 }
 
 impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
@@ -680,7 +681,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp_value(
+    fn mk_fp(
         &self,
         bv_sign: &BitwuzlaTerm,
         bv_exponent: &BitwuzlaTerm,
