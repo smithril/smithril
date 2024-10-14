@@ -38,6 +38,7 @@ pub enum DuoOperationKind {
     Neq,
     Or,
     Xor,
+    Iff,
     Select,
     BvAdd,
     BvAnd,
@@ -478,6 +479,7 @@ boolean_binary_function!(mk_implies, Implies);
 boolean_binary_function!(mk_neq, Neq);
 boolean_unary_function!(mk_not, Not);
 boolean_binary_function!(mk_or, Or);
+boolean_binary_function!(mk_iff, Iff);
 pub fn mk_smt_bool(val: bool) -> Term {
     Term {
         term: UnsortedTerm::Constant(GenConstant::Boolean(val)),

@@ -107,6 +107,10 @@ struct SmithrilTerm smithril_mk_xor(struct SmithrilContext context,
                                     struct SmithrilTerm term1,
                                     struct SmithrilTerm term2);
 
+struct SmithrilTerm smithril_mk_iff(struct SmithrilContext context,
+                                    struct SmithrilTerm term1,
+                                    struct SmithrilTerm term2);
+
 struct SmithrilTerm smithril_mk_bvand(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
                                       struct SmithrilTerm term2);

@@ -456,6 +456,7 @@ binary_function!(smithril_mk_eq, mk_eq);
 binary_function!(smithril_mk_implies, mk_implies);
 binary_function!(smithril_mk_neq, mk_neq);
 binary_function!(smithril_mk_xor, mk_xor);
+binary_function!(smithril_mk_iff, mk_iff);
 binary_function!(smithril_mk_bvand, mk_bv_and);
 binary_function!(smithril_mk_bvashr, mk_bv_ashr);
 binary_function!(smithril_mk_bvlshr, mk_bv_lshr);

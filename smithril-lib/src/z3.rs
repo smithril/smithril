@@ -610,6 +610,7 @@ impl GeneralBoolConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_implies, Z3_mk_implies);
     create_converter_unary_function_z3!(mk_not, Z3_mk_not);
     create_converter_binary_function_z3!(mk_xor, Z3_mk_xor);
+    create_converter_binary_function_z3!(mk_iff, Z3_mk_iff);
 }
 
 impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {

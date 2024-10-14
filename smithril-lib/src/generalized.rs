@@ -289,6 +289,9 @@ where
                         DuoOperationKind::Xor => {
                             self.try_get_bool_converter().unwrap().mk_xor(&t1, &t2)
                         }
+                        DuoOperationKind::Iff => {
+                            self.try_get_bool_converter().unwrap().mk_iff(&t1, &t2)
+                        }
                         DuoOperationKind::Select => {
                             self.try_get_array_converter().unwrap().mk_select(&t1, &t2)
                         }
@@ -574,6 +577,7 @@ where
     define_converter_binary_function!(mk_and);
     define_converter_binary_function!(mk_or);
     define_converter_binary_function!(mk_xor);
+    define_converter_binary_function!(mk_iff);
 }
 
 pub trait GeneralBvConverter<S, T>: GeneralConverter<S, T>
