@@ -492,6 +492,7 @@ binary_function!(smithril_mk_bvumod, mk_bv_umod);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
 binary_function!(smithril_mk_concat, mk_concat);
 unary_function!(smithril_mk_not, mk_not);
+binary_function!(smithril_mk_select, mk_select);
 
 unary_function!(smithril_fp_is_nan, fp_is_nan);
 unary_function!(smithril_fp_is_inf, fp_is_inf);

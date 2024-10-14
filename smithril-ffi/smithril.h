@@ -215,6 +215,10 @@ struct SmithrilTerm smithril_mk_concat(struct SmithrilContext context,
 
 struct SmithrilTerm smithril_mk_not(struct SmithrilContext context, struct SmithrilTerm term1);
 
+struct SmithrilTerm smithril_mk_select(struct SmithrilContext context,
+                                       struct SmithrilTerm term1,
+                                       struct SmithrilTerm term2);
+
 struct SmithrilTerm smithril_fp_is_nan(struct SmithrilContext context, struct SmithrilTerm term1);
 
 struct SmithrilTerm smithril_fp_is_inf(struct SmithrilContext context, struct SmithrilTerm term1);
