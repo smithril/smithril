@@ -346,6 +346,11 @@ struct SmithrilTerm smithril_mk_ite(struct SmithrilContext context,
                                     struct SmithrilTerm term2,
                                     struct SmithrilTerm term3);
 
+struct SmithrilTerm smithril_mk_fp(struct SmithrilContext context,
+                                   struct SmithrilTerm term1,
+                                   struct SmithrilTerm term2,
+                                   struct SmithrilTerm term3);
+
 struct SmithrilTerm smithril_mk_extract(struct SmithrilContext context,
                                         uint64_t high,
                                         uint64_t low,

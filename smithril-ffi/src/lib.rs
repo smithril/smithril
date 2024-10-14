@@ -561,6 +561,7 @@ fp_to_function!(smithril_mk_fp_to_ubv, mk_fp_to_ubv);
 
 ternary_function!(smithril_mk_store, mk_store);
 ternary_function!(smithril_mk_ite, mk_ite);
+ternary_function!(smithril_mk_fp, mk_fp);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_extract(

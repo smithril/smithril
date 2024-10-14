@@ -547,6 +547,21 @@ pub fn mk_ite(term1: &Term, term2: &Term, term3: &Term) -> Term {
     }
 }
 
+pub fn mk_fp(term1: &Term, term2: &Term, term3: &Term) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
+            TrioOperationKind::Fp,
+            term1.clone(),
+            term2.clone(),
+            term3.clone(),
+        ))),
+        sort: mk_fp_sort(
+            term2.sort.try_get_bv_sort_size().unwrap(),
+            term3.sort.try_get_bv_sort_size().unwrap(),
+        ),
+    }
+}
+
 pub fn try_constant_to_string(term: &Term) -> Option<String> {
     match &term.term {
         UnsortedTerm::Constant(constant) => match constant {
