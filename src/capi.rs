@@ -8,7 +8,6 @@ use std::{
     time::Duration,
 };
 
-use duration_string::DurationString;
 use crate::{
     generalized::Options,
     term::{self, Sort, SortKind, Term},
@@ -17,12 +16,13 @@ use crate::{
     generalized::{AsyncFactory, AsyncSolver},
     solver,
 };
+use duration_string::DurationString;
 
 pub use crate::generalized::SolverResult;
 pub use crate::term::RoundingMode;
 
-use once_cell::sync::Lazy;
 use crate::converters::Converter;
+use once_cell::sync::Lazy;
 use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {

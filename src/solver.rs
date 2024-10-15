@@ -1261,7 +1261,7 @@ fn unsat_works() -> Term {
 async fn smithril_working_test() {
     use std::env;
     let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("../target/debug");
+    smithril_converters_dir.push("target/debug");
     let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
     unsafe {
         env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
@@ -1292,7 +1292,7 @@ async fn smithril_working_test() {
 async fn smithril_unsat_core_test() {
     use std::env;
     let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("../target/debug");
+    smithril_converters_dir.push("target/debug");
     let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
     unsafe {
         env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
@@ -1321,7 +1321,7 @@ async fn smithril_unsat_core_test() {
 async fn smithril_timeout_test() {
     use std::env;
     let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("../target/debug");
+    smithril_converters_dir.push("target/debug");
     let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
     unsafe {
         env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);

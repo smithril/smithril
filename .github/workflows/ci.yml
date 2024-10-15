@@ -39,13 +39,13 @@ jobs:
         key: ${{ runner.os }}-sys-solvers
 
     - name: Format
-      run: cargo fmt --check
+      run: cargo fmt --check --all
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --workspace
 
     - name: Lint
-      run: cargo clippy --all-targets --all-features
+      run: cargo clippy --all-targets --all-features --workspace
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace
