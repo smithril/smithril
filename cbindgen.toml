@@ -1,5 +1,8 @@
+include_guard = "SMITHRIL_H"
+tab_width = 4
+style = "Type"
 language = "C"
-pragma_once = true
+cpp_compat = true
 
 [parse]
 parse_deps = true

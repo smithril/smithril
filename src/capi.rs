@@ -9,20 +9,20 @@ use std::{
 };
 
 use duration_string::DurationString;
-use smithril_lib::{
+use crate::{
     generalized::Options,
     term::{self, Sort, SortKind, Term},
 };
-use smithril_lib::{
+use crate::{
     generalized::{AsyncFactory, AsyncSolver},
     solver,
 };
 
-pub use smithril_lib::generalized::SolverResult;
-pub use smithril_lib::term::RoundingMode;
+pub use crate::generalized::SolverResult;
+pub use crate::term::RoundingMode;
 
 use once_cell::sync::Lazy;
-use smithril_lib::converters::Converter;
+use crate::converters::Converter;
 use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
