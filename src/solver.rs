@@ -1020,9 +1020,12 @@ fn get_solver_path(solver_name: &str) -> PathBuf {
 }
 
 fn get_converters_dir() -> PathBuf {
-    std::env::var("SMITHRIL_CONVERTERS_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| panic!("SMITHRIL_CONVERTERS_DIR environment variable is not set"))
+    // std::env::var("SMITHRIL_CONVERTERS_DIR")
+    //     .map(PathBuf::from)
+    //     .unwrap_or_else(|_| panic!("SMITHRIL_CONVERTERS_DIR environment variable is not set"))
+    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    smithril_converters_dir.push("target/release");
+    smithril_converters_dir
 }
 
 impl SmithrilFactory {
