@@ -6,7 +6,7 @@ cpp_compat = true
 
 [parse]
 parse_deps = true
-include = ["smithril-lib"]
+include = ["smithril"]
 
 [parse.expand]
-crates = ["smithril-ffi"]
+crates = ["smithril"]
