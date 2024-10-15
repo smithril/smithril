@@ -581,6 +581,26 @@ fp_to_fp_function!(smithril_mk_fp_to_fp_from_ubv, mk_fp_to_fp_from_ubv);
 fp_to_function!(smithril_mk_fp_to_sbv, mk_fp_to_sbv);
 fp_to_function!(smithril_mk_fp_to_ubv, mk_fp_to_ubv);
 
+#[no_mangle]
+pub unsafe extern "C" fn smithril_mk_fp_to_fp_from_bv(
+    context: SmithrilContext,
+    term1: SmithrilTerm,
+    ew: u64,
+    sw: u64,
+) -> SmithrilTerm {
+    let context = context.0 as *const solver::SmithrilContext;
+    Arc::increment_strong_count(context);
+    let smithril_context = Arc::from_raw(context);
+    let term1 = term1.0 as *const Term;
+    Arc::increment_strong_count(term1);
+    let smithril_term1 = Arc::from_raw(term1);
+    let term = Arc::new(term::mk_fp_to_fp_from_bv(smithril_term1.as_ref(), ew, sw));
+    let term = intern_term(smithril_context, term);
+    let term = Arc::into_raw(term);
+    Arc::decrement_strong_count(term);
+    SmithrilTerm(term as *const c_void)
+}
+
 ternary_function!(smithril_mk_store, mk_store);
 ternary_function!(smithril_mk_ite, mk_ite);
 ternary_function!(smithril_mk_fp, mk_fp);

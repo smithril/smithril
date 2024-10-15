@@ -938,6 +938,19 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
+    fn mk_fp_to_fp_from_bv(&self, term: &BitwuzlaTerm, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_BV,
+                term.term,
+                ew,
+                sw,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
     fn mk_fp_pos_zero(&self, sort: &BitwuzlaSort) -> BitwuzlaTerm {
         unsafe {
             let term =

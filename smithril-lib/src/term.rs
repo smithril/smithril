@@ -133,6 +133,7 @@ pub enum GenOperation {
     Extract(u64, u64, Term),
     Extend(ExtendOperationKind, u64, Term),
     FpToFp(FpToFpOperationKind, RoundingMode, u64, u64, Term),
+    FpToFpFromBv(u64, u64, Term),
     FpTo(FpToOperationKind, RoundingMode, u64, Term),
     Duo(DuoOperationKind, Term, Term),
     Trio(TrioOperationKind, Term, Term, Term),
@@ -448,6 +449,13 @@ pub fn mk_fp_to_fp_from_ubv(r_mode: &RoundingMode, term: &Term, ew: u64, sw: u64
             sw,
             term.clone(),
         ))),
+        sort: mk_fp_sort(ew, sw),
+    }
+}
+
+pub fn mk_fp_to_fp_from_bv(term: &Term, ew: u64, sw: u64) -> Term {
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::FpToFpFromBv(ew, sw, term.clone()))),
         sort: mk_fp_sort(ew, sw),
     }
 }

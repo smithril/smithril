@@ -501,6 +501,12 @@ where
                             .mk_zero_extend(*size, &t),
                     }
                 }
+                GenOperation::FpToFpFromBv(ew, sw, term) => {
+                    let t = self.convert_term(term);
+                    self.try_get_fp_converter()
+                        .unwrap()
+                        .mk_fp_to_fp_from_bv(&t, *ew, *sw)
+                }
             },
         }
     }
@@ -569,6 +575,7 @@ where
     fn mk_fp_to_ubv(&self, r_mode: &RoundingMode, term: &T, w: u64) -> T;
     fn mk_fp_to_fp_from_sbv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
     fn mk_fp_to_fp_from_ubv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
+    fn mk_fp_to_fp_from_bv(&self, term: &T, ew: u64, sw: u64) -> T;
 }
 
 pub trait GeneralBoolConverter<S, T>: GeneralConverter<S, T>

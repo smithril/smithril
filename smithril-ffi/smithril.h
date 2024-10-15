@@ -329,6 +329,11 @@ struct SmithrilTerm smithril_mk_fp_to_ubv(struct SmithrilContext context,
                                           struct SmithrilTerm term1,
                                           uint64_t w);
 
+struct SmithrilTerm smithril_mk_fp_to_fp_from_bv(struct SmithrilContext context,
+                                                 struct SmithrilTerm term1,
+                                                 uint64_t ew,
+                                                 uint64_t sw);
+
 struct SmithrilTerm smithril_mk_store(struct SmithrilContext context,
                                       struct SmithrilTerm term1,
                                       struct SmithrilTerm term2,

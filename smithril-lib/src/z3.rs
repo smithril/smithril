@@ -924,6 +924,14 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
             Z3Term::new(&self.context, term)
         }
     }
+
+    fn mk_fp_to_fp_from_bv(&self, term: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_to_fp_bv(self.context(), term.term, sort.sort);
+            Z3Term::new(&self.context, term)
+        }
+    }
 }
 
 impl GeneralConverter<Z3Sort, Z3Term> for Z3Converter {
