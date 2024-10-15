@@ -271,26 +271,6 @@ macro_rules! create_converter_fp_binary_function_z3 {
     };
 }
 
-macro_rules! create_converter_fp_unary_no_rm_function_z3 {
-    ($func_name:ident, $z3_sys_func_name:ident) => {
-        fn $func_name(&self, _r_mode: &RoundingMode, term: &Z3Term) -> Z3Term {
-            Z3Term::new(&self.context, unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context(), term.term)
-            })
-        }
-    };
-}
-
-macro_rules! create_converter_fp_binary_no_rm_function_z3 {
-    ($func_name:ident, $z3_sys_func_name:ident) => {
-        fn $func_name(&self, _r_mode: &RoundingMode, term1: &Z3Term, term2: &Z3Term) -> Z3Term {
-            Z3Term::new(&self.context, unsafe {
-                smithril_z3_sys::$z3_sys_func_name(self.context(), term1.term, term2.term)
-            })
-        }
-    };
-}
-
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Z3Term {
     pub term: smithril_z3_sys::Z3_ast,
@@ -686,7 +666,12 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp(&self, bv_sign: &Z3Term, bv_exponent: &Z3Term, bv_significand: &Z3Term) -> Z3Term {
+    fn mk_fp_value(
+        &self,
+        bv_sign: &Z3Term,
+        bv_exponent: &Z3Term,
+        bv_significand: &Z3Term,
+    ) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_fp(
                 self.context(),
@@ -809,13 +794,13 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_rem, Z3_mk_fpa_rem);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_min, Z3_mk_fpa_min);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_max, Z3_mk_fpa_max);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_lt, Z3_mk_fpa_lt);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_leq, Z3_mk_fpa_leq);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_gt, Z3_mk_fpa_gt);
-    create_converter_fp_binary_no_rm_function_z3!(mk_fp_geq, Z3_mk_fpa_geq);
+    create_converter_binary_function_z3!(mk_fp_rem, Z3_mk_fpa_rem);
+    create_converter_binary_function_z3!(mk_fp_min, Z3_mk_fpa_min);
+    create_converter_binary_function_z3!(mk_fp_max, Z3_mk_fpa_max);
+    create_converter_binary_function_z3!(mk_fp_lt, Z3_mk_fpa_lt);
+    create_converter_binary_function_z3!(mk_fp_leq, Z3_mk_fpa_leq);
+    create_converter_binary_function_z3!(mk_fp_gt, Z3_mk_fpa_gt);
+    create_converter_binary_function_z3!(mk_fp_geq, Z3_mk_fpa_geq);
     create_converter_fp_binary_function_z3!(mk_fp_add, Z3_mk_fpa_add);
     create_converter_fp_binary_function_z3!(mk_fp_sub, Z3_mk_fpa_sub);
     create_converter_fp_binary_function_z3!(mk_fp_mul, Z3_mk_fpa_mul);
@@ -823,8 +808,8 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
 
     create_converter_fp_unary_function_z3!(mk_fp_sqrt, Z3_mk_fpa_sqrt);
     create_converter_fp_unary_function_z3!(mk_fp_rti, Z3_mk_fpa_round_to_integral);
-    create_converter_fp_unary_no_rm_function_z3!(mk_fp_abs, Z3_mk_fpa_abs);
-    create_converter_fp_unary_no_rm_function_z3!(mk_fp_neg, Z3_mk_fpa_neg);
+    create_converter_unary_function_z3!(mk_fp_abs, Z3_mk_fpa_abs);
+    create_converter_unary_function_z3!(mk_fp_neg, Z3_mk_fpa_neg);
 
     fn get_rouning_mode(&self, r_mode: &RoundingMode) -> Z3Term {
         unsafe {
@@ -941,6 +926,14 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
                 term.term,
                 sort.sort,
             );
+            Z3Term::new(&self.context, term)
+        }
+    }
+
+    fn mk_fp_to_fp_from_bv(&self, term: &Z3Term, ew: u64, sw: u64) -> Z3Term {
+        unsafe {
+            let sort = self.mk_fp_sort(ew, sw);
+            let term = smithril_z3_sys::Z3_mk_fpa_to_fp_bv(self.context(), term.term, sort.sort);
             Z3Term::new(&self.context, term)
         }
     }

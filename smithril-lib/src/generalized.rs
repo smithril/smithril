@@ -267,6 +267,12 @@ where
                         UnoOperationKind::FpIsPos => {
                             self.try_get_fp_converter().unwrap().fp_is_pos(&t1)
                         }
+                        UnoOperationKind::FpAbs => {
+                            self.try_get_fp_converter().unwrap().mk_fp_abs(&t1)
+                        }
+                        UnoOperationKind::FpNeg => {
+                            self.try_get_fp_converter().unwrap().mk_fp_neg(&t1)
+                        }
                     }
                 }
                 GenOperation::Duo(kind, term1, term2) => {
@@ -373,6 +379,27 @@ where
                         DuoOperationKind::Concat => {
                             self.try_get_bv_converter().unwrap().mk_concat(&t1, &t2)
                         }
+                        DuoOperationKind::FpRem => {
+                            self.try_get_fp_converter().unwrap().mk_fp_rem(&t1, &t2)
+                        }
+                        DuoOperationKind::FpMin => {
+                            self.try_get_fp_converter().unwrap().mk_fp_min(&t1, &t2)
+                        }
+                        DuoOperationKind::FpMax => {
+                            self.try_get_fp_converter().unwrap().mk_fp_max(&t1, &t2)
+                        }
+                        DuoOperationKind::FpLT => {
+                            self.try_get_fp_converter().unwrap().mk_fp_lt(&t1, &t2)
+                        }
+                        DuoOperationKind::FpLEQ => {
+                            self.try_get_fp_converter().unwrap().mk_fp_leq(&t1, &t2)
+                        }
+                        DuoOperationKind::FpGT => {
+                            self.try_get_fp_converter().unwrap().mk_fp_gt(&t1, &t2)
+                        }
+                        DuoOperationKind::FpGEQ => {
+                            self.try_get_fp_converter().unwrap().mk_fp_geq(&t1, &t2)
+                        }
                     }
                 }
                 GenOperation::Trio(kind, term1, term2, term3) => {
@@ -384,9 +411,10 @@ where
                             .try_get_array_converter()
                             .unwrap()
                             .mk_store(&t1, &t2, &t3),
-                        TrioOperationKind::Fp => {
-                            self.try_get_fp_converter().unwrap().mk_fp(&t1, &t2, &t3)
-                        }
+                        TrioOperationKind::Fp => self
+                            .try_get_fp_converter()
+                            .unwrap()
+                            .mk_fp_value(&t1, &t2, &t3),
                         TrioOperationKind::Ite => {
                             self.try_get_bool_converter().unwrap().mk_ite(&t1, &t2, &t3)
                         }
@@ -407,42 +435,12 @@ where
                         FpUnoOperationKind::FpRti => {
                             self.try_get_fp_converter().unwrap().mk_fp_rti(rmode, &t)
                         }
-                        FpUnoOperationKind::FpAbs => {
-                            self.try_get_fp_converter().unwrap().mk_fp_abs(rmode, &t)
-                        }
-                        FpUnoOperationKind::FpNeg => {
-                            self.try_get_fp_converter().unwrap().mk_fp_neg(rmode, &t)
-                        }
                     }
                 }
                 GenOperation::FpDuo(kind, rmode, term1, term2) => {
                     let t1 = self.convert_term(term1);
                     let t2 = self.convert_term(term2);
                     match kind {
-                        FpDuoOperationKind::FpMin => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_min(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpMax => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_max(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpLT => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_lt(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpLEQ => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_leq(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpGT => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_gt(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpGEQ => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_geq(rmode, &t1, &t2),
                         FpDuoOperationKind::FpAdd => self
                             .try_get_fp_converter()
                             .unwrap()
@@ -459,10 +457,6 @@ where
                             .try_get_fp_converter()
                             .unwrap()
                             .mk_fp_div(rmode, &t1, &t2),
-                        FpDuoOperationKind::FpRem => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_rem(rmode, &t1, &t2),
                     }
                 }
                 GenOperation::FpToFp(kind, rmode, ew, sw, term) => {
@@ -508,6 +502,12 @@ where
                             .mk_zero_extend(*size, &t),
                     }
                 }
+                GenOperation::FpToFpFromBv(ew, sw, term) => {
+                    let t = self.convert_term(term);
+                    self.try_get_fp_converter()
+                        .unwrap()
+                        .mk_fp_to_fp_from_bv(&t, *ew, *sw)
+                }
             },
         }
     }
@@ -536,7 +536,7 @@ where
     T: GeneralTerm,
 {
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> S;
-    fn mk_fp(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
+    fn mk_fp_value(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
     fn mk_fp_pos_zero(&self, sort: &S) -> T;
     fn mk_fp_pos_inf(&self, sort: &S) -> T;
     fn mk_fp_neg_zero(&self, sort: &S) -> T;
@@ -553,22 +553,21 @@ where
     fn fp_is_pos(&self, term: &T) -> T;
 
     fn mk_fp_eq(&self, term1: &T, term2: &T) -> T;
-    define_converter_fp_binary_function!(mk_fp_rem);
-    define_converter_fp_binary_function!(mk_fp_min);
-    define_converter_fp_binary_function!(mk_fp_max);
-    define_converter_fp_binary_function!(mk_fp_lt); //less than
-    define_converter_fp_binary_function!(mk_fp_leq); //less or equal than
-    define_converter_fp_binary_function!(mk_fp_gt); //greater than
-    define_converter_fp_binary_function!(mk_fp_geq); //greater or equal than
     define_converter_fp_binary_function!(mk_fp_add);
     define_converter_fp_binary_function!(mk_fp_sub);
     define_converter_fp_binary_function!(mk_fp_mul);
     define_converter_fp_binary_function!(mk_fp_div);
-
+    define_converter_binary_function!(mk_fp_rem);
+    define_converter_binary_function!(mk_fp_min);
+    define_converter_binary_function!(mk_fp_max);
+    define_converter_binary_function!(mk_fp_lt); //less than
+    define_converter_binary_function!(mk_fp_leq); //less or equal than
+    define_converter_binary_function!(mk_fp_gt); //greater than
+    define_converter_binary_function!(mk_fp_geq); //greater or equal than
     define_converter_fp_unary_function!(mk_fp_sqrt);
     define_converter_fp_unary_function!(mk_fp_rti);
-    define_converter_fp_unary_function!(mk_fp_abs);
-    define_converter_fp_unary_function!(mk_fp_neg);
+    define_converter_unary_function!(mk_fp_abs);
+    define_converter_unary_function!(mk_fp_neg);
 
     fn get_rouning_mode(&self, r_mode: &RoundingMode) -> T;
 
@@ -577,6 +576,7 @@ where
     fn mk_fp_to_ubv(&self, r_mode: &RoundingMode, term: &T, w: u64) -> T;
     fn mk_fp_to_fp_from_sbv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
     fn mk_fp_to_fp_from_ubv(&self, r_mode: &RoundingMode, term: &T, ew: u64, sw: u64) -> T;
+    fn mk_fp_to_fp_from_bv(&self, term: &T, ew: u64, sw: u64) -> T;
 }
 
 pub trait GeneralBoolConverter<S, T>: GeneralConverter<S, T>

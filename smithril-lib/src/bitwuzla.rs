@@ -681,7 +681,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp(
+    fn mk_fp_value(
         &self,
         bv_sign: &BitwuzlaTerm,
         bv_exponent: &BitwuzlaTerm,
@@ -817,21 +817,21 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_rem, BITWUZLA_KIND_FP_REM);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_min, BITWUZLA_KIND_FP_MIN);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_max, BITWUZLA_KIND_FP_MAX);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_lt, BITWUZLA_KIND_FP_LT);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_leq, BITWUZLA_KIND_FP_LEQ);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_gt, BITWUZLA_KIND_FP_GT);
-    create_converter_fp_binary_function_bitwuzla!(mk_fp_geq, BITWUZLA_KIND_FP_GEQ);
+    create_converter_binary_function_bitwuzla!(mk_fp_rem, BITWUZLA_KIND_FP_REM);
+    create_converter_binary_function_bitwuzla!(mk_fp_min, BITWUZLA_KIND_FP_MIN);
+    create_converter_binary_function_bitwuzla!(mk_fp_max, BITWUZLA_KIND_FP_MAX);
+    create_converter_binary_function_bitwuzla!(mk_fp_lt, BITWUZLA_KIND_FP_LT);
+    create_converter_binary_function_bitwuzla!(mk_fp_leq, BITWUZLA_KIND_FP_LEQ);
+    create_converter_binary_function_bitwuzla!(mk_fp_gt, BITWUZLA_KIND_FP_GT);
+    create_converter_binary_function_bitwuzla!(mk_fp_geq, BITWUZLA_KIND_FP_GEQ);
     create_converter_fp_binary_function_bitwuzla!(mk_fp_add, BITWUZLA_KIND_FP_ADD);
     create_converter_fp_binary_function_bitwuzla!(mk_fp_sub, BITWUZLA_KIND_FP_SUB);
     create_converter_fp_binary_function_bitwuzla!(mk_fp_mul, BITWUZLA_KIND_FP_MUL);
     create_converter_fp_binary_function_bitwuzla!(mk_fp_div, BITWUZLA_KIND_FP_DIV);
     create_converter_fp_unary_function_bitwuzla!(mk_fp_sqrt, BITWUZLA_KIND_FP_SQRT);
     create_converter_fp_unary_function_bitwuzla!(mk_fp_rti, BITWUZLA_KIND_FP_RTI);
-    create_converter_fp_unary_function_bitwuzla!(mk_fp_abs, BITWUZLA_KIND_FP_ABS);
-    create_converter_fp_unary_function_bitwuzla!(mk_fp_neg, BITWUZLA_KIND_FP_NEG);
+    create_converter_unary_function_bitwuzla!(mk_fp_abs, BITWUZLA_KIND_FP_ABS);
+    create_converter_unary_function_bitwuzla!(mk_fp_neg, BITWUZLA_KIND_FP_NEG);
 
     fn get_rouning_mode(&self, r_mode: &RoundingMode) -> BitwuzlaTerm {
         unsafe {
@@ -930,6 +930,19 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
                 self.term_manager(),
                 smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_UBV,
                 r_mode.term,
+                term.term,
+                ew,
+                sw,
+            );
+            BitwuzlaTerm { term }
+        }
+    }
+
+    fn mk_fp_to_fp_from_bv(&self, term: &BitwuzlaTerm, ew: u64, sw: u64) -> BitwuzlaTerm {
+        unsafe {
+            let term = smithril_bitwuzla_sys::bitwuzla_mk_term1_indexed2(
+                self.term_manager(),
+                smithril_bitwuzla_sys::BITWUZLA_KIND_FP_TO_FP_FROM_BV,
                 term.term,
                 ew,
                 sw,
