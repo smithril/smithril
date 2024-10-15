@@ -681,7 +681,7 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp(
+    fn mk_fp_value(
         &self,
         bv_sign: &BitwuzlaTerm,
         bv_exponent: &BitwuzlaTerm,

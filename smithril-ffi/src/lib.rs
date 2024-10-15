@@ -603,7 +603,7 @@ pub unsafe extern "C" fn smithril_mk_fp_to_fp_from_bv(
 
 ternary_function!(smithril_mk_store, mk_store);
 ternary_function!(smithril_mk_ite, mk_ite);
-ternary_function!(smithril_mk_fp, mk_fp);
+ternary_function!(smithril_mk_fp_value, mk_fp_value);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_extract(
