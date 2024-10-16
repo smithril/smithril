@@ -27,7 +27,7 @@ use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
-        .enable_io()
+        .worker_threads(2)
         .build()
         .unwrap()
 });

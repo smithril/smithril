@@ -1020,11 +1020,12 @@ fn get_solver_path(solver_name: &str) -> PathBuf {
 }
 
 fn get_converters_dir() -> PathBuf {
-    // std::env::var("SMITHRIL_CONVERTERS_DIR")
-    //     .map(PathBuf::from)
-    //     .unwrap_or_else(|_| panic!("SMITHRIL_CONVERTERS_DIR environment variable is not set"))
     let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("target/release");
+    if cfg!(debug_assertions) {
+        smithril_converters_dir.push("target/debug");
+    } else {
+        smithril_converters_dir.push("target/release");
+    }
     smithril_converters_dir
 }
 
@@ -1262,14 +1263,6 @@ fn unsat_works() -> Term {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smithril_working_test() {
-    use std::env;
-    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("target/debug");
-    let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
-    unsafe {
-        env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
-    }
-
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
@@ -1293,14 +1286,6 @@ async fn smithril_working_test() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smithril_unsat_core_test() {
-    use std::env;
-    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("target/debug");
-    let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
-    unsafe {
-        env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
-    }
-
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
     let factory = SmithrilFactory::new(converters.clone()).await;
@@ -1322,14 +1307,6 @@ async fn smithril_unsat_core_test() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smithril_timeout_test() {
-    use std::env;
-    let mut smithril_converters_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    smithril_converters_dir.push("target/debug");
-    let smithril_converters_path = env::join_paths(vec![smithril_converters_dir]).unwrap();
-    unsafe {
-        env::set_var("SMITHRIL_CONVERTERS_DIR", smithril_converters_path);
-    }
-
     let converters = vec![Converter::Dummy];
 
     let factory = SmithrilFactory::new(converters.clone()).await;
