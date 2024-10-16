@@ -56,9 +56,8 @@ jobs:
     - name: Setup nightly rustc
       run: rustup default nightly
 
-
     - name: Install cargo-c
-      run: cargo test --verbose --workspace
+      run:  cargo install cargo-c
 
     - name: Run cbuild
       run: cargo cbuild --destdir="/tmp/smithril"
