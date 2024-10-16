@@ -38,6 +38,9 @@ jobs:
         path: ~/.smithril
         key: ${{ runner.os }}-sys-solvers
 
+    - name: Setup default rustc
+      run: rustup default stable
+
     - name: Format
       run: cargo fmt --check --all
 
@@ -49,3 +52,12 @@ jobs:
 
     - name: Run tests
       run: cargo test --verbose --workspace
+
+    - name: Install cargo-c
+      run: cargo test --verbose --workspace
+
+    - name: Setup nightly rustc
+      run: rustup default nightly
+
+    - name: Run cbuild
+      run: cargo cinstall --destdir="/tmp/smithril"
