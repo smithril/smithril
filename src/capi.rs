@@ -200,7 +200,10 @@ pub unsafe extern "C" fn smithril_mk_array_sort(
     let elem_sort = elem_sort.0 as *const Sort;
     Arc::increment_strong_count(elem_sort);
     let smithril_elem_sort = Arc::from_raw(elem_sort);
-    let sort = Arc::new(term::mk_array_sort(&smithril_index_sort, &smithril_elem_sort));
+    let sort = Arc::new(term::mk_array_sort(
+        &smithril_index_sort,
+        &smithril_elem_sort,
+    ));
     let sort = intern_sort(smithril_context, sort);
     let sort = Arc::into_raw(sort);
     Arc::decrement_strong_count(sort);
