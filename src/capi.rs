@@ -8,25 +8,26 @@ use std::{
     time::Duration,
 };
 
-use duration_string::DurationString;
-use smithril_lib::{
+use crate::{
     generalized::Options,
     term::{self, Sort, SortKind, Term},
 };
-use smithril_lib::{
+use crate::{
     generalized::{AsyncFactory, AsyncSolver},
     solver,
 };
+use duration_string::DurationString;
 
-pub use smithril_lib::generalized::SolverResult;
-pub use smithril_lib::term::RoundingMode;
+pub use crate::generalized::SolverResult;
+pub use crate::term::RoundingMode;
 
+use crate::converters::Converter;
 use once_cell::sync::Lazy;
-use smithril_lib::converters::Converter;
 use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
+        .worker_threads(2)
         .enable_io()
         .build()
         .unwrap()
@@ -196,11 +197,14 @@ pub unsafe extern "C" fn smithril_mk_array_sort(
     let smithril_context = Arc::from_raw(context);
     let index_sort = index_sort.0 as *const Sort;
     Arc::increment_strong_count(index_sort);
-    let smithril_index_sort = &*index_sort;
+    let smithril_index_sort = Arc::from_raw(index_sort);
     let elem_sort = elem_sort.0 as *const Sort;
     Arc::increment_strong_count(elem_sort);
-    let smithril_elem_sort = &*elem_sort;
-    let sort = Arc::new(term::mk_array_sort(smithril_index_sort, smithril_elem_sort));
+    let smithril_elem_sort = Arc::from_raw(elem_sort);
+    let sort = Arc::new(term::mk_array_sort(
+        &smithril_index_sort,
+        &smithril_elem_sort,
+    ));
     let sort = intern_sort(smithril_context, sort);
     let sort = Arc::into_raw(sort);
     Arc::decrement_strong_count(sort);
@@ -230,8 +234,8 @@ pub unsafe extern "C" fn smithril_mk_bv_value_uint64(
     let smithril_context = Arc::from_raw(context);
     let sort = sort.0 as *const Sort;
     Arc::increment_strong_count(sort);
-    let smithril_sort = &*sort;
-    let term = Arc::new(term::mk_bv_value_uint64(val, smithril_sort));
+    let smithril_sort = Arc::from_raw(sort);
+    let term = Arc::new(term::mk_bv_value_uint64(val, &smithril_sort));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
@@ -265,8 +269,8 @@ pub unsafe fn smithril_mk_smt_symbol_inner(
     }
     let sort = sort.0 as *const Sort;
     Arc::increment_strong_count(sort);
-    let smithril_sort = &*sort;
-    let term = Arc::new(term::mk_smt_symbol(name, smithril_sort));
+    let smithril_sort = Arc::from_raw(sort);
+    let term = Arc::new(term::mk_smt_symbol(name, &smithril_sort));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
@@ -314,11 +318,11 @@ pub unsafe extern "C" fn smithril_mk_smt_const_symbol(
     let smithril_context = Arc::from_raw(context);
     let term = term.0 as *const Term;
     Arc::increment_strong_count(term);
-    let smithril_term = &*term;
+    let smithril_term = Arc::from_raw(term);
     let sort = sort.0 as *const Sort;
     Arc::increment_strong_count(sort);
-    let smithril_sort = &*sort;
-    let term = Arc::new(term::mk_smt_const_symbol(smithril_term, smithril_sort));
+    let smithril_sort = Arc::from_raw(sort);
+    let term = Arc::new(term::mk_smt_const_symbol(&smithril_term, &smithril_sort));
     let term = intern_term(smithril_context, term);
     let term = Arc::into_raw(term);
     Arc::decrement_strong_count(term);
@@ -863,7 +867,9 @@ pub unsafe extern "C" fn smithril_delete_context(context: SmithrilContext) {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_delete_solver(solver: SmithrilSolver) {
-    let smithril_solver = Arc::from_raw(solver.0 as *const solver::SmithrilSolver);
+    let solver = solver.0 as *const solver::SmithrilSolver;
+    Arc::increment_strong_count(solver);
+    let smithril_solver = Arc::from_raw(solver);
     SOLVERS.write().unwrap().remove(&smithril_solver);
     RUNTIME.block_on(FACTORY.write().unwrap().delete_solver(smithril_solver));
 }

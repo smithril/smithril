@@ -36,6 +36,8 @@ pub mod converters {
     }
 }
 
+mod capi;
+
 #[cfg(test)]
 mod tests {
 

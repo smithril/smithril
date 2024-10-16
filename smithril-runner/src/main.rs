@@ -1,5 +1,5 @@
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
-use smithril_lib::{
+use smithril::{
     converters::{self, Converter},
     generalized::{Context, Factory, Interrupter, Solver, SolverResult},
     solver::{
