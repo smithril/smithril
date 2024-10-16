@@ -53,11 +53,12 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --workspace
 
-    - name: Install cargo-c
-      run: cargo test --verbose --workspace
-
     - name: Setup nightly rustc
       run: rustup default nightly
 
+
+    - name: Install cargo-c
+      run: cargo test --verbose --workspace
+
     - name: Run cbuild
-      run: cargo cinstall --destdir="/tmp/smithril"
+      run: cargo cbuild --destdir="/tmp/smithril"
