@@ -666,7 +666,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp_value(
+    fn mk_fp(
         &self,
         bv_sign: &Z3Term,
         bv_exponent: &Z3Term,

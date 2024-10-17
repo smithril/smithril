@@ -84,7 +84,6 @@ impl AsyncResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         &self,
         solver: Arc<RemoteSolver>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        assert_eq!(Arc::strong_count(&solver), 1);
         self.worker
             .delete_solver(solver.context, solver.label)
             .await?;
@@ -731,6 +730,7 @@ impl RemoteWorker {
                     for command in postponed_commands.into_iter() {
                         self.resend_command(command).await?;
                     }
+                    self.postponed_commands.write().unwrap().clear();
                 }
                 Ok(true)
             }
@@ -744,10 +744,12 @@ impl RemoteWorker {
     pub async fn new_context(
         &self,
     ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        {
+            *self.context_id.write().unwrap() += 1;
+        }
         let command_response = if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewContext()));
-            let context_id = { *self.context_id.read().unwrap() } + 1;
-            *self.context_id.write().unwrap() = context_id;
+            let context_id = { *self.context_id.read().unwrap() };
             ContextLabel(context_id)
         } else {
             self.inc_communication();
@@ -768,13 +770,15 @@ impl RemoteWorker {
         context: ContextLabel,
         options: &Options,
     ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
+        {
+            *self.solver_id.write().unwrap() += 1;
+        }
         let command_response = if !self.try_resend_postponed_commands().await? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewSolver(
                 context,
                 options.clone(),
             )));
-            let solver_id = { *self.solver_id.read().unwrap() } + 1;
-            *self.solver_id.write().unwrap() = solver_id;
+            let solver_id = { *self.solver_id.read().unwrap() };
             SolverLabel(solver_id)
         } else {
             self.inc_communication();
@@ -878,6 +882,8 @@ impl RemoteWorker {
         if state == RemoteState::Busy {
             Err(Box::new(WorkerError {}))
         } else {
+            let success = self.try_resend_postponed_commands().await?;
+            assert!(success);
             self.inc_communication();
             let command_response = self.communicator().await.eval(solver, term).await?;
             self.dec_communication();
@@ -893,6 +899,8 @@ impl RemoteWorker {
         if state == RemoteState::Busy {
             Err(Box::new(WorkerError {}))
         } else {
+            let success = self.try_resend_postponed_commands().await?;
+            assert!(success);
             self.inc_communication();
             let command_response = self.communicator().await.unsat_core(solver).await?;
             self.dec_communication();
@@ -917,6 +925,9 @@ impl RemoteWorker {
         let state = self.check_state().await?;
         if state == RemoteState::Busy {
             self.restart().await?;
+        } else {
+            let success = self.try_resend_postponed_commands().await?;
+            assert!(success);
         }
         let command_response = self.communicator().await.check_sat(solver).await?;
         Ok(command_response)
@@ -1109,11 +1120,14 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
 
     async fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
         assert_eq!(Arc::strong_count(&solver), 1);
-        let solver = Arc::try_unwrap(solver).unwrap();
         let mut handles = Vec::new();
-        for (factory, solver) in self.factories.iter().zip(solver.solvers.into_iter()) {
-            let handler = factory.delete_solver(solver);
-            handles.push(handler);
+        {
+            let solver = Arc::try_unwrap(solver).ok().unwrap();
+            let solvers = solver.solvers;
+            for (factory, solver) in self.factories.iter().zip(solvers.into_iter()) {
+                let handler = factory.delete_solver(solver);
+                handles.push(handler);
+            }
         }
         for handler in handles {
             handler.await.unwrap();
@@ -1174,6 +1188,7 @@ impl AsyncSolver for SmithrilSolver {
             result = res;
             break;
         }
+        while let Some(_) = futs.next().await {}
         result
     }
 

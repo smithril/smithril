@@ -238,7 +238,7 @@ pub fn mk_fp_sort(ew: u64, sw: u64) -> Sort {
     Sort::FpSort(ew, sw)
 }
 
-pub fn mk_fp_value(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) -> Term {
+pub fn mk_fp(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) -> Term {
     let exp_size = bv_exponent.sort.try_get_bv_sort_size().unwrap();
     let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap();
     Term {

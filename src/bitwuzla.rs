@@ -673,29 +673,14 @@ impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
 }
 
 impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    create_converter_ternary_function_bitwuzla!(mk_fp, BITWUZLA_KIND_FP_FP);
+
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> BitwuzlaSort {
         BitwuzlaSort {
             sort: unsafe {
                 smithril_bitwuzla_sys::bitwuzla_mk_fp_sort(self.term_manager(), ew, sw)
             },
         }
-    }
-
-    fn mk_fp_value(
-        &self,
-        bv_sign: &BitwuzlaTerm,
-        bv_exponent: &BitwuzlaTerm,
-        bv_significand: &BitwuzlaTerm,
-    ) -> BitwuzlaTerm {
-        let float_term = unsafe {
-            smithril_bitwuzla_sys::bitwuzla_mk_fp_value(
-                self.term_manager(),
-                bv_sign.term,
-                bv_exponent.term,
-                bv_significand.term,
-            )
-        };
-        BitwuzlaTerm { term: float_term }
     }
 
     fn fp_get_bv_exp_size(&self, term: &BitwuzlaTerm) -> u64 {

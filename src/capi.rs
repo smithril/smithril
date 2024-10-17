@@ -27,7 +27,7 @@ use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
-        .worker_threads(2)
+        .worker_threads(1)
         .enable_io()
         .build()
         .unwrap()
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn smithril_mk_fp_to_fp_from_bv(
 
 ternary_function!(smithril_mk_store, mk_store);
 ternary_function!(smithril_mk_ite, mk_ite);
-ternary_function!(smithril_mk_fp_value, mk_fp_value);
+ternary_function!(smithril_mk_fp, mk_fp);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_extract(
