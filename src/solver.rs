@@ -8,6 +8,7 @@ use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
+use std::thread;
 use std::time::Duration;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
@@ -228,6 +229,7 @@ pub struct RemoteWorker {
     process: RwLock<Child>,
     count_communication: Mutex<u64>,
     is_alive: Mutex<bool>,
+    in_resend: Mutex<bool>,
     active_contexts: RwLock<HashSet<ContextLabel>>,
     active_solvers: RwLock<HashSet<(ContextLabel, SolverLabel)>>,
     solver_commands: RwLock<HashMap<SolverLabel, Vec<RemoteSolverCommand>>>,
@@ -488,6 +490,7 @@ impl RemoteWorker {
         let solver_id = RwLock::new(solver_id);
         let count_ready = Mutex::new(0);
         let is_alive = Mutex::new(true);
+        let in_resend = Mutex::new(false);
 
         Ok(RemoteWorker {
             process,
@@ -503,6 +506,7 @@ impl RemoteWorker {
             solver_id,
             count_communication: count_ready,
             is_alive,
+            in_resend,
         })
     }
 
@@ -684,6 +688,20 @@ impl RemoteWorker {
         }
     }
 
+    fn wait_and_lock_in_resend(&self) {
+        loop {
+            let mut lock = self.in_resend.lock().unwrap();
+            if !*lock {
+                *lock = true;
+                break;
+            }
+        }
+    }
+
+    fn free_in_resend(&self) {
+        *self.in_resend.lock().unwrap() = false;
+    }
+
     pub async fn check_state(
         &self,
     ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
@@ -721,20 +739,25 @@ impl RemoteWorker {
     async fn try_resend_postponed_commands(
         &self,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        self.wait_and_lock_in_resend();
         let state = self.check_state().await?;
-        match state {
+        let res = match state {
             RemoteState::Busy => Ok(false),
             RemoteState::Idle => {
                 let postponed_commands = { self.postponed_commands.read().unwrap() }.clone();
                 if !postponed_commands.is_empty() {
+                    dbg!("resend start!");
                     for command in postponed_commands.into_iter() {
                         self.resend_command(command).await?;
                     }
                     self.postponed_commands.write().unwrap().clear();
+                    dbg!("resend end!");
                 }
                 Ok(true)
             }
-        }
+        };
+        self.free_in_resend();
+        res
     }
 
     fn postpone_command(&self, command: RemoteCommand) {
@@ -977,7 +1000,7 @@ impl RemoteSolver {
                 if let Some(timeout) = s.timeout {
                     let (tx_timeout, rx_timeout) = oneshot::channel();
                     tokio::spawn(async move {
-                        tokio::time::sleep(timeout).await;
+                        thread::sleep(timeout);
                         let _ = tx_timeout.send(());
                     });
                     select! {

@@ -2,7 +2,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ffi::{c_char, c_void, CStr},
+    ffi::{c_char, c_void, CStr, CString},
     ptr::null,
     sync::{Arc, RwLock},
     time::Duration,
@@ -27,7 +27,7 @@ use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
-        .worker_threads(1)
+        .worker_threads(4)
         .enable_io()
         .build()
         .unwrap()
@@ -66,7 +66,7 @@ static OPTIONS: Lazy<RwLock<Vec<Arc<LockingOptions>>>> = Lazy::new(|| RwLock::ne
 static TERMS: Lazy<RwLock<Terms>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static SORTS: Lazy<RwLock<Sorts>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static SYMBOLS: Lazy<RwLock<Symbols>> = Lazy::new(|| RwLock::new(HashMap::new()));
-static LAST_EVALUATED_TERM: Lazy<RwLock<Arc<String>>> = Lazy::new(|| RwLock::new(Arc::default()));
+static LAST_EVALUATED_TERM: Lazy<RwLock<Arc<CString>>> = Lazy::new(|| RwLock::new(Arc::default()));
 static LAST_UNSAT_CORE: Lazy<RwLock<Arc<Vec<Term>>>> = Lazy::new(|| RwLock::new(Arc::default()));
 static FRESH_SYMBOLS_COUNT: Lazy<RwLock<u64>> = Lazy::new(|| RwLock::new(1));
 
@@ -768,9 +768,11 @@ pub unsafe extern "C" fn smithril_eval(
     RUNTIME
         .block_on(smithril_solver.eval(&smithril_term))
         .map(|term| {
-            let constant = Arc::new(term::try_constant_to_string(&term).unwrap());
+            dbg!(&term);
+            let constant = term::try_constant_to_string(&term).unwrap();
+            let constant = Arc::new(CString::new(constant).unwrap());
             *LAST_EVALUATED_TERM.write().unwrap() = constant.clone();
-            let constant: *const c_char = constant.as_ptr() as *const c_char;
+            let constant: *const c_char = constant.as_ptr();
             constant
         })
         .unwrap_or_else(|| {
@@ -834,7 +836,9 @@ pub unsafe extern "C" fn smithril_delete_options(options: SmithrilOptions) {
 #[no_mangle]
 pub unsafe extern "C" fn smithril_set_timeout(options: SmithrilOptions, timeout: *const c_char) {
     let timeout = unsafe { CStr::from_ptr(timeout).to_string_lossy().into_owned() };
+    dbg!(&timeout);
     let timeout: Duration = DurationString::try_from(timeout).unwrap().into();
+    dbg!(&timeout);
     let options = options.0 as *const LockingOptions;
     Arc::increment_strong_count(options);
     let smithril_options = Arc::from_raw(options);
