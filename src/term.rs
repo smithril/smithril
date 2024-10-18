@@ -240,7 +240,7 @@ pub fn mk_fp_sort(ew: u64, sw: u64) -> Sort {
 
 pub fn mk_fp(bv_sign: &Term, bv_exponent: &Term, bv_significand: &Term) -> Term {
     let exp_size = bv_exponent.sort.try_get_bv_sort_size().unwrap();
-    let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap();
+    let sign_size = bv_significand.sort.try_get_bv_sort_size().unwrap() + 1;
     Term {
         term: UnsortedTerm::Operation(Box::new(GenOperation::Trio(
             TrioOperationKind::Fp,
@@ -462,7 +462,17 @@ pub fn mk_fp_to_fp_from_bv(term: &Term, ew: u64, sw: u64) -> Term {
 
 boolean_binary_function!(mk_and, And);
 binary_function!(mk_bv_add, BvAdd);
-binary_function!(mk_bv_and, BvAnd);
+pub fn mk_bv_and(term1: &Term, term2: &Term) -> Term {
+    dbg!("bv_and", term1, term2);
+    Term {
+        term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
+            DuoOperationKind::BvAnd,
+            term1.clone(),
+            term2.clone(),
+        ))),
+        sort: term1.sort.clone(),
+    }
+}
 binary_function!(mk_bv_ashr, BvAshr);
 binary_function!(mk_bv_lshr, BvLshr);
 binary_function!(mk_bv_mul, BvMul);

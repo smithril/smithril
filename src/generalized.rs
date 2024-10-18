@@ -26,7 +26,7 @@ pub struct FloatingPointAsBinary {
 }
 
 #[repr(C)]
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum SolverResult {
     Sat,
     Unsat,
@@ -411,10 +411,9 @@ where
                             .try_get_array_converter()
                             .unwrap()
                             .mk_store(&t1, &t2, &t3),
-                        TrioOperationKind::Fp => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp(&t1, &t2, &t3),
+                        TrioOperationKind::Fp => {
+                            self.try_get_fp_converter().unwrap().mk_fp(&t1, &t2, &t3)
+                        }
                         TrioOperationKind::Ite => {
                             self.try_get_bool_converter().unwrap().mk_ite(&t1, &t2, &t3)
                         }

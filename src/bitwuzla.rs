@@ -241,6 +241,7 @@ pub struct BitwuzlaSolver {
     pub context: Arc<BitwuzlaConverter>,
     pub options: BitwuzlaOptions,
     pub asserted_terms_map: RwLock<HashMap<BitwuzlaTerm, Term>>,
+    pub last_check_sat: RwLock<Option<SolverResult>>,
     solver: RwLock<BitwuzlaSolverSys>,
 }
 
@@ -293,6 +294,7 @@ impl BitwuzlaSolver {
             asserted_terms_map: RwLock::new(HashMap::new()),
             solver,
             context,
+            last_check_sat: RwLock::new(Default::default()),
         }
     }
 
@@ -476,6 +478,8 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     }
 
     fn eval(&self, term1: &BitwuzlaTerm) -> Option<BitwuzlaTerm> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Sat);
         let bitwuzla_term =
             unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver(), term1.term) };
         let res = BitwuzlaTerm {
@@ -518,6 +522,9 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     }
 
     fn check_sat(&self) -> SolverResult {
+        {
+            *self.last_check_sat.write().unwrap() = None;
+        }
         unsafe {
             let termination_callback_state =
                 smithril_bitwuzla_sys::bitwuzla_get_termination_callback_state(self.solver())
@@ -525,11 +532,15 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
             (*termination_callback_state).start();
         }
         let res = unsafe { smithril_bitwuzla_sys::bitwuzla_check_sat(self.solver()) };
-        match res {
+        let res = match res {
             smithril_bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
             smithril_bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
             _ => SolverResult::Unknown,
+        };
+        {
+            *self.last_check_sat.write().unwrap() = Some(res);
         }
+        res
     }
 
     fn push(&self) {

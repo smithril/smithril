@@ -309,6 +309,7 @@ pub struct Z3Solver {
     solver: Z3SolverSys,
     pub context: Arc<Z3Converter>,
     pub asserted_terms_map: RwLock<HashMap<Z3Term, Term>>,
+    pub last_check_sat: RwLock<Option<SolverResult>>,
     pub unsat_map: RwLock<HashMap<Z3Term, Z3Term>>,
 }
 
@@ -347,6 +348,7 @@ impl Z3Solver {
             context,
             asserted_terms_map: RwLock::new(HashMap::new()),
             unsat_map: RwLock::new(HashMap::new()),
+            last_check_sat: RwLock::new(Default::default()),
         }
     }
 }
@@ -488,6 +490,8 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 
     fn eval(&self, term1: &Z3Term) -> Option<Z3Term> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Sat);
         let context = self.context.as_ref();
         let mut r: smithril_z3_sys::Z3_ast = ptr::null_mut();
         let model_completion = false;
@@ -529,14 +533,21 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 
     fn check_sat(&self) -> SolverResult {
+        {
+            *self.last_check_sat.write().unwrap() = None;
+        }
         let context = self.context.as_ref();
         let res = unsafe { smithril_z3_sys::Z3_solver_check(context.context(), self.solver.0) };
         context.context.check_error();
-        match res {
+        let res = match res {
             smithril_z3_sys::Z3_L_TRUE => SolverResult::Sat,
             smithril_z3_sys::Z3_L_FALSE => SolverResult::Unsat,
             _ => SolverResult::Unknown,
+        };
+        {
+            *self.last_check_sat.write().unwrap() = Some(res);
         }
+        res
     }
 
     fn push(&self) {
@@ -666,12 +677,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp(
-        &self,
-        bv_sign: &Z3Term,
-        bv_exponent: &Z3Term,
-        bv_significand: &Z3Term,
-    ) -> Z3Term {
+    fn mk_fp(&self, bv_sign: &Z3Term, bv_exponent: &Z3Term, bv_significand: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_fp(
                 self.context(),

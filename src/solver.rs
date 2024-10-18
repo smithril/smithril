@@ -836,6 +836,7 @@ impl RemoteWorker {
             .write()
             .unwrap()
             .remove(&(context, solver));
+        self.solver_commands.write().unwrap().remove(&solver);
         self.solver_options.write().unwrap().remove(&solver);
         Ok(())
     }
@@ -878,12 +879,9 @@ impl RemoteWorker {
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let state = self.check_state().await?;
-        if state == RemoteState::Busy {
+        if !self.try_resend_postponed_commands().await? {
             Err(Box::new(WorkerError {}))
         } else {
-            let success = self.try_resend_postponed_commands().await?;
-            assert!(success);
             self.inc_communication();
             let command_response = self.communicator().await.eval(solver, term).await?;
             self.dec_communication();
@@ -895,12 +893,9 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let state = self.check_state().await?;
-        if state == RemoteState::Busy {
+        if !self.try_resend_postponed_commands().await? {
             Err(Box::new(WorkerError {}))
         } else {
-            let success = self.try_resend_postponed_commands().await?;
-            assert!(success);
             self.inc_communication();
             let command_response = self.communicator().await.unsat_core(solver).await?;
             self.dec_communication();
@@ -922,12 +917,8 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        let state = self.check_state().await?;
-        if state == RemoteState::Busy {
+        if !self.try_resend_postponed_commands().await? {
             self.restart().await?;
-        } else {
-            let success = self.try_resend_postponed_commands().await?;
-            assert!(success);
         }
         let command_response = self.communicator().await.check_sat(solver).await?;
         Ok(command_response)
@@ -971,7 +962,8 @@ impl RemoteSolver {
     pub async fn cancellabel_check_sat(
         s: Arc<Self>,
         token: CancellationToken,
-    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        id: usize,
+    ) -> Result<(SolverResult, usize), Box<dyn std::error::Error + Send + Sync>> {
         let (tx_cancell, rx_cancell) = oneshot::channel();
 
         {
@@ -1015,9 +1007,12 @@ impl RemoteSolver {
         select! {
             _  =  rx_cancell => {
                 s.interrupt().await?;
-                Ok(SolverResult::Unknown)
+                Ok((SolverResult::Unknown, id))
             }
-            res = rx_check_sat => { res? }
+            res = rx_check_sat => {
+                let res = res??;
+                Ok((res, id))
+            }
         }
     }
 }
@@ -1063,9 +1058,24 @@ pub struct SmithrilContext {
 
 impl AsyncContext for SmithrilContext {}
 
-#[derive(Hash, PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct SmithrilSolver {
     solvers: Vec<Arc<RemoteSolver>>,
+    last_fastest_solver_index: RwLock<usize>,
+}
+
+impl PartialEq for SmithrilSolver {
+    fn eq(&self, other: &Self) -> bool {
+        self.solvers.eq(&other.solvers)
+    }
+}
+
+impl Eq for SmithrilSolver {}
+
+impl Hash for SmithrilSolver {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.solvers.hash(state);
+    }
 }
 
 impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
@@ -1115,7 +1125,10 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         for handler in handles {
             solvers.push(handler.await.unwrap());
         }
-        Arc::new(SmithrilSolver { solvers })
+        Arc::new(SmithrilSolver {
+            solvers,
+            last_fastest_solver_index: RwLock::new(Default::default()),
+        })
     }
 
     async fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
@@ -1172,19 +1185,20 @@ impl AsyncSolver for SmithrilSolver {
     async fn check_sat(&self) -> SolverResult {
         let mut handles = Vec::new();
         let token = CancellationToken::new();
-        for solver in self.solvers.iter() {
-            let handler = RemoteSolver::cancellabel_check_sat(solver.clone(), token.clone());
+        for (count, solver) in self.solvers.iter().enumerate() {
+            let handler = RemoteSolver::cancellabel_check_sat(solver.clone(), token.clone(), count);
             handles.push(handler);
         }
         let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
 
         let mut result = SolverResult::Unknown;
         while let Some(res) = futs.next().await {
-            let res = res.unwrap();
+            let (res, count) = res.unwrap();
             if SolverResult::Unknown == res {
                 continue;
             }
             token.cancel();
+            *self.last_fastest_solver_index.write().unwrap() = count;
             result = res;
             break;
         }
@@ -1193,41 +1207,15 @@ impl AsyncSolver for SmithrilSolver {
     }
 
     async fn unsat_core(&self) -> Vec<Term> {
-        let mut handles = Vec::new();
-        for solver in self.solvers.iter() {
-            let handler = solver.unsat_core();
-            handles.push(handler);
-        }
-        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
-
-        let mut result = vec![];
-        while let Some(res) = futs.next().await {
-            if res.is_err() {
-                continue;
-            }
-            result = res.unwrap();
-            break;
-        }
-        result
+        let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
+        let solver = self.solvers.get(last_fastest_solver_index).unwrap();
+        solver.unsat_core().await.unwrap()
     }
 
     async fn eval(&self, term: &Term) -> Option<Term> {
-        let mut handles = Vec::new();
-        for solver in self.solvers.iter() {
-            let handler = solver.eval(term);
-            handles.push(handler);
-        }
-        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
-
-        let mut result = None;
-        while let Some(res) = futs.next().await {
-            if res.is_err() {
-                continue;
-            }
-            result = res.unwrap();
-            break;
-        }
-        result
+        let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
+        let solver = self.solvers.get(last_fastest_solver_index).unwrap();
+        solver.eval(term).await.unwrap()
     }
 
     async fn push(&self) {

@@ -137,11 +137,14 @@ fn start<
     let state = Arc::new(RwLock::new(RemoteState::Idle));
     {
         let interrupters = interrupters.clone();
+        let converter = converter.clone();
         thread::spawn(move || loop {
             let solver_label = remote_commander.interrupt_receiver.recv().unwrap();
+            dbg!(("interrupt", &solver_label, &converter));
             let interrupters = interrupters.read().unwrap();
-            let interrupter = interrupters.get(&solver_label).unwrap();
-            interrupter.interrupt();
+            if let Some(interrupter) = interrupters.get(&solver_label) {
+                interrupter.interrupt();
+            }
         });
     }
 
@@ -176,13 +179,16 @@ fn start<
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Busy;
                     };
-                    let solver = solvers.get(&solver_label).unwrap().clone();
-                    let result = Solver::check_sat(solver.as_ref());
-                    remote_commander.solver_result_sender.send(result).unwrap();
+                    let result = if let Some(solver) = solvers.get(&solver_label) {
+                        Solver::check_sat(solver.as_ref())
+                    } else {
+                        SolverResult::Unknown
+                    };
                     {
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Idle;
                     }
+                    remote_commander.solver_result_sender.send(result).unwrap();
                 }
                 RemoteSolverCommand::UnsatCore(solver_label) => {
                     dbg!(("unsat_core", &solver_label, &converter));
@@ -255,7 +261,7 @@ fn start<
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteFactoryCommand::RestoreSolver(context_label, solver_label, options) => {
-                    dbg!(("restore_solver", &context_label, &converter));
+                    dbg!(("restore_solver", &context_label, &solver_label, &converter));
                     let context = contexts.get(&context_label).unwrap();
                     let solver = factory.new_solver(context.clone(), &options);
                     let interrupter = Arc::new(factory.new_interrupter(solver.clone()));

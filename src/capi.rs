@@ -773,7 +773,10 @@ pub unsafe extern "C" fn smithril_eval(
             let constant: *const c_char = constant.as_ptr() as *const c_char;
             constant
         })
-        .unwrap_or(null())
+        .unwrap_or_else(|| {
+            dbg!(&smithril_term);
+            null()
+        })
 }
 
 #[no_mangle]
