@@ -7,7 +7,7 @@ use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard};
 use std::thread;
 use std::time::Duration;
 
@@ -18,7 +18,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::converters::Converter;
 use crate::generalized::{
-    AsyncContext, AsyncFactory, AsyncResultFactory, AsyncResultSolver, AsyncSolver, Options,
+    AsyncContext, AsyncFactory, AsyncResultSolver, AsyncSolver, Options, ResultFactory,
     SolverResult,
 };
 use crate::term::Term;
@@ -28,7 +28,7 @@ pub struct RemoteFactory {
 }
 
 impl RemoteFactory {
-    pub async fn new(
+    pub fn new(
         solver_path: &str,
         converter: &Converter,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
@@ -36,21 +36,24 @@ impl RemoteFactory {
         let solver_id = 0u64;
 
         Ok(RemoteFactory {
-            worker: Arc::new(
-                RemoteWorker::new(solver_path, converter, context_id, solver_id).await?,
-            ),
+            worker: Arc::new(RemoteWorker::new(
+                solver_path,
+                converter,
+                context_id,
+                solver_id,
+            )?),
         })
     }
 }
 
-impl AsyncResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
-    async fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.terminate().await?;
+impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
+    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.terminate()?;
         Ok(())
     }
 
     async fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.new_context().await?;
+        let command_response = self.worker.new_context()?;
         let command_response = RemoteContext {
             label: command_response,
         };
@@ -235,7 +238,7 @@ pub struct RemoteWorker {
     solver_commands: RwLock<HashMap<SolverLabel, Vec<RemoteSolverCommand>>>,
     postponed_commands: RwLock<Vec<RemoteCommand>>,
     solver_options: RwLock<HashMap<SolverLabel, Options>>,
-    communicator: tokio::sync::RwLock<RemoteWorkerLockingCommunicator>,
+    communicator: RwLock<RemoteWorkerLockingCommunicator>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -282,7 +285,7 @@ impl RemoteWorkerLockingCommunicator {
         }
     }
 
-    async fn send_factory_command(
+    fn send_factory_command(
         &self,
         command: RemoteFactoryCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -293,7 +296,7 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    async fn send_solver_command(
+    fn send_solver_command(
         &self,
         command: RemoteSolverCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -304,37 +307,32 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    pub async fn new_context(
-        &self,
-    ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::NewContext())
-            .await?;
+    pub fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::NewContext())?;
         let command_response = self.new_context_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn new_solver(
+    pub fn new_solver(
         &self,
         context: ContextLabel,
         options: &Options,
     ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::NewSolver(context, options.clone()))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::NewSolver(context, options.clone()))?;
         let command_response = self.new_solver_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn restore_context(
+    pub fn restore_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::RestoreContext(context))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::RestoreContext(context))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn restore_solver(
+    pub fn restore_solver(
         &self,
         context: ContextLabel,
         solver: SolverLabel,
@@ -344,54 +342,51 @@ impl RemoteWorkerLockingCommunicator {
             context,
             solver,
             options.clone(),
-        ))
-        .await?;
+        ))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn delete_context(
+    pub fn delete_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::DeleteContext(context))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::DeleteContext(context))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn delete_solver(
+    pub fn delete_solver(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::DeleteSolver(solver))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::DeleteSolver(solver))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn assert(
+    pub fn assert(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Assert(solver, term.clone());
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn reset(
+    pub fn reset(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Reset(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn interrupt(
+    pub fn interrupt(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -399,40 +394,38 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    pub async fn check_sat(
+    pub fn check_sat(
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::CheckSat(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         let command_response = self.solver_result_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn eval(
+    pub fn eval(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Eval(solver, term.clone());
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         let command_response = self.eval_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn unsat_core(
+    pub fn unsat_core(
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::UnsatCore(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         let command_response = self.unsat_core_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn check_state(
-        &self,
-    ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn check_state(&self) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
         let state = {
             self.check_state_sender.lock().unwrap().send(())?;
             self.state_receiver.lock().unwrap().recv()?
@@ -440,23 +433,23 @@ impl RemoteWorkerLockingCommunicator {
         Ok(state)
     }
 
-    pub async fn push(
+    pub fn push(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Push(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn pop(
+    pub fn pop(
         &self,
         solver: SolverLabel,
         size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Pop(solver, size);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
@@ -473,17 +466,17 @@ impl Display for WorkerError {
 impl Error for WorkerError {}
 
 impl RemoteWorker {
-    pub async fn new(
+    pub fn new(
         solver_path: &str,
         converter: &Converter,
         context_id: u64,
         solver_id: u64,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let (process, communicator) =
-            RemoteWorker::start_process(converter, context_id, solver_id, solver_path).await?;
+            RemoteWorker::start_process(converter, context_id, solver_id, solver_path)?;
         let process = RwLock::new(process);
         let communicator = RemoteWorkerLockingCommunicator::new(communicator);
-        let communicator = tokio::sync::RwLock::new(communicator);
+        let communicator = RwLock::new(communicator);
         let solver_path = solver_path.to_string();
         let converter = converter.clone();
         let context_id = RwLock::new(context_id);
@@ -510,7 +503,7 @@ impl RemoteWorker {
         })
     }
 
-    async fn start_process(
+    fn start_process(
         converter: &Converter,
         context_id: u64,
         solver_id: u64,
@@ -528,59 +521,53 @@ impl RemoteWorker {
         Ok((process, communicator))
     }
 
-    async fn resend_command(
+    fn resend_command(
         &self,
         command: RemoteCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match command {
             RemoteCommand::Solver(command) => match command {
                 RemoteSolverCommand::Assert(solver, term) => {
-                    self.communicator().await.assert(solver, &term).await?;
+                    self.communicator().assert(solver, &term)?;
                 }
                 RemoteSolverCommand::Reset(solver) => {
-                    self.communicator().await.reset(solver).await?;
+                    self.communicator().reset(solver)?;
                 }
                 RemoteSolverCommand::CheckSat(solver) => {
-                    let _ = self.communicator().await.check_sat(solver).await?;
+                    let _ = self.communicator().check_sat(solver)?;
                 }
                 RemoteSolverCommand::UnsatCore(solver) => {
-                    let _ = self.communicator().await.unsat_core(solver).await?;
+                    let _ = self.communicator().unsat_core(solver)?;
                 }
                 RemoteSolverCommand::Eval(solver, term) => {
-                    let _ = self.communicator().await.eval(solver, &term).await?;
+                    let _ = self.communicator().eval(solver, &term)?;
                 }
                 RemoteSolverCommand::Push(solver) => {
-                    self.communicator().await.push(solver).await?;
+                    self.communicator().push(solver)?;
                 }
                 RemoteSolverCommand::Pop(solver, size) => {
-                    self.communicator().await.pop(solver, size).await?;
+                    self.communicator().pop(solver, size)?;
                 }
             },
             RemoteCommand::Factory(command) => match command {
                 RemoteFactoryCommand::DeleteContext(context) => {
-                    self.communicator().await.delete_context(context).await?;
+                    self.communicator().delete_context(context)?;
                 }
                 RemoteFactoryCommand::DeleteSolver(solver) => {
-                    self.communicator().await.delete_solver(solver).await?;
+                    self.communicator().delete_solver(solver)?;
                 }
                 RemoteFactoryCommand::NewContext() => {
-                    let _ = self.communicator().await.new_context().await?;
+                    let _ = self.communicator().new_context()?;
                 }
                 RemoteFactoryCommand::NewSolver(context, options) => {
-                    let _ = self
-                        .communicator()
-                        .await
-                        .new_solver(context, &options)
-                        .await?;
+                    let _ = self.communicator().new_solver(context, &options)?;
                 }
                 RemoteFactoryCommand::RestoreContext(context) => {
-                    self.communicator().await.restore_context(context).await?;
+                    self.communicator().restore_context(context)?;
                 }
                 RemoteFactoryCommand::RestoreSolver(context, solver, options) => {
                     self.communicator()
-                        .await
-                        .restore_solver(context, solver, &options)
-                        .await?;
+                        .restore_solver(context, solver, &options)?;
                 }
             },
         }
@@ -592,7 +579,7 @@ impl RemoteWorker {
             return Ok(());
         }
         self.wait_zero_communication_to_lock_is_alive();
-        self.terminate().await?;
+        self.terminate()?;
         let context_id = *self.context_id.read().unwrap();
         let solver_id = *self.solver_id.read().unwrap();
         let (process, communicator) = RemoteWorker::start_process(
@@ -600,12 +587,11 @@ impl RemoteWorker {
             context_id,
             solver_id,
             self.solver_path.as_str(),
-        )
-        .await?;
+        )?;
         let communicator = RemoteWorkerLockingCommunicator::new(communicator);
         {
             *self.process.write().unwrap() = process;
-            *self.communicator.write().await = communicator;
+            *self.communicator.write().unwrap() = communicator;
         }
         let contexts: Vec<_> = self
             .active_contexts
@@ -617,8 +603,7 @@ impl RemoteWorker {
         for context in contexts {
             self.resend_command(RemoteCommand::Factory(
                 RemoteFactoryCommand::RestoreContext(context),
-            ))
-            .await?;
+            ))?;
         }
         let solvers: Vec<_> = self
             .active_solvers
@@ -639,14 +624,14 @@ impl RemoteWorker {
             let command = RemoteCommand::Factory(RemoteFactoryCommand::RestoreSolver(
                 context, solver, option,
             ));
-            self.resend_command(command).await?;
+            self.resend_command(command)?;
         }
         let solver_commands = { self.solver_commands.read().unwrap().clone() };
 
         for (_, commands) in solver_commands {
             for command in commands {
                 let command = RemoteCommand::Solver(command.clone());
-                self.resend_command(command).await?;
+                self.resend_command(command)?;
             }
         }
         {
@@ -702,27 +687,25 @@ impl RemoteWorker {
         *self.in_resend.lock().unwrap() = false;
     }
 
-    pub async fn check_state(
-        &self,
-    ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn check_state(&self) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
         self.inc_communication();
-        let state = self.communicator().await.check_state().await?;
+        let state = self.communicator().check_state()?;
         self.dec_communication();
         Ok(state)
     }
 
-    pub async fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         {
             self.process.write().unwrap().start_kill()?;
         }
         Ok(())
     }
 
-    async fn communicator(&self) -> tokio::sync::RwLockReadGuard<RemoteWorkerLockingCommunicator> {
-        self.communicator.read().await
+    fn communicator(&self) -> RwLockReadGuard<RemoteWorkerLockingCommunicator> {
+        self.communicator.read().unwrap()
     }
 
-    async fn save_solver_command(
+    fn save_solver_command(
         &self,
         solver_label: SolverLabel,
         command: RemoteSolverCommand,
@@ -736,18 +719,18 @@ impl RemoteWorker {
         Ok(())
     }
 
-    async fn try_resend_postponed_commands(
+    fn try_resend_postponed_commands(
         &self,
     ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         self.wait_and_lock_in_resend();
-        let state = self.check_state().await?;
+        let state = self.check_state()?;
         let res = match state {
             RemoteState::Busy => Ok(false),
             RemoteState::Idle => {
                 let postponed_commands = { self.postponed_commands.read().unwrap() }.clone();
                 if !postponed_commands.is_empty() {
                     for command in postponed_commands.into_iter() {
-                        self.resend_command(command).await?;
+                        self.resend_command(command)?;
                     }
                     self.postponed_commands.write().unwrap().clear();
                 }
@@ -762,19 +745,17 @@ impl RemoteWorker {
         self.postponed_commands.write().unwrap().push(command);
     }
 
-    pub async fn new_context(
-        &self,
-    ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
         {
             *self.context_id.write().unwrap() += 1;
         }
-        let command_response = if !self.try_resend_postponed_commands().await? {
+        let command_response = if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewContext()));
             let context_id = { *self.context_id.read().unwrap() };
             ContextLabel(context_id)
         } else {
             self.inc_communication();
-            let context = self.communicator().await.new_context().await?;
+            let context = self.communicator().new_context()?;
             self.dec_communication();
             context
         };
@@ -794,7 +775,7 @@ impl RemoteWorker {
         {
             *self.solver_id.write().unwrap() += 1;
         }
-        let command_response = if !self.try_resend_postponed_commands().await? {
+        let command_response = if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewSolver(
                 context,
                 options.clone(),
@@ -803,11 +784,7 @@ impl RemoteWorker {
             SolverLabel(solver_id)
         } else {
             self.inc_communication();
-            let solver = self
-                .communicator()
-                .await
-                .new_solver(context, options)
-                .await?;
+            let solver = self.communicator().new_solver(context, options)?;
             self.dec_communication();
             solver
         };
@@ -826,13 +803,13 @@ impl RemoteWorker {
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteContext(
                 context,
             )));
         } else {
             self.inc_communication();
-            self.communicator().await.delete_context(context).await?;
+            self.communicator().delete_context(context)?;
             self.dec_communication();
         };
         self.active_contexts.write().unwrap().remove(&context);
@@ -844,13 +821,13 @@ impl RemoteWorker {
         context: ContextLabel,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteSolver(
                 solver,
             )));
         } else {
             self.inc_communication();
-            self.communicator().await.delete_solver(solver).await?;
+            self.communicator().delete_solver(solver)?;
             self.dec_communication();
         };
         self.active_solvers
@@ -868,12 +845,12 @@ impl RemoteWorker {
         term: &Term,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Assert(solver, term.clone());
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.inc_communication();
-            self.communicator().await.assert(solver, term).await?;
+            self.communicator().assert(solver, term)?;
             self.dec_communication();
         };
         Ok(())
@@ -884,12 +861,12 @@ impl RemoteWorker {
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Reset(solver);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.inc_communication();
-            self.communicator().await.reset(solver).await?;
+            self.communicator().reset(solver)?;
             self.dec_communication();
         };
         Ok(())
@@ -900,11 +877,11 @@ impl RemoteWorker {
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        if !self.try_resend_postponed_commands()? {
             Err(Box::new(WorkerError {}))
         } else {
             self.inc_communication();
-            let command_response = self.communicator().await.eval(solver, term).await?;
+            let command_response = self.communicator().eval(solver, term)?;
             self.dec_communication();
             Ok(command_response)
         }
@@ -914,11 +891,11 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        if !self.try_resend_postponed_commands()? {
             Err(Box::new(WorkerError {}))
         } else {
             self.inc_communication();
-            let command_response = self.communicator().await.unsat_core(solver).await?;
+            let command_response = self.communicator().unsat_core(solver)?;
             self.dec_communication();
             Ok(command_response)
         }
@@ -929,7 +906,7 @@ impl RemoteWorker {
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if *self.is_alive.lock().unwrap() {
-            self.communicator().await.interrupt(solver).await?;
+            self.communicator().interrupt(solver)?;
         }
         Ok(())
     }
@@ -938,10 +915,10 @@ impl RemoteWorker {
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        if !self.try_resend_postponed_commands()? {
             self.restart().await?;
         }
-        let command_response = self.communicator().await.check_sat(solver).await?;
+        let command_response = self.communicator().check_sat(solver)?;
         Ok(command_response)
     }
 
@@ -950,12 +927,12 @@ impl RemoteWorker {
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Push(solver);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.inc_communication();
-            self.communicator().await.push(solver).await?;
+            self.communicator().push(solver)?;
             self.dec_communication();
         };
         Ok(())
@@ -967,12 +944,12 @@ impl RemoteWorker {
         size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Pop(solver, size);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands()? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
             self.inc_communication();
-            self.communicator().await.pop(solver, size).await?;
+            self.communicator().pop(solver, size)?;
             self.dec_communication();
         };
         Ok(())
@@ -1063,9 +1040,7 @@ impl SmithrilFactory {
         let mut factories: Vec<RemoteFactory> = Default::default();
 
         for converter in &converters {
-            let solver_process = RemoteFactory::new(&solver_path_string, converter)
-                .await
-                .unwrap();
+            let solver_process = RemoteFactory::new(&solver_path_string, converter).unwrap();
             factories.push(solver_process);
         }
         Self { factories }
@@ -1102,7 +1077,7 @@ impl Hash for SmithrilSolver {
 impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
     async fn terminate(&self) {
         for solver in self.factories.iter() {
-            solver.terminate().await.unwrap();
+            solver.terminate().unwrap();
         }
     }
 

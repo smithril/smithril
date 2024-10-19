@@ -55,14 +55,14 @@ where
 
 pub trait AsyncContext {}
 
-pub trait AsyncResultFactory<C, SL>
+pub trait ResultFactory<C, SL>
 where
     C: AsyncContext,
     SL: AsyncResultSolver,
 {
     fn terminate(
         &self,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     fn new_context(
         &self,
     ) -> impl std::future::Future<Output = Result<C, Box<dyn std::error::Error + Send + Sync>>> + Send;
