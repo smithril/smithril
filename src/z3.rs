@@ -706,54 +706,6 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn fp_get_values_ieee(&self, term1: &Z3Term) -> crate::generalized::FloatingPointAsBinary {
-        unsafe {
-            let bv_term = smithril_z3_sys::Z3_mk_fpa_to_ieee_bv(self.context(), term1.term);
-            let exp_size = self.fp_get_bv_exp_size(term1) as c_uint;
-            let sig_size = self.fp_get_bv_sig_size(term1) as c_uint;
-
-            let sign_term = smithril_z3_sys::Z3_mk_extract(
-                self.context(),
-                exp_size + sig_size,
-                exp_size + sig_size,
-                bv_term,
-            );
-            let sign_term = smithril_z3_sys::Z3_simplify(self.context(), sign_term);
-
-            let exponent_term = smithril_z3_sys::Z3_mk_extract(
-                self.context(),
-                exp_size + sig_size - 1,
-                sig_size,
-                bv_term,
-            );
-            let exponent_term = smithril_z3_sys::Z3_simplify(self.context(), exponent_term);
-
-            let significand_term =
-                smithril_z3_sys::Z3_mk_extract(self.context(), sig_size - 1, 0, bv_term);
-            let significand_term = smithril_z3_sys::Z3_simplify(self.context(), significand_term);
-
-            let sign_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), sign_term);
-            let sign = CStr::from_ptr(sign_str).to_string_lossy().into_owned();
-
-            let exponent_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), exponent_term);
-            let exponent = CStr::from_ptr(exponent_str).to_string_lossy().into_owned();
-
-            let significand_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), significand_term);
-            let significand = CStr::from_ptr(significand_str)
-                .to_string_lossy()
-                .into_owned();
-
-            FloatingPointAsBinary {
-                sign,
-                exponent,
-                significand,
-            }
-        }
-    }
-
     fn fp_is_nan(&self, term1: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_is_nan(self.context(), term1.term);

@@ -705,39 +705,6 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_sig_size(term.term) }
     }
 
-    fn fp_get_values_ieee(&self, term: &BitwuzlaTerm) -> FloatingPointAsBinary {
-        unsafe {
-            let sign_s = CString::new(String::new()).unwrap();
-            let mut sign_ptr = sign_s.as_ptr();
-
-            let exponent_s = CString::new(String::new()).unwrap();
-            let mut exponent_ptr = exponent_s.as_ptr();
-
-            let significand_s = CString::new(String::new()).unwrap();
-            let mut significand_ptr = significand_s.as_ptr();
-
-            smithril_bitwuzla_sys::bitwuzla_term_value_get_fp_ieee(
-                term.term,
-                &mut sign_ptr,
-                &mut exponent_ptr,
-                &mut significand_ptr,
-                2,
-            );
-
-            let sign = CStr::from_ptr(sign_ptr).to_string_lossy().into_owned();
-            let exponent = CStr::from_ptr(exponent_ptr).to_string_lossy().into_owned();
-            let significand = CStr::from_ptr(significand_ptr)
-                .to_string_lossy()
-                .into_owned();
-
-            FloatingPointAsBinary {
-                sign,
-                exponent: exponent.trim_start_matches('0').to_owned(),
-                significand: significand.trim_start_matches('0').to_owned(),
-            }
-        }
-    }
-
     fn fp_is_pos(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {
         unsafe {
             let term = smithril_bitwuzla_sys::bitwuzla_mk_term1(

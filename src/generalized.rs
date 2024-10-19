@@ -546,7 +546,6 @@ where
 
     fn fp_get_bv_exp_size(&self, term: &T) -> u64;
     fn fp_get_bv_sig_size(&self, term: &T) -> u64;
-    fn fp_get_values_ieee(&self, term: &T) -> FloatingPointAsBinary;
     fn fp_is_nan(&self, term: &T) -> T;
     fn fp_is_inf(&self, term: &T) -> T;
     fn fp_is_normal(&self, term: &T) -> T;
