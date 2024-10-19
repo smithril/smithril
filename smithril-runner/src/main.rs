@@ -85,33 +85,15 @@ fn main() {
     match converter_kind {
         Converter::Bitwuzla => {
             let mut factory = converters::mk_bitwuzla_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                Converter::Bitwuzla,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
         Converter::Z3 => {
             let mut factory = converters::mk_z3_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                Converter::Z3,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
         Converter::Dummy => {
             let mut factory = converters::mk_dummy_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                Converter::Dummy,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
     };
 }
@@ -126,7 +108,6 @@ fn start<
     remote_commander: RemoteCommander,
     context_id: u64,
     solver_id: u64,
-    converter: Converter,
 ) {
     let mut context_id = context_id;
     let mut contexts = HashMap::new();
@@ -137,10 +118,8 @@ fn start<
     let state = Arc::new(RwLock::new(RemoteState::Idle));
     {
         let interrupters = interrupters.clone();
-        let converter = converter.clone();
         thread::spawn(move || loop {
             let solver_label = remote_commander.interrupt_receiver.recv().unwrap();
-            dbg!(("interrupt", &solver_label, &converter));
             let interrupters = interrupters.read().unwrap();
             if let Some(interrupter) = interrupters.get(&solver_label) {
                 interrupter.interrupt();
@@ -162,19 +141,16 @@ fn start<
         match command {
             RemoteCommand::Solver(command) => match command {
                 RemoteSolverCommand::Assert(solver_label, term) => {
-                    dbg!(("assert", &solver_label, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::assert(solver.as_ref(), &term);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteSolverCommand::Reset(solver_label) => {
-                    dbg!(("reset", &solver_label, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::reset(solver.as_ref());
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteSolverCommand::CheckSat(solver_label) => {
-                    dbg!(("check_sat", &solver_label, &converter));
                     {
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Busy;
@@ -191,25 +167,21 @@ fn start<
                     remote_commander.solver_result_sender.send(result).unwrap();
                 }
                 RemoteSolverCommand::UnsatCore(solver_label) => {
-                    dbg!(("unsat_core", &solver_label, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     let result = Solver::unsat_core(solver.as_ref());
                     remote_commander.unsat_core_sender.send(result).unwrap();
                 }
                 RemoteSolverCommand::Eval(solver_label, term) => {
-                    dbg!(("eval", &solver_label, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     let result = Solver::eval(solver.as_ref(), &term);
                     remote_commander.eval_sender.send(result).unwrap();
                 }
                 RemoteSolverCommand::Push(solver_label) => {
-                    dbg!(("push", &solver_label, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::push(solver.as_ref());
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteSolverCommand::Pop(solver_label, size) => {
-                    dbg!(("pop", &solver_label, &size, &converter));
                     let solver = solvers.get(&solver_label).unwrap().clone();
                     Solver::pop(solver.as_ref(), size);
                     remote_commander.confirmation_sender.send(()).unwrap();
@@ -217,7 +189,6 @@ fn start<
             },
             RemoteCommand::Factory(command) => match command {
                 RemoteFactoryCommand::NewContext() => {
-                    dbg!(("new_context", &converter));
                     let context = factory.new_context();
                     context_id += 1;
                     let context_label = ContextLabel(context_id);
@@ -228,17 +199,14 @@ fn start<
                         .unwrap();
                 }
                 RemoteFactoryCommand::DeleteContext(context_label) => {
-                    dbg!(("delete_context", &context_label, &converter));
                     contexts.remove(&context_label);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteFactoryCommand::DeleteSolver(solver_label) => {
-                    dbg!(("delete_solver", &solver_label, &converter));
                     solvers.remove(&solver_label);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteFactoryCommand::NewSolver(context_label, options) => {
-                    dbg!(("new_solver", &context_label, &converter));
                     let context = contexts.get(&context_label).unwrap();
                     let solver = factory.new_solver(context.clone(), &options);
                     let interrupter = Arc::new(factory.new_interrupter(solver.clone()));
@@ -255,13 +223,11 @@ fn start<
                         .unwrap();
                 }
                 RemoteFactoryCommand::RestoreContext(context_label) => {
-                    dbg!(("restore_context", &context_label, &converter));
                     let context = factory.new_context();
                     contexts.insert(context_label, context);
                     remote_commander.confirmation_sender.send(()).unwrap();
                 }
                 RemoteFactoryCommand::RestoreSolver(context_label, solver_label, options) => {
-                    dbg!(("restore_solver", &context_label, &solver_label, &converter));
                     let context = contexts.get(&context_label).unwrap();
                     let solver = factory.new_solver(context.clone(), &options);
                     let interrupter = Arc::new(factory.new_interrupter(solver.clone()));

@@ -462,6 +462,8 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     for BitwuzlaSolver
 {
     fn unsat_core(&self) -> Vec<BitwuzlaTerm> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Unsat);
         let mut size: usize = 0;
         let u_core =
             unsafe { smithril_bitwuzla_sys::bitwuzla_get_unsat_core(self.solver(), &mut size) };

@@ -448,6 +448,8 @@ macro_rules! create_converter_ternary_function_z3 {
 
 impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     fn unsat_core(&self) -> Vec<Z3Term> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Unsat);
         let context = self.context.as_ref();
         let u_core =
             unsafe { smithril_z3_sys::Z3_solver_get_unsat_core(context.context(), self.solver.0) };

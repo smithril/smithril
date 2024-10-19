@@ -1223,7 +1223,7 @@ impl AsyncSolver for SmithrilSolver {
             result = res;
             break;
         }
-        while let Some(_) = futs.next().await {}
+        while (futs.next().await).is_some() {}
         result
     }
 
