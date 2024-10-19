@@ -18,13 +18,6 @@ pub trait GeneralSort {}
 
 pub trait GeneralTerm {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub struct FloatingPointAsBinary {
-    pub sign: String,
-    pub exponent: String,
-    pub significand: String,
-}
-
 #[repr(C)]
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum SolverResult {

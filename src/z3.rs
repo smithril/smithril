@@ -1,14 +1,14 @@
 use std::collections::HashSet;
-use std::ffi::{c_uint, CString};
+use std::ffi::CString;
 use std::hash::Hash;
 use std::ptr;
 use std::sync::RwLock;
 use std::{collections::HashMap, ffi::CStr, sync::Arc};
 
 use crate::generalized::{
-    Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
-    GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
-    GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+    Context, Factory, GeneralArrayConverter, GeneralBoolConverter, GeneralBvConverter,
+    GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
+    Interrupter, OptionKind, Options, Solver, SolverResult,
 };
 use crate::term::{self, RoundingMode, Sort, Term};
 use crate::utils;

@@ -1,8 +1,8 @@
 use crate::{
     generalized::{
-        Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
-        GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
-        GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+        Context, Factory, GeneralArrayConverter, GeneralBoolConverter, GeneralBvConverter,
+        GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
+        GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
     },
     term::{self, Sort, Term},
 };

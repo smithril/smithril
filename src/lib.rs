@@ -43,8 +43,8 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        Factory, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
-        GeneralTerm, Options, Solver, SolverResult,
+        Factory, GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
+        Options, Solver, SolverResult,
     };
     use crate::term::{self, RoundingMode, Sort, Term, UnsortedTerm};
     use crate::z3::Z3Factory;
