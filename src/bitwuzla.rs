@@ -1,8 +1,8 @@
 use crate::{
     generalized::{
-        Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
-        GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
-        GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+        Context, Factory, GeneralArrayConverter, GeneralBoolConverter, GeneralBvConverter,
+        GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
+        GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
     },
     term::{self, Sort, Term},
 };
@@ -241,6 +241,7 @@ pub struct BitwuzlaSolver {
     pub context: Arc<BitwuzlaConverter>,
     pub options: BitwuzlaOptions,
     pub asserted_terms_map: RwLock<HashMap<BitwuzlaTerm, Term>>,
+    pub last_check_sat: RwLock<Option<SolverResult>>,
     solver: RwLock<BitwuzlaSolverSys>,
 }
 
@@ -293,6 +294,7 @@ impl BitwuzlaSolver {
             asserted_terms_map: RwLock::new(HashMap::new()),
             solver,
             context,
+            last_check_sat: RwLock::new(Default::default()),
         }
     }
 
@@ -460,6 +462,8 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     for BitwuzlaSolver
 {
     fn unsat_core(&self) -> Vec<BitwuzlaTerm> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Unsat);
         let mut size: usize = 0;
         let u_core =
             unsafe { smithril_bitwuzla_sys::bitwuzla_get_unsat_core(self.solver(), &mut size) };
@@ -476,6 +480,8 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     }
 
     fn eval(&self, term1: &BitwuzlaTerm) -> Option<BitwuzlaTerm> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Sat);
         let bitwuzla_term =
             unsafe { smithril_bitwuzla_sys::bitwuzla_get_value(self.solver(), term1.term) };
         let res = BitwuzlaTerm {
@@ -518,6 +524,9 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
     }
 
     fn check_sat(&self) -> SolverResult {
+        {
+            *self.last_check_sat.write().unwrap() = None;
+        }
         unsafe {
             let termination_callback_state =
                 smithril_bitwuzla_sys::bitwuzla_get_termination_callback_state(self.solver())
@@ -525,11 +534,15 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
             (*termination_callback_state).start();
         }
         let res = unsafe { smithril_bitwuzla_sys::bitwuzla_check_sat(self.solver()) };
-        match res {
+        let res = match res {
             smithril_bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
             smithril_bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
             _ => SolverResult::Unknown,
+        };
+        {
+            *self.last_check_sat.write().unwrap() = Some(res);
         }
+        res
     }
 
     fn push(&self) {
@@ -596,13 +609,14 @@ impl GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_binary_function_bitwuzla!(mk_bv_sle, BITWUZLA_KIND_BV_SLE);
     create_converter_binary_function_bitwuzla!(mk_bv_slt, BITWUZLA_KIND_BV_SLT);
     create_converter_binary_function_bitwuzla!(mk_bv_smod, BITWUZLA_KIND_BV_SMOD);
+    create_converter_binary_function_bitwuzla!(mk_bv_srem, BITWUZLA_KIND_BV_SREM);
     create_converter_binary_function_bitwuzla!(mk_bv_sub, BITWUZLA_KIND_BV_SUB);
     create_converter_binary_function_bitwuzla!(mk_bv_udiv, BITWUZLA_KIND_BV_UDIV);
     create_converter_binary_function_bitwuzla!(mk_bv_uge, BITWUZLA_KIND_BV_UGE);
     create_converter_binary_function_bitwuzla!(mk_bv_ugt, BITWUZLA_KIND_BV_UGT);
     create_converter_binary_function_bitwuzla!(mk_bv_ule, BITWUZLA_KIND_BV_ULE);
     create_converter_binary_function_bitwuzla!(mk_bv_ult, BITWUZLA_KIND_BV_ULT);
-    create_converter_binary_function_bitwuzla!(mk_bv_umod, BITWUZLA_KIND_BV_UREM);
+    create_converter_binary_function_bitwuzla!(mk_bv_urem, BITWUZLA_KIND_BV_UREM);
     create_converter_binary_function_bitwuzla!(mk_bv_xor, BITWUZLA_KIND_BV_XOR);
     create_converter_binary_function_bitwuzla!(mk_bv_mul, BITWUZLA_KIND_BV_MUL);
     create_converter_binary_function_bitwuzla!(mk_concat, BITWUZLA_KIND_BV_CONCAT);
@@ -673,6 +687,8 @@ impl GeneralBoolConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
 }
 
 impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
+    create_converter_ternary_function_bitwuzla!(mk_fp, BITWUZLA_KIND_FP_FP);
+
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> BitwuzlaSort {
         BitwuzlaSort {
             sort: unsafe {
@@ -681,62 +697,12 @@ impl GeneralFpConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
         }
     }
 
-    fn mk_fp_value(
-        &self,
-        bv_sign: &BitwuzlaTerm,
-        bv_exponent: &BitwuzlaTerm,
-        bv_significand: &BitwuzlaTerm,
-    ) -> BitwuzlaTerm {
-        let float_term = unsafe {
-            smithril_bitwuzla_sys::bitwuzla_mk_fp_value(
-                self.term_manager(),
-                bv_sign.term,
-                bv_exponent.term,
-                bv_significand.term,
-            )
-        };
-        BitwuzlaTerm { term: float_term }
-    }
-
     fn fp_get_bv_exp_size(&self, term: &BitwuzlaTerm) -> u64 {
         unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_exp_size(term.term) }
     }
 
     fn fp_get_bv_sig_size(&self, term: &BitwuzlaTerm) -> u64 {
         unsafe { smithril_bitwuzla_sys::bitwuzla_term_fp_get_sig_size(term.term) }
-    }
-
-    fn fp_get_values_ieee(&self, term: &BitwuzlaTerm) -> FloatingPointAsBinary {
-        unsafe {
-            let sign_s = CString::new(String::new()).unwrap();
-            let mut sign_ptr = sign_s.as_ptr();
-
-            let exponent_s = CString::new(String::new()).unwrap();
-            let mut exponent_ptr = exponent_s.as_ptr();
-
-            let significand_s = CString::new(String::new()).unwrap();
-            let mut significand_ptr = significand_s.as_ptr();
-
-            smithril_bitwuzla_sys::bitwuzla_term_value_get_fp_ieee(
-                term.term,
-                &mut sign_ptr,
-                &mut exponent_ptr,
-                &mut significand_ptr,
-                2,
-            );
-
-            let sign = CStr::from_ptr(sign_ptr).to_string_lossy().into_owned();
-            let exponent = CStr::from_ptr(exponent_ptr).to_string_lossy().into_owned();
-            let significand = CStr::from_ptr(significand_ptr)
-                .to_string_lossy()
-                .into_owned();
-
-            FloatingPointAsBinary {
-                sign,
-                exponent: exponent.trim_start_matches('0').to_owned(),
-                significand: significand.trim_start_matches('0').to_owned(),
-            }
-        }
     }
 
     fn fp_is_pos(&self, term1: &BitwuzlaTerm) -> BitwuzlaTerm {

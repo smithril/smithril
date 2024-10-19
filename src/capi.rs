@@ -2,7 +2,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ffi::{c_char, c_void, CStr},
+    ffi::{c_char, c_void, CStr, CString},
     ptr::null,
     sync::{Arc, RwLock},
     time::Duration,
@@ -27,7 +27,7 @@ use tokio::runtime::{self, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
-        .worker_threads(2)
+        .worker_threads(4)
         .enable_io()
         .build()
         .unwrap()
@@ -66,7 +66,7 @@ static OPTIONS: Lazy<RwLock<Vec<Arc<LockingOptions>>>> = Lazy::new(|| RwLock::ne
 static TERMS: Lazy<RwLock<Terms>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static SORTS: Lazy<RwLock<Sorts>> = Lazy::new(|| RwLock::new(HashMap::new()));
 static SYMBOLS: Lazy<RwLock<Symbols>> = Lazy::new(|| RwLock::new(HashMap::new()));
-static LAST_EVALUATED_TERM: Lazy<RwLock<Arc<String>>> = Lazy::new(|| RwLock::new(Arc::default()));
+static LAST_EVALUATED_TERM: Lazy<RwLock<Arc<CString>>> = Lazy::new(|| RwLock::new(Arc::default()));
 static LAST_UNSAT_CORE: Lazy<RwLock<Arc<Vec<Term>>>> = Lazy::new(|| RwLock::new(Arc::default()));
 static FRESH_SYMBOLS_COUNT: Lazy<RwLock<u64>> = Lazy::new(|| RwLock::new(1));
 
@@ -548,7 +548,8 @@ binary_function!(smithril_mk_bvuge, mk_bv_uge);
 binary_function!(smithril_mk_bvugt, mk_bv_ugt);
 binary_function!(smithril_mk_bvule, mk_bv_ule);
 binary_function!(smithril_mk_bvult, mk_bv_ult);
-binary_function!(smithril_mk_bvumod, mk_bv_umod);
+binary_function!(smithril_mk_bvsrem, mk_bv_srem);
+binary_function!(smithril_mk_bvurem, mk_bv_urem);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
 binary_function!(smithril_mk_concat, mk_concat);
 unary_function!(smithril_mk_not, mk_not);
@@ -607,7 +608,7 @@ pub unsafe extern "C" fn smithril_mk_fp_to_fp_from_bv(
 
 ternary_function!(smithril_mk_store, mk_store);
 ternary_function!(smithril_mk_ite, mk_ite);
-ternary_function!(smithril_mk_fp_value, mk_fp_value);
+ternary_function!(smithril_mk_fp, mk_fp);
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_mk_extract(
@@ -768,9 +769,10 @@ pub unsafe extern "C" fn smithril_eval(
     RUNTIME
         .block_on(smithril_solver.eval(&smithril_term))
         .map(|term| {
-            let constant = Arc::new(term::try_constant_to_string(&term).unwrap());
+            let constant = term::try_constant_to_string(&term).unwrap();
+            let constant = Arc::new(CString::new(constant).unwrap());
             *LAST_EVALUATED_TERM.write().unwrap() = constant.clone();
-            let constant: *const c_char = constant.as_ptr() as *const c_char;
+            let constant: *const c_char = constant.as_ptr();
             constant
         })
         .unwrap_or(null())

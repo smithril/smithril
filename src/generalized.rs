@@ -18,15 +18,8 @@ pub trait GeneralSort {}
 
 pub trait GeneralTerm {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Hash)]
-pub struct FloatingPointAsBinary {
-    pub sign: String,
-    pub exponent: String,
-    pub significand: String,
-}
-
 #[repr(C)]
-#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum SolverResult {
     Sat,
     Unsat,
@@ -367,8 +360,11 @@ where
                         DuoOperationKind::BvUlt => {
                             self.try_get_bv_converter().unwrap().mk_bv_ult(&t1, &t2)
                         }
-                        DuoOperationKind::BvUmod => {
-                            self.try_get_bv_converter().unwrap().mk_bv_umod(&t1, &t2)
+                        DuoOperationKind::BvUrem => {
+                            self.try_get_bv_converter().unwrap().mk_bv_urem(&t1, &t2)
+                        }
+                        DuoOperationKind::BvSrem => {
+                            self.try_get_bv_converter().unwrap().mk_bv_srem(&t1, &t2)
                         }
                         DuoOperationKind::BvXor => {
                             self.try_get_bv_converter().unwrap().mk_bv_xor(&t1, &t2)
@@ -411,10 +407,9 @@ where
                             .try_get_array_converter()
                             .unwrap()
                             .mk_store(&t1, &t2, &t3),
-                        TrioOperationKind::Fp => self
-                            .try_get_fp_converter()
-                            .unwrap()
-                            .mk_fp_value(&t1, &t2, &t3),
+                        TrioOperationKind::Fp => {
+                            self.try_get_fp_converter().unwrap().mk_fp(&t1, &t2, &t3)
+                        }
                         TrioOperationKind::Ite => {
                             self.try_get_bool_converter().unwrap().mk_ite(&t1, &t2, &t3)
                         }
@@ -536,7 +531,7 @@ where
     T: GeneralTerm,
 {
     fn mk_fp_sort(&self, ew: u64, sw: u64) -> S;
-    fn mk_fp_value(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
+    fn mk_fp(&self, bv_sign: &T, bv_exponent: &T, bv_significand: &T) -> T;
     fn mk_fp_pos_zero(&self, sort: &S) -> T;
     fn mk_fp_pos_inf(&self, sort: &S) -> T;
     fn mk_fp_neg_zero(&self, sort: &S) -> T;
@@ -544,7 +539,6 @@ where
 
     fn fp_get_bv_exp_size(&self, term: &T) -> u64;
     fn fp_get_bv_sig_size(&self, term: &T) -> u64;
-    fn fp_get_values_ieee(&self, term: &T) -> FloatingPointAsBinary;
     fn fp_is_nan(&self, term: &T) -> T;
     fn fp_is_inf(&self, term: &T) -> T;
     fn fp_is_normal(&self, term: &T) -> T;
@@ -621,13 +615,14 @@ where
     define_converter_binary_function!(mk_bv_sle);
     define_converter_binary_function!(mk_bv_slt);
     define_converter_binary_function!(mk_bv_smod);
+    define_converter_binary_function!(mk_bv_srem);
     define_converter_binary_function!(mk_bv_sub);
     define_converter_binary_function!(mk_bv_udiv);
     define_converter_binary_function!(mk_bv_uge);
     define_converter_binary_function!(mk_bv_ugt);
     define_converter_binary_function!(mk_bv_ule);
     define_converter_binary_function!(mk_bv_ult);
-    define_converter_binary_function!(mk_bv_umod);
+    define_converter_binary_function!(mk_bv_urem);
     define_converter_binary_function!(mk_bv_xor);
     define_converter_binary_function!(mk_concat);
     fn mk_extract(&self, high: u64, low: u64, term: &T) -> T;

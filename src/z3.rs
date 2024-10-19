@@ -1,14 +1,14 @@
 use std::collections::HashSet;
-use std::ffi::{c_uint, CString};
+use std::ffi::CString;
 use std::hash::Hash;
 use std::ptr;
 use std::sync::RwLock;
 use std::{collections::HashMap, ffi::CStr, sync::Arc};
 
 use crate::generalized::{
-    Context, Factory, FloatingPointAsBinary, GeneralArrayConverter, GeneralBoolConverter,
-    GeneralBvConverter, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver,
-    GeneralSort, GeneralTerm, Interrupter, OptionKind, Options, Solver, SolverResult,
+    Context, Factory, GeneralArrayConverter, GeneralBoolConverter, GeneralBvConverter,
+    GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
+    Interrupter, OptionKind, Options, Solver, SolverResult,
 };
 use crate::term::{self, RoundingMode, Sort, Term};
 use crate::utils;
@@ -309,6 +309,7 @@ pub struct Z3Solver {
     solver: Z3SolverSys,
     pub context: Arc<Z3Converter>,
     pub asserted_terms_map: RwLock<HashMap<Z3Term, Term>>,
+    pub last_check_sat: RwLock<Option<SolverResult>>,
     pub unsat_map: RwLock<HashMap<Z3Term, Z3Term>>,
 }
 
@@ -347,6 +348,7 @@ impl Z3Solver {
             context,
             asserted_terms_map: RwLock::new(HashMap::new()),
             unsat_map: RwLock::new(HashMap::new()),
+            last_check_sat: RwLock::new(Default::default()),
         }
     }
 }
@@ -446,6 +448,8 @@ macro_rules! create_converter_ternary_function_z3 {
 
 impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     fn unsat_core(&self) -> Vec<Z3Term> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Unsat);
         let context = self.context.as_ref();
         let u_core =
             unsafe { smithril_z3_sys::Z3_solver_get_unsat_core(context.context(), self.solver.0) };
@@ -488,6 +492,8 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 
     fn eval(&self, term1: &Z3Term) -> Option<Z3Term> {
+        let last_check_sat = { *self.last_check_sat.read().unwrap() };
+        assert_eq!(last_check_sat.unwrap(), SolverResult::Sat);
         let context = self.context.as_ref();
         let mut r: smithril_z3_sys::Z3_ast = ptr::null_mut();
         let model_completion = false;
@@ -529,14 +535,21 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
     }
 
     fn check_sat(&self) -> SolverResult {
+        {
+            *self.last_check_sat.write().unwrap() = None;
+        }
         let context = self.context.as_ref();
         let res = unsafe { smithril_z3_sys::Z3_solver_check(context.context(), self.solver.0) };
         context.context.check_error();
-        match res {
+        let res = match res {
             smithril_z3_sys::Z3_L_TRUE => SolverResult::Sat,
             smithril_z3_sys::Z3_L_FALSE => SolverResult::Unsat,
             _ => SolverResult::Unknown,
+        };
+        {
+            *self.last_check_sat.write().unwrap() = Some(res);
         }
+        res
     }
 
     fn push(&self) {
@@ -626,13 +639,14 @@ impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_bv_sle, Z3_mk_bvsle);
     create_converter_binary_function_z3!(mk_bv_slt, Z3_mk_bvslt);
     create_converter_binary_function_z3!(mk_bv_smod, Z3_mk_bvsmod);
+    create_converter_binary_function_z3!(mk_bv_srem, Z3_mk_bvsrem);
     create_converter_binary_function_z3!(mk_bv_sub, Z3_mk_bvsub);
     create_converter_binary_function_z3!(mk_bv_udiv, Z3_mk_bvudiv);
     create_converter_binary_function_z3!(mk_bv_uge, Z3_mk_bvuge);
     create_converter_binary_function_z3!(mk_bv_ugt, Z3_mk_bvugt);
     create_converter_binary_function_z3!(mk_bv_ule, Z3_mk_bvule);
     create_converter_binary_function_z3!(mk_bv_ult, Z3_mk_bvult);
-    create_converter_binary_function_z3!(mk_bv_umod, Z3_mk_bvurem);
+    create_converter_binary_function_z3!(mk_bv_urem, Z3_mk_bvurem);
     create_converter_binary_function_z3!(mk_bv_xor, Z3_mk_bvxor);
     create_converter_binary_function_z3!(mk_concat, Z3_mk_concat);
 
@@ -666,12 +680,7 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         }
     }
 
-    fn mk_fp_value(
-        &self,
-        bv_sign: &Z3Term,
-        bv_exponent: &Z3Term,
-        bv_significand: &Z3Term,
-    ) -> Z3Term {
+    fn mk_fp(&self, bv_sign: &Z3Term, bv_exponent: &Z3Term, bv_significand: &Z3Term) -> Z3Term {
         unsafe {
             let term = smithril_z3_sys::Z3_mk_fpa_fp(
                 self.context(),
@@ -694,54 +703,6 @@ impl GeneralFpConverter<Z3Sort, Z3Term> for Z3Converter {
         unsafe {
             let exp_sort = smithril_z3_sys::Z3_get_sort(self.context(), term1.term);
             (smithril_z3_sys::Z3_fpa_get_sbits(self.context(), exp_sort) - 1) as u64
-        }
-    }
-
-    fn fp_get_values_ieee(&self, term1: &Z3Term) -> crate::generalized::FloatingPointAsBinary {
-        unsafe {
-            let bv_term = smithril_z3_sys::Z3_mk_fpa_to_ieee_bv(self.context(), term1.term);
-            let exp_size = self.fp_get_bv_exp_size(term1) as c_uint;
-            let sig_size = self.fp_get_bv_sig_size(term1) as c_uint;
-
-            let sign_term = smithril_z3_sys::Z3_mk_extract(
-                self.context(),
-                exp_size + sig_size,
-                exp_size + sig_size,
-                bv_term,
-            );
-            let sign_term = smithril_z3_sys::Z3_simplify(self.context(), sign_term);
-
-            let exponent_term = smithril_z3_sys::Z3_mk_extract(
-                self.context(),
-                exp_size + sig_size - 1,
-                sig_size,
-                bv_term,
-            );
-            let exponent_term = smithril_z3_sys::Z3_simplify(self.context(), exponent_term);
-
-            let significand_term =
-                smithril_z3_sys::Z3_mk_extract(self.context(), sig_size - 1, 0, bv_term);
-            let significand_term = smithril_z3_sys::Z3_simplify(self.context(), significand_term);
-
-            let sign_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), sign_term);
-            let sign = CStr::from_ptr(sign_str).to_string_lossy().into_owned();
-
-            let exponent_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), exponent_term);
-            let exponent = CStr::from_ptr(exponent_str).to_string_lossy().into_owned();
-
-            let significand_str: *const i8 =
-                smithril_z3_sys::Z3_get_numeral_binary_string(self.context(), significand_term);
-            let significand = CStr::from_ptr(significand_str)
-                .to_string_lossy()
-                .into_owned();
-
-            FloatingPointAsBinary {
-                sign,
-                exponent,
-                significand,
-            }
         }
     }
 

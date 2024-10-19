@@ -43,8 +43,8 @@ mod tests {
 
     use crate::bitwuzla::BitwuzlaFactory;
     use crate::generalized::{
-        Factory, GeneralConverter, GeneralFpConverter, GeneralOptions, GeneralSolver, GeneralSort,
-        GeneralTerm, Options, Solver, SolverResult,
+        Factory, GeneralConverter, GeneralOptions, GeneralSolver, GeneralSort, GeneralTerm,
+        Options, Solver, SolverResult,
     };
     use crate::term::{self, RoundingMode, Sort, Term, UnsortedTerm};
     use crate::z3::Z3Factory;
@@ -333,50 +333,6 @@ mod tests {
         solver.assert(&converter.convert_term(&t));
         let result = solver.check_sat();
         assert_eq!(SolverResult::Unsat, result);
-    }
-
-    fn generalized_generate_fp_ieee<FP, S, T>(
-        converter: &FP,
-    ) -> crate::generalized::FloatingPointAsBinary
-    where
-        FP: GeneralFpConverter<S, T>,
-        S: GeneralSort,
-        T: GeneralTerm,
-    {
-        let x1 = Term {
-            term: UnsortedTerm::Constant(term::GenConstant::Numeral(0)),
-            sort: Sort::BvSort(1),
-        };
-        let x2 = Term {
-            term: UnsortedTerm::Constant(term::GenConstant::Numeral(2)),
-            sort: Sort::BvSort(10),
-        };
-        let x3 = Term {
-            term: UnsortedTerm::Constant(term::GenConstant::Numeral(5)),
-            sort: Sort::BvSort(10),
-        };
-        let x = Term {
-            term: UnsortedTerm::Operation(Box::new(term::GenOperation::Trio(
-                term::TrioOperationKind::Fp,
-                x1,
-                x2,
-                x3,
-            ))),
-            sort: Sort::FpSort(10, 10),
-        };
-
-        converter.fp_get_values_ieee(&converter.convert_term(&x))
-    }
-
-    #[test]
-    fn ieee_works() {
-        let mut factory = BitwuzlaFactory::default();
-        let context = factory.new_context();
-        let x = generalized_generate_fp_ieee(context.as_ref());
-        let mut factory = Z3Factory::default();
-        let context = factory.new_context();
-        let y = generalized_generate_fp_ieee(context.as_ref());
-        assert_eq!(x, y);
     }
 
     #[test]

@@ -121,8 +121,9 @@ fn start<
         thread::spawn(move || loop {
             let solver_label = remote_commander.interrupt_receiver.recv().unwrap();
             let interrupters = interrupters.read().unwrap();
-            let interrupter = interrupters.get(&solver_label).unwrap();
-            interrupter.interrupt();
+            if let Some(interrupter) = interrupters.get(&solver_label) {
+                interrupter.interrupt();
+            }
         });
     }
 
@@ -154,13 +155,16 @@ fn start<
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Busy;
                     };
-                    let solver = solvers.get(&solver_label).unwrap().clone();
-                    let result = Solver::check_sat(solver.as_ref());
-                    remote_commander.solver_result_sender.send(result).unwrap();
+                    let result = if let Some(solver) = solvers.get(&solver_label) {
+                        Solver::check_sat(solver.as_ref())
+                    } else {
+                        SolverResult::Unknown
+                    };
                     {
                         let mut state = state.write().unwrap();
                         *state = RemoteState::Idle;
                     }
+                    remote_commander.solver_result_sender.send(result).unwrap();
                 }
                 RemoteSolverCommand::UnsatCore(solver_label) => {
                     let solver = solvers.get(&solver_label).unwrap().clone();
