@@ -58,13 +58,14 @@ pub enum DuoOperationKind {
     BvSle,
     BvSlt,
     BvSmod,
+    BvSrem,
     BvSub,
     BvUdiv,
     BvUge,
     BvUgt,
     BvUle,
     BvUlt,
-    BvUmod,
+    BvUrem,
     BvXor,
     FpEq,
     Concat,
@@ -462,17 +463,7 @@ pub fn mk_fp_to_fp_from_bv(term: &Term, ew: u64, sw: u64) -> Term {
 
 boolean_binary_function!(mk_and, And);
 binary_function!(mk_bv_add, BvAdd);
-pub fn mk_bv_and(term1: &Term, term2: &Term) -> Term {
-    dbg!("bv_and", term1, term2);
-    Term {
-        term: UnsortedTerm::Operation(Box::new(GenOperation::Duo(
-            DuoOperationKind::BvAnd,
-            term1.clone(),
-            term2.clone(),
-        ))),
-        sort: term1.sort.clone(),
-    }
-}
+binary_function!(mk_bv_and, BvAnd);
 binary_function!(mk_bv_ashr, BvAshr);
 binary_function!(mk_bv_lshr, BvLshr);
 binary_function!(mk_bv_mul, BvMul);
@@ -490,13 +481,14 @@ binary_function!(mk_bv_shl, BvShl);
 boolean_binary_function!(mk_bv_sle, BvSle);
 boolean_binary_function!(mk_bv_slt, BvSlt);
 binary_function!(mk_bv_smod, BvSmod);
+binary_function!(mk_bv_srem, BvSrem);
 binary_function!(mk_bv_sub, BvSub);
 binary_function!(mk_bv_udiv, BvUdiv);
 boolean_binary_function!(mk_bv_uge, BvUge);
 boolean_binary_function!(mk_bv_ugt, BvUgt);
 boolean_binary_function!(mk_bv_ule, BvUle);
 boolean_binary_function!(mk_bv_ult, BvUlt);
-binary_function!(mk_bv_umod, BvUmod);
+binary_function!(mk_bv_urem, BvUrem);
 binary_function!(mk_bv_xor, BvXor);
 boolean_binary_function!(mk_eq, Eq);
 boolean_binary_function!(mk_implies, Implies);

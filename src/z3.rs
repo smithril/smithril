@@ -637,13 +637,14 @@ impl GeneralBvConverter<Z3Sort, Z3Term> for Z3Converter {
     create_converter_binary_function_z3!(mk_bv_sle, Z3_mk_bvsle);
     create_converter_binary_function_z3!(mk_bv_slt, Z3_mk_bvslt);
     create_converter_binary_function_z3!(mk_bv_smod, Z3_mk_bvsmod);
+    create_converter_binary_function_z3!(mk_bv_srem, Z3_mk_bvsrem);
     create_converter_binary_function_z3!(mk_bv_sub, Z3_mk_bvsub);
     create_converter_binary_function_z3!(mk_bv_udiv, Z3_mk_bvudiv);
     create_converter_binary_function_z3!(mk_bv_uge, Z3_mk_bvuge);
     create_converter_binary_function_z3!(mk_bv_ugt, Z3_mk_bvugt);
     create_converter_binary_function_z3!(mk_bv_ule, Z3_mk_bvule);
     create_converter_binary_function_z3!(mk_bv_ult, Z3_mk_bvult);
-    create_converter_binary_function_z3!(mk_bv_umod, Z3_mk_bvurem);
+    create_converter_binary_function_z3!(mk_bv_urem, Z3_mk_bvurem);
     create_converter_binary_function_z3!(mk_bv_xor, Z3_mk_bvxor);
     create_converter_binary_function_z3!(mk_concat, Z3_mk_concat);
 

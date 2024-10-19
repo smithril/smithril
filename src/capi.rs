@@ -548,7 +548,8 @@ binary_function!(smithril_mk_bvuge, mk_bv_uge);
 binary_function!(smithril_mk_bvugt, mk_bv_ugt);
 binary_function!(smithril_mk_bvule, mk_bv_ule);
 binary_function!(smithril_mk_bvult, mk_bv_ult);
-binary_function!(smithril_mk_bvumod, mk_bv_umod);
+binary_function!(smithril_mk_bvsrem, mk_bv_srem);
+binary_function!(smithril_mk_bvurem, mk_bv_urem);
 binary_function!(smithril_mk_bvxor, mk_bv_xor);
 binary_function!(smithril_mk_concat, mk_concat);
 unary_function!(smithril_mk_not, mk_not);
@@ -768,17 +769,13 @@ pub unsafe extern "C" fn smithril_eval(
     RUNTIME
         .block_on(smithril_solver.eval(&smithril_term))
         .map(|term| {
-            dbg!(&term);
             let constant = term::try_constant_to_string(&term).unwrap();
             let constant = Arc::new(CString::new(constant).unwrap());
             *LAST_EVALUATED_TERM.write().unwrap() = constant.clone();
             let constant: *const c_char = constant.as_ptr();
             constant
         })
-        .unwrap_or_else(|| {
-            dbg!(&smithril_term);
-            null()
-        })
+        .unwrap_or_else(|| null())
 }
 
 #[no_mangle]
@@ -836,9 +833,7 @@ pub unsafe extern "C" fn smithril_delete_options(options: SmithrilOptions) {
 #[no_mangle]
 pub unsafe extern "C" fn smithril_set_timeout(options: SmithrilOptions, timeout: *const c_char) {
     let timeout = unsafe { CStr::from_ptr(timeout).to_string_lossy().into_owned() };
-    dbg!(&timeout);
     let timeout: Duration = DurationString::try_from(timeout).unwrap().into();
-    dbg!(&timeout);
     let options = options.0 as *const LockingOptions;
     Arc::increment_strong_count(options);
     let smithril_options = Arc::from_raw(options);

@@ -607,13 +607,14 @@ impl GeneralBvConverter<BitwuzlaSort, BitwuzlaTerm> for BitwuzlaConverter {
     create_converter_binary_function_bitwuzla!(mk_bv_sle, BITWUZLA_KIND_BV_SLE);
     create_converter_binary_function_bitwuzla!(mk_bv_slt, BITWUZLA_KIND_BV_SLT);
     create_converter_binary_function_bitwuzla!(mk_bv_smod, BITWUZLA_KIND_BV_SMOD);
+    create_converter_binary_function_bitwuzla!(mk_bv_srem, BITWUZLA_KIND_BV_SREM);
     create_converter_binary_function_bitwuzla!(mk_bv_sub, BITWUZLA_KIND_BV_SUB);
     create_converter_binary_function_bitwuzla!(mk_bv_udiv, BITWUZLA_KIND_BV_UDIV);
     create_converter_binary_function_bitwuzla!(mk_bv_uge, BITWUZLA_KIND_BV_UGE);
     create_converter_binary_function_bitwuzla!(mk_bv_ugt, BITWUZLA_KIND_BV_UGT);
     create_converter_binary_function_bitwuzla!(mk_bv_ule, BITWUZLA_KIND_BV_ULE);
     create_converter_binary_function_bitwuzla!(mk_bv_ult, BITWUZLA_KIND_BV_ULT);
-    create_converter_binary_function_bitwuzla!(mk_bv_umod, BITWUZLA_KIND_BV_UREM);
+    create_converter_binary_function_bitwuzla!(mk_bv_urem, BITWUZLA_KIND_BV_UREM);
     create_converter_binary_function_bitwuzla!(mk_bv_xor, BITWUZLA_KIND_BV_XOR);
     create_converter_binary_function_bitwuzla!(mk_bv_mul, BITWUZLA_KIND_BV_MUL);
     create_converter_binary_function_bitwuzla!(mk_concat, BITWUZLA_KIND_BV_CONCAT);

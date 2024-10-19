@@ -746,12 +746,10 @@ impl RemoteWorker {
             RemoteState::Idle => {
                 let postponed_commands = { self.postponed_commands.read().unwrap() }.clone();
                 if !postponed_commands.is_empty() {
-                    dbg!("resend start!");
                     for command in postponed_commands.into_iter() {
                         self.resend_command(command).await?;
                     }
                     self.postponed_commands.write().unwrap().clear();
-                    dbg!("resend end!");
                 }
                 Ok(true)
             }

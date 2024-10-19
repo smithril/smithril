@@ -367,8 +367,11 @@ where
                         DuoOperationKind::BvUlt => {
                             self.try_get_bv_converter().unwrap().mk_bv_ult(&t1, &t2)
                         }
-                        DuoOperationKind::BvUmod => {
-                            self.try_get_bv_converter().unwrap().mk_bv_umod(&t1, &t2)
+                        DuoOperationKind::BvUrem => {
+                            self.try_get_bv_converter().unwrap().mk_bv_urem(&t1, &t2)
+                        }
+                        DuoOperationKind::BvSrem => {
+                            self.try_get_bv_converter().unwrap().mk_bv_srem(&t1, &t2)
                         }
                         DuoOperationKind::BvXor => {
                             self.try_get_bv_converter().unwrap().mk_bv_xor(&t1, &t2)
@@ -620,13 +623,14 @@ where
     define_converter_binary_function!(mk_bv_sle);
     define_converter_binary_function!(mk_bv_slt);
     define_converter_binary_function!(mk_bv_smod);
+    define_converter_binary_function!(mk_bv_srem);
     define_converter_binary_function!(mk_bv_sub);
     define_converter_binary_function!(mk_bv_udiv);
     define_converter_binary_function!(mk_bv_uge);
     define_converter_binary_function!(mk_bv_ugt);
     define_converter_binary_function!(mk_bv_ule);
     define_converter_binary_function!(mk_bv_ult);
-    define_converter_binary_function!(mk_bv_umod);
+    define_converter_binary_function!(mk_bv_urem);
     define_converter_binary_function!(mk_bv_xor);
     define_converter_binary_function!(mk_concat);
     fn mk_extract(&self, high: u64, low: u64, term: &T) -> T;
