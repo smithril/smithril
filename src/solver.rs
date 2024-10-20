@@ -7,18 +7,18 @@ use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::path::PathBuf;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard};
 use std::thread;
 use std::time::Duration;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
-use tokio::process::{Child, Command};
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
 use crate::converters::Converter;
 use crate::generalized::{
-    AsyncContext, AsyncFactory, AsyncResultSolver, AsyncSolver, Options, ResultFactory,
+    AsyncContext, AsyncFactory, ResultSolver, AsyncSolver, Options, ResultFactory,
     SolverResult,
 };
 use crate::term::Term;
@@ -52,7 +52,7 @@ impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         Ok(())
     }
 
-    async fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
+    fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
         let command_response = self.worker.new_context()?;
         let command_response = RemoteContext {
             label: command_response,
@@ -60,12 +60,12 @@ impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         Ok(command_response)
     }
 
-    async fn new_solver(
+    fn new_solver(
         &self,
         context: &RemoteContext,
         options: &Options,
     ) -> Result<Arc<RemoteSolver>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.new_solver(context.label, options).await?;
+        let command_response = self.worker.new_solver(context.label, options)?;
         let command_response = RemoteSolver {
             label: command_response,
             worker: self.worker.clone(),
@@ -76,21 +76,19 @@ impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         Ok(command_response)
     }
 
-    async fn delete_context(
+    fn delete_context(
         &self,
         context: RemoteContext,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.delete_context(context.label).await?;
+        self.worker.delete_context(context.label)?;
         Ok(())
     }
 
-    async fn delete_solver(
+    fn delete_solver(
         &self,
         solver: Arc<RemoteSolver>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker
-            .delete_solver(solver.context, solver.label)
-            .await?;
+        self.worker.delete_solver(solver.context, solver.label)?;
         Ok(())
     }
 }
@@ -169,47 +167,44 @@ impl fmt::Display for SolverError {
     }
 }
 
-impl AsyncResultSolver for RemoteSolver {
-    async fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.assert(self.label, term).await?;
+impl ResultSolver for RemoteSolver {
+    fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.assert(self.label, term)?;
         Ok(())
     }
 
-    async fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.reset(self.label).await?;
+    fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.reset(self.label)?;
         Ok(())
     }
 
-    async fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.interrupt(self.label).await?;
+    fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.interrupt(self.label)?;
         Ok(())
     }
 
-    async fn check_sat(&self) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.check_sat(self.label).await?;
+    fn check_sat(&self) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.check_sat(self.label)?;
         Ok(command_response)
     }
 
-    async fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.unsat_core(self.label).await?;
+    fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.unsat_core(self.label)?;
         Ok(command_response)
     }
 
-    async fn eval(
-        &self,
-        term: &Term,
-    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.eval(self.label, term).await?;
+    fn eval(&self, term: &Term) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.eval(self.label, term)?;
         Ok(command_response)
     }
 
-    async fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.push(self.label).await?;
+    fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.push(self.label)?;
         Ok(())
     }
 
-    async fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.pop(self.label, size).await?;
+    fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.pop(self.label, size)?;
         Ok(())
     }
 }
@@ -574,7 +569,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if !*self.is_alive.lock().unwrap() {
             return Ok(());
         }
@@ -696,7 +691,7 @@ impl RemoteWorker {
 
     pub fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         {
-            self.process.write().unwrap().start_kill()?;
+            self.process.write().unwrap().kill()?;
         }
         Ok(())
     }
@@ -767,7 +762,7 @@ impl RemoteWorker {
         Ok(command_response)
     }
 
-    pub async fn new_solver(
+    pub fn new_solver(
         &self,
         context: ContextLabel,
         options: &Options,
@@ -799,7 +794,7 @@ impl RemoteWorker {
         Ok(command_response)
     }
 
-    pub async fn delete_context(
+    pub fn delete_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -816,7 +811,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn delete_solver(
+    pub fn delete_solver(
         &self,
         context: ContextLabel,
         solver: SolverLabel,
@@ -839,7 +834,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn assert(
+    pub fn assert(
         &self,
         solver: SolverLabel,
         term: &Term,
@@ -856,7 +851,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn reset(
+    pub fn reset(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -872,7 +867,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn eval(
+    pub fn eval(
         &self,
         solver: SolverLabel,
         term: &Term,
@@ -887,7 +882,7 @@ impl RemoteWorker {
         }
     }
 
-    pub async fn unsat_core(
+    pub fn unsat_core(
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
@@ -901,7 +896,7 @@ impl RemoteWorker {
         }
     }
 
-    pub async fn interrupt(
+    pub fn interrupt(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -911,18 +906,18 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn check_sat(
+    pub fn check_sat(
         &self,
         solver: SolverLabel,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
         if !self.try_resend_postponed_commands()? {
-            self.restart().await?;
+            self.restart()?;
         }
         let command_response = self.communicator().check_sat(solver)?;
         Ok(command_response)
     }
 
-    pub async fn push(
+    pub fn push(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -938,7 +933,7 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub async fn pop(
+    pub fn pop(
         &self,
         solver: SolverLabel,
         size: u64,
@@ -998,13 +993,13 @@ impl RemoteSolver {
             let s = s.clone();
 
             tokio::spawn(async move {
-                let res = s.check_sat().await;
+                let res = s.check_sat();
                 let _ = tx_check_sat.send(res);
             });
         }
         select! {
             _  =  rx_cancell => {
-                s.interrupt().await?;
+                s.interrupt()?;
                 Ok((SolverResult::Unknown, id))
             }
             res = rx_check_sat => {
@@ -1034,7 +1029,7 @@ fn get_converters_dir() -> PathBuf {
 }
 
 impl SmithrilFactory {
-    pub async fn new(converters: Vec<Converter>) -> Self {
+    pub fn new(converters: Vec<Converter>) -> Self {
         let solver_path = get_solver_path("smithril-runner");
         let solver_path_string = solver_path.to_string_lossy().into_owned();
         let mut factories: Vec<RemoteFactory> = Default::default();
@@ -1075,7 +1070,7 @@ impl Hash for SmithrilSolver {
 }
 
 impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
-    async fn terminate(&self) {
+    fn terminate(&self) {
         for solver in self.factories.iter() {
             solver.terminate().unwrap();
         }
@@ -1089,7 +1084,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         }
         let mut contexts = Vec::new();
         for handler in handles {
-            contexts.push(handler.await.unwrap());
+            contexts.push(handler.unwrap());
         }
         Arc::new(SmithrilContext { contexts })
     }
@@ -1103,7 +1098,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 
@@ -1119,7 +1114,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         }
         let mut solvers = Vec::new();
         for handler in handles {
-            solvers.push(handler.await.unwrap());
+            solvers.push(handler.unwrap());
         }
         Arc::new(SmithrilSolver {
             solvers,
@@ -1139,7 +1134,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
             }
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 }
@@ -1152,7 +1147,7 @@ impl AsyncSolver for SmithrilSolver {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 
@@ -1163,7 +1158,7 @@ impl AsyncSolver for SmithrilSolver {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 
@@ -1174,7 +1169,7 @@ impl AsyncSolver for SmithrilSolver {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 
@@ -1205,13 +1200,13 @@ impl AsyncSolver for SmithrilSolver {
     async fn unsat_core(&self) -> Vec<Term> {
         let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
-        solver.unsat_core().await.unwrap()
+        solver.unsat_core().unwrap()
     }
 
     async fn eval(&self, term: &Term) -> Option<Term> {
         let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
-        solver.eval(term).await.unwrap()
+        solver.eval(term).unwrap()
     }
 
     async fn push(&self) {
@@ -1221,7 +1216,7 @@ impl AsyncSolver for SmithrilSolver {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 
@@ -1232,7 +1227,7 @@ impl AsyncSolver for SmithrilSolver {
             handles.push(handler);
         }
         for handler in handles {
-            handler.await.unwrap();
+            handler.unwrap();
         }
     }
 }
@@ -1265,7 +1260,7 @@ async fn smithril_working_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
+    let factory = SmithrilFactory::new(converters.clone());
     let context = factory.new_context().await;
     let solver = factory.new_solver(context, &Options::default()).await;
     solver.assert(&t).await;
@@ -1280,14 +1275,14 @@ async fn smithril_working_test() {
     assert_eq!(SolverResult::Unsat, status);
     solver.reset().await;
 
-    factory.terminate().await;
+    factory.terminate();
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smithril_unsat_core_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
+    let factory = SmithrilFactory::new(converters.clone());
     let context = factory.new_context().await;
     let mut options = Options::default();
     options.set_produce_unsat_core(true);
@@ -1301,14 +1296,14 @@ async fn smithril_unsat_core_test() {
     let unsat_core = solver.unsat_core().await;
     assert_eq!(unsat_core.len(), 1);
 
-    factory.terminate().await;
+    factory.terminate();
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
+    let factory = SmithrilFactory::new(converters.clone());
     let context = factory.new_context().await;
     let mut options = Options::default();
     options.set_external_timeout(Some(Duration::from_nanos(1)));
@@ -1320,5 +1315,5 @@ async fn smithril_timeout_test() {
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Unknown, status);
 
-    factory.terminate().await;
+    factory.terminate();
 }

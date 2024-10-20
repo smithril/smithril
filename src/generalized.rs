@@ -58,28 +58,20 @@ pub trait AsyncContext {}
 pub trait ResultFactory<C, SL>
 where
     C: AsyncContext,
-    SL: AsyncResultSolver,
+    SL: ResultSolver,
 {
-    fn terminate(
-        &self,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    fn new_context(
-        &self,
-    ) -> impl std::future::Future<Output = Result<C, Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn new_context(&self) -> Result<C, Box<dyn std::error::Error + Send + Sync>>;
     fn new_solver(
         &self,
         context: &C,
         options: &Options,
-    ) -> impl std::future::Future<Output = Result<Arc<SL>, Box<dyn std::error::Error + Send + Sync>>>
-           + Send;
-    fn delete_context(
-        &self,
-        context: C,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    ) -> Result<Arc<SL>, Box<dyn std::error::Error + Send + Sync>>;
+    fn delete_context(&self, context: C) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     fn delete_solver(
         &self,
         solver: Arc<SL>,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub trait AsyncFactory<C, SL>
@@ -87,7 +79,7 @@ where
     C: AsyncContext,
     SL: AsyncSolver,
 {
-    fn terminate(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn terminate(&self);
     fn new_context(&self) -> impl std::future::Future<Output = Arc<C>> + Send;
     fn new_solver(
         &self,
@@ -115,39 +107,15 @@ where
     fn pop(&self, size: u64);
 }
 
-pub trait AsyncResultSolver {
-    fn assert(
-        &self,
-        term: &Term,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
-    fn reset(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
-    fn interrupt(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
-    fn check_sat(
-        &self,
-    ) -> impl std::future::Future<
-        Output = Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>,
-    > + Send;
-    fn unsat_core(
-        &self,
-    ) -> impl std::future::Future<Output = Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>>
-           + Send;
-    fn eval(
-        &self,
-        term: &Term,
-    ) -> impl std::future::Future<
-        Output = Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>,
-    > + Send;
-    fn push(
-        &self,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
-    fn pop(
-        &self,
-        size: u64,
-    ) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+pub trait ResultSolver {
+    fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn check_sat(&self) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>;
+    fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>;
+    fn eval(&self, term: &Term) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>;
+    fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub trait AsyncSolver {
