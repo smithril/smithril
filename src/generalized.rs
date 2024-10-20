@@ -80,14 +80,10 @@ where
     SL: AsyncSolver,
 {
     fn terminate(&self);
-    fn new_context(&self) -> impl std::future::Future<Output = Arc<C>> + Send;
-    fn new_solver(
-        &self,
-        context: Arc<C>,
-        options: &Options,
-    ) -> impl std::future::Future<Output = Arc<SL>> + Send;
-    fn delete_context(&self, context: Arc<C>) -> impl std::future::Future<Output = ()> + Send;
-    fn delete_solver(&self, solver: Arc<SL>) -> impl std::future::Future<Output = ()> + Send;
+    fn new_context(&self) -> Arc<C>;
+    fn new_solver(&self, context: Arc<C>, options: &Options) -> Arc<SL>;
+    fn delete_context(&self, context: Arc<C>);
+    fn delete_solver(&self, solver: Arc<SL>);
 }
 
 pub trait GeneralSolver<S, T, O, C>
@@ -119,14 +115,14 @@ pub trait ResultSolver {
 }
 
 pub trait AsyncSolver {
-    fn assert(&self, term: &Term) -> impl std::future::Future<Output = ()> + Send;
-    fn reset(&self) -> impl std::future::Future<Output = ()> + Send;
-    fn interrupt(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn assert(&self, term: &Term);
+    fn reset(&self);
+    fn interrupt(&self);
     fn check_sat(&self) -> impl std::future::Future<Output = SolverResult> + Send;
-    fn unsat_core(&self) -> impl std::future::Future<Output = Vec<Term>> + Send;
-    fn eval(&self, term: &Term) -> impl std::future::Future<Output = Option<Term>> + Send;
-    fn push(&self) -> impl std::future::Future<Output = ()> + Send;
-    fn pop(&self, size: u64) -> impl std::future::Future<Output = ()> + Send;
+    fn unsat_core(&self) -> Vec<Term>;
+    fn eval(&self, term: &Term) -> Option<Term>;
+    fn push(&self);
+    fn pop(&self, size: u64);
 }
 
 macro_rules! define_converter_unary_function {

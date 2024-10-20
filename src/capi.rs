@@ -679,7 +679,7 @@ pub unsafe extern "C" fn smithril_new_options() -> SmithrilOptions {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_new_context() -> SmithrilContext {
-    let smithril_context = RUNTIME.block_on(FACTORY.write().unwrap().new_context());
+    let smithril_context = FACTORY.write().unwrap().new_context();
     CONTEXTS.write().unwrap().insert(smithril_context.clone());
     let context = Arc::into_raw(smithril_context);
     Arc::decrement_strong_count(context);
@@ -698,12 +698,10 @@ pub unsafe extern "C" fn smithril_new_solver(
     Arc::increment_strong_count(options);
     let smithril_options = Arc::from_raw(options);
     let options = smithril_options.options.read().unwrap();
-    let smithril_solver = RUNTIME.block_on(
-        FACTORY
-            .write()
-            .unwrap()
-            .new_solver(smithril_context, &options),
-    );
+    let smithril_solver = FACTORY
+        .write()
+        .unwrap()
+        .new_solver(smithril_context, &options);
     SOLVERS.write().unwrap().insert(smithril_solver.clone());
     let solver = Arc::into_raw(smithril_solver);
     Arc::decrement_strong_count(solver);
@@ -723,7 +721,7 @@ pub unsafe extern "C" fn smithril_reset(solver: SmithrilSolver) {
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    RUNTIME.block_on(smithril_solver.reset())
+    smithril_solver.reset()
 }
 
 #[no_mangle]
@@ -731,7 +729,7 @@ pub unsafe extern "C" fn smithril_push(solver: SmithrilSolver) {
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    RUNTIME.block_on(smithril_solver.push())
+    smithril_solver.push()
 }
 
 #[no_mangle]
@@ -739,7 +737,7 @@ pub unsafe extern "C" fn smithril_pop(solver: SmithrilSolver, size: u64) {
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    RUNTIME.block_on(smithril_solver.pop(size))
+    smithril_solver.pop(size)
 }
 
 #[no_mangle]
@@ -750,7 +748,7 @@ pub unsafe extern "C" fn smithril_assert(solver: SmithrilSolver, term: SmithrilT
     let term = term.0 as *const Term;
     Arc::increment_strong_count(term);
     let smithril_term = Arc::from_raw(term);
-    RUNTIME.block_on(smithril_solver.assert(&smithril_term))
+    smithril_solver.assert(&smithril_term)
 }
 
 #[no_mangle]
@@ -764,8 +762,8 @@ pub unsafe extern "C" fn smithril_eval(
     let term = term.0 as *const Term;
     Arc::increment_strong_count(term);
     let smithril_term = Arc::from_raw(term);
-    RUNTIME
-        .block_on(smithril_solver.eval(&smithril_term))
+    smithril_solver
+        .eval(&smithril_term)
         .map(|term| {
             let constant = term::try_constant_to_string(&term).unwrap();
             let constant = Arc::new(CString::new(constant).unwrap());
@@ -781,7 +779,7 @@ pub unsafe extern "C" fn smithril_unsat_core(solver: SmithrilSolver) -> Smithril
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    let unsat_core = RUNTIME.block_on(smithril_solver.unsat_core());
+    let unsat_core = smithril_solver.unsat_core();
     let unsat_core = Arc::new(unsat_core);
     *LAST_UNSAT_CORE.write().unwrap() = unsat_core.clone();
     let unsat_core = Arc::into_raw(unsat_core);
@@ -862,7 +860,7 @@ pub unsafe extern "C" fn smithril_delete_context(context: SmithrilContext) {
     TERMS.write().unwrap().remove(&smithril_context).unwrap();
     SORTS.write().unwrap().remove(&smithril_context).unwrap();
     CONTEXTS.write().unwrap().remove(&smithril_context);
-    RUNTIME.block_on(FACTORY.write().unwrap().delete_context(smithril_context));
+    FACTORY.write().unwrap().delete_context(smithril_context);
 }
 
 #[no_mangle]
@@ -871,5 +869,5 @@ pub unsafe extern "C" fn smithril_delete_solver(solver: SmithrilSolver) {
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     SOLVERS.write().unwrap().remove(&smithril_solver);
-    RUNTIME.block_on(FACTORY.write().unwrap().delete_solver(smithril_solver));
+    FACTORY.write().unwrap().delete_solver(smithril_solver);
 }

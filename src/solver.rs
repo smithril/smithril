@@ -18,8 +18,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::converters::Converter;
 use crate::generalized::{
-    AsyncContext, AsyncFactory, ResultSolver, AsyncSolver, Options, ResultFactory,
-    SolverResult,
+    AsyncContext, AsyncFactory, AsyncSolver, Options, ResultFactory, ResultSolver, SolverResult,
 };
 use crate::term::Term;
 
@@ -1076,45 +1075,26 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         }
     }
 
-    async fn new_context(&self) -> Arc<SmithrilContext> {
-        let mut handles = Vec::new();
-        for factory in self.factories.iter() {
-            let handler = factory.new_context();
-            handles.push(handler);
-        }
+    fn new_context(&self) -> Arc<SmithrilContext> {
         let mut contexts = Vec::new();
-        for handler in handles {
-            contexts.push(handler.unwrap());
+        for factory in self.factories.iter() {
+            contexts.push(factory.new_context().unwrap());
         }
         Arc::new(SmithrilContext { contexts })
     }
 
-    async fn delete_context(&self, context: Arc<SmithrilContext>) {
+    fn delete_context(&self, context: Arc<SmithrilContext>) {
         assert_eq!(Arc::strong_count(&context), 1);
         let context = Arc::try_unwrap(context).unwrap();
-        let mut handles = Vec::new();
         for (factory, context) in self.factories.iter().zip(context.contexts.into_iter()) {
-            let handler = factory.delete_context(context);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            factory.delete_context(context).unwrap();
         }
     }
 
-    async fn new_solver(
-        &self,
-        context: Arc<SmithrilContext>,
-        options: &Options,
-    ) -> Arc<SmithrilSolver> {
-        let mut handles = Vec::new();
-        for (factory, context) in self.factories.iter().zip(context.contexts.iter()) {
-            let handler = factory.new_solver(context, options);
-            handles.push(handler);
-        }
+    fn new_solver(&self, context: Arc<SmithrilContext>, options: &Options) -> Arc<SmithrilSolver> {
         let mut solvers = Vec::new();
-        for handler in handles {
-            solvers.push(handler.unwrap());
+        for (factory, context) in self.factories.iter().zip(context.contexts.iter()) {
+            solvers.push(factory.new_solver(context, options).unwrap());
         }
         Arc::new(SmithrilSolver {
             solvers,
@@ -1122,54 +1102,32 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         })
     }
 
-    async fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
+    fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
         assert_eq!(Arc::strong_count(&solver), 1);
-        let mut handles = Vec::new();
-        {
-            let solver = Arc::try_unwrap(solver).ok().unwrap();
-            let solvers = solver.solvers;
-            for (factory, solver) in self.factories.iter().zip(solvers.into_iter()) {
-                let handler = factory.delete_solver(solver);
-                handles.push(handler);
-            }
-        }
-        for handler in handles {
-            handler.unwrap();
+        let solver = Arc::try_unwrap(solver).ok().unwrap();
+        let solvers = solver.solvers;
+        for (factory, solver) in self.factories.iter().zip(solvers.into_iter()) {
+            factory.delete_solver(solver).unwrap()
         }
     }
 }
 
 impl AsyncSolver for SmithrilSolver {
-    async fn assert(&self, term: &Term) {
-        let mut handles = Vec::new();
+    fn assert(&self, term: &Term) {
         for solver in self.solvers.iter() {
-            let handler = solver.assert(term);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            solver.assert(term).unwrap();
         }
     }
 
-    async fn reset(&self) {
-        let mut handles = Vec::new();
+    fn reset(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.reset();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            solver.reset().unwrap();
         }
     }
 
-    async fn interrupt(&self) {
-        let mut handles = Vec::new();
+    fn interrupt(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.interrupt();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            solver.interrupt().unwrap();
         }
     }
 
@@ -1197,37 +1155,27 @@ impl AsyncSolver for SmithrilSolver {
         result
     }
 
-    async fn unsat_core(&self) -> Vec<Term> {
+    fn unsat_core(&self) -> Vec<Term> {
         let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
         solver.unsat_core().unwrap()
     }
 
-    async fn eval(&self, term: &Term) -> Option<Term> {
+    fn eval(&self, term: &Term) -> Option<Term> {
         let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
         solver.eval(term).unwrap()
     }
 
-    async fn push(&self) {
-        let mut handles = Vec::new();
+    fn push(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.push();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            solver.push().unwrap();
         }
     }
 
-    async fn pop(&self, size: u64) {
-        let mut handles = Vec::new();
+    fn pop(&self, size: u64) {
         for solver in self.solvers.iter() {
-            let handler = solver.pop(size);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.unwrap();
+            solver.pop(size).unwrap();
         }
     }
 }
@@ -1261,19 +1209,19 @@ async fn smithril_working_test() {
     let t = sat_works("");
 
     let factory = SmithrilFactory::new(converters.clone());
-    let context = factory.new_context().await;
-    let solver = factory.new_solver(context, &Options::default()).await;
-    solver.assert(&t).await;
+    let context = factory.new_context();
+    let solver = factory.new_solver(context, &Options::default());
+    solver.assert(&t);
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Sat, status);
-    solver.reset().await;
+    solver.reset();
 
     let t = unsat_works();
 
-    solver.assert(&t).await;
+    solver.assert(&t);
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Unsat, status);
-    solver.reset().await;
+    solver.reset();
 
     factory.terminate();
 }
@@ -1283,17 +1231,17 @@ async fn smithril_unsat_core_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
     let factory = SmithrilFactory::new(converters.clone());
-    let context = factory.new_context().await;
+    let context = factory.new_context();
     let mut options = Options::default();
     options.set_produce_unsat_core(true);
-    let solver = factory.new_solver(context, &options).await;
+    let solver = factory.new_solver(context, &options);
 
     let t = unsat_works();
 
-    solver.assert(&t).await;
+    solver.assert(&t);
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Unsat, status);
-    let unsat_core = solver.unsat_core().await;
+    let unsat_core = solver.unsat_core();
     assert_eq!(unsat_core.len(), 1);
 
     factory.terminate();
@@ -1304,13 +1252,13 @@ async fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
     let factory = SmithrilFactory::new(converters.clone());
-    let context = factory.new_context().await;
+    let context = factory.new_context();
     let mut options = Options::default();
     options.set_external_timeout(Some(Duration::from_nanos(1)));
-    let solver = factory.new_solver(context, &options).await;
+    let solver = factory.new_solver(context, &options);
     for i in 0..1000 {
         let t = sat_works(&i.to_string());
-        solver.assert(&t).await;
+        solver.assert(&t);
     }
     let status = solver.check_sat().await;
     assert_eq!(SolverResult::Unknown, status);
