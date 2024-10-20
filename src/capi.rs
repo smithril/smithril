@@ -34,12 +34,10 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 });
 
 static FACTORY: Lazy<RwLock<solver::SmithrilFactory>> = Lazy::new(|| {
-    RwLock::new({
-        RUNTIME.block_on(solver::SmithrilFactory::new(vec![
-            Converter::Z3,
-            Converter::Bitwuzla,
-        ]))
-    })
+    RwLock::new(solver::SmithrilFactory::new(vec![
+        Converter::Z3,
+        Converter::Bitwuzla,
+    ]))
 });
 
 type Terms = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Term>>>;
