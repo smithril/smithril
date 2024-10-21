@@ -118,7 +118,7 @@ pub trait AsyncSolver {
     fn assert(&self, term: &Term);
     fn reset(&self);
     fn interrupt(&self);
-    fn check_sat(&self) -> impl std::future::Future<Output = SolverResult> + Send;
+    fn check_sat(&self) -> SolverResult;
     fn unsat_core(&self) -> Vec<Term>;
     fn eval(&self, term: &Term) -> Option<Term>;
     fn push(&self);

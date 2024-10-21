@@ -1,6 +1,4 @@
-use futures::channel::oneshot;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -13,8 +11,6 @@ use std::thread;
 use std::time::Duration;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
-use tokio::select;
-use tokio_util::sync::CancellationToken;
 
 use crate::converters::Converter;
 use crate::generalized::{
@@ -31,7 +27,8 @@ impl RemoteFactory {
         solver_path: &str,
         converter: &Converter,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let context_id = 0u64;
+        let var_name = 0u64;
+        let context_id = var_name;
         let solver_id = 0u64;
 
         Ok(RemoteFactory {
@@ -950,62 +947,68 @@ impl RemoteWorker {
     }
 }
 
+#[derive(Clone)]
+pub enum InterruptionType {
+    Cancell,
+    Result(SolverResult, usize),
+}
+
 impl RemoteSolver {
-    pub async fn cancellabel_check_sat(
+    pub fn cancellabel_check_sat(
         s: Arc<Self>,
-        token: CancellationToken,
+        token: Receiver<()>,
+        tx_check_sat: Sender<InterruptionType>,
         id: usize,
-    ) -> Result<(SolverResult, usize), Box<dyn std::error::Error + Send + Sync>> {
-        let (tx_cancell, rx_cancell) = oneshot::channel();
+    ) {
+        let (tx_cancell, rx_cancell) = unbounded();
 
         {
             let s = s.clone();
-            tokio::spawn(async move {
-                let (tx_token, rx_token) = oneshot::channel();
-                tokio::spawn(async move {
-                    token.cancelled().await;
-                    let _ = tx_token.send(());
-                });
+            thread::spawn(move || {
                 if let Some(timeout) = s.timeout {
-                    let (tx_timeout, rx_timeout) = oneshot::channel();
-                    tokio::spawn(async move {
+                    let (tx_timeout1, rx_timeout) = unbounded();
+                    let tx_timeout2 = tx_timeout1.clone();
+                    thread::spawn(move || {
                         thread::sleep(timeout);
-                        let _ = tx_timeout.send(());
+                        let _ = tx_timeout1.send(());
                     });
-                    select! {
-                        _  = rx_timeout => {
-                            let _ = tx_cancell.send(());
-                        }
-                        _ = rx_token => {
-                            let _ = tx_cancell.send(());
-                        }
-                    }
+                    thread::spawn(move || {
+                        token.recv().unwrap();
+                        let _ = tx_timeout2.send(());
+                    });
+                    rx_timeout.recv().unwrap();
+                    let _ = tx_cancell.send(());
                 } else {
-                    rx_token.await.unwrap();
+                    token.recv().unwrap();
                     let _ = tx_cancell.send(());
                 }
             });
         }
 
-        let (tx_check_sat, rx_check_sat) = oneshot::channel();
+        // let (tx_check_sat1, rx_check_sat) = unbounded();
+        let tx_check_sat2 = tx_check_sat.clone();
         {
             let s = s.clone();
 
-            tokio::spawn(async move {
-                let res = s.check_sat();
-                let _ = tx_check_sat.send(res);
+            thread::spawn(move || {
+                let res = s.check_sat().ok().unwrap();
+                let _ = tx_check_sat.send(InterruptionType::Result(res, id));
+            });
+
+            thread::spawn(move || {
+                rx_cancell.recv().unwrap();
+                let _ = tx_check_sat2.send(InterruptionType::Cancell);
             });
         }
-        select! {
-            _  =  rx_cancell => {
-                s.interrupt()?;
-                Ok((SolverResult::Unknown, id))
-            }
-            res = rx_check_sat => {
-                let res = res??;
-                Ok((res, id))
-            }
-        }
+        // (rx_check_sat, id)
+
+        // match rx_check_sat.recv().unwrap() {
+        //     InterruptionType::Cancell => {
+        //         s.interrupt()?;
+        //         Ok((SolverResult::Unknown, id))
+        //     }
+        //     InterruptionType::Result(res) => Ok((res, id)),
+        // }
     }
 }
 
@@ -1131,27 +1134,28 @@ impl AsyncSolver for SmithrilSolver {
         }
     }
 
-    async fn check_sat(&self) -> SolverResult {
-        let mut handles = Vec::new();
-        let token = CancellationToken::new();
+    fn check_sat(&self) -> SolverResult {
+        let (cancell, token) = unbounded();
+        let (s_check_sat, r_check_sat) = unbounded();
         for (count, solver) in self.solvers.iter().enumerate() {
-            let handler = RemoteSolver::cancellabel_check_sat(solver.clone(), token.clone(), count);
-            handles.push(handler);
+            RemoteSolver::cancellabel_check_sat(
+                solver.clone(),
+                token.clone(),
+                s_check_sat.clone(),
+                count,
+            );
         }
-        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
 
         let mut result = SolverResult::Unknown;
-        while let Some(res) = futs.next().await {
-            let (res, count) = res.unwrap();
+        while let InterruptionType::Result(res, count) = r_check_sat.recv().unwrap() {
             if SolverResult::Unknown == res {
                 continue;
             }
-            token.cancel();
+            cancell.send(()).unwrap();
             *self.last_fastest_solver_index.write().unwrap() = count;
             result = res;
             break;
         }
-        while (futs.next().await).is_some() {}
         result
     }
 
@@ -1203,8 +1207,8 @@ fn unsat_works() -> Term {
     term::mk_and(&eq, &n)
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_working_test() {
+#[test]
+fn smithril_working_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
@@ -1212,22 +1216,22 @@ async fn smithril_working_test() {
     let context = factory.new_context();
     let solver = factory.new_solver(context, &Options::default());
     solver.assert(&t);
-    let status = solver.check_sat().await;
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Sat, status);
     solver.reset();
 
     let t = unsat_works();
 
     solver.assert(&t);
-    let status = solver.check_sat().await;
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unsat, status);
     solver.reset();
 
     factory.terminate();
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_unsat_core_test() {
+#[test]
+fn smithril_unsat_core_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
     let factory = SmithrilFactory::new(converters.clone());
@@ -1239,7 +1243,7 @@ async fn smithril_unsat_core_test() {
     let t = unsat_works();
 
     solver.assert(&t);
-    let status = solver.check_sat().await;
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unsat, status);
     let unsat_core = solver.unsat_core();
     assert_eq!(unsat_core.len(), 1);
@@ -1247,8 +1251,8 @@ async fn smithril_unsat_core_test() {
     factory.terminate();
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_timeout_test() {
+#[test]
+fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
     let factory = SmithrilFactory::new(converters.clone());
@@ -1260,7 +1264,7 @@ async fn smithril_timeout_test() {
         let t = sat_works(&i.to_string());
         solver.assert(&t);
     }
-    let status = solver.check_sat().await;
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unknown, status);
 
     factory.terminate();

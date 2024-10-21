@@ -23,15 +23,6 @@ pub use crate::term::RoundingMode;
 
 use crate::converters::Converter;
 use once_cell::sync::Lazy;
-use tokio::runtime::{self, Runtime};
-
-static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
-    runtime::Builder::new_multi_thread()
-        .worker_threads(4)
-        .enable_io()
-        .build()
-        .unwrap()
-});
 
 static FACTORY: Lazy<RwLock<solver::SmithrilFactory>> = Lazy::new(|| {
     RwLock::new(solver::SmithrilFactory::new(vec![
@@ -713,7 +704,7 @@ pub unsafe extern "C" fn smithril_check_sat(solver: SmithrilSolver) -> SolverRes
     let solver = solver.0 as *const solver::SmithrilSolver;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
-    RUNTIME.block_on(smithril_solver.check_sat())
+    smithril_solver.check_sat()
 }
 
 #[no_mangle]
