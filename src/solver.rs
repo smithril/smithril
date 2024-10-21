@@ -973,19 +973,18 @@ impl RemoteSolver {
                         let _ = tx_timeout1.send(());
                     });
                     thread::spawn(move || {
-                        token.recv().unwrap();
+                        let _ = token.recv();
                         let _ = tx_timeout2.send(());
                     });
-                    rx_timeout.recv().unwrap();
+                    let _ = rx_timeout.recv();
                     let _ = tx_cancell.send(());
                 } else {
-                    token.recv().unwrap();
+                    let _ = token.recv();
                     let _ = tx_cancell.send(());
                 }
             });
         }
 
-        // let (tx_check_sat1, rx_check_sat) = unbounded();
         let tx_check_sat2 = tx_check_sat.clone();
         {
             let s = s.clone();
@@ -996,19 +995,10 @@ impl RemoteSolver {
             });
 
             thread::spawn(move || {
-                rx_cancell.recv().unwrap();
+                let _ = rx_cancell.recv().unwrap();
                 let _ = tx_check_sat2.send(InterruptionType::Cancell);
             });
         }
-        // (rx_check_sat, id)
-
-        // match rx_check_sat.recv().unwrap() {
-        //     InterruptionType::Cancell => {
-        //         s.interrupt()?;
-        //         Ok((SolverResult::Unknown, id))
-        //     }
-        //     InterruptionType::Result(res) => Ok((res, id)),
-        // }
     }
 }
 
