@@ -24,12 +24,8 @@ pub use crate::term::RoundingMode;
 use crate::converters::Converter;
 use once_cell::sync::Lazy;
 
-static FACTORY: Lazy<RwLock<solver::SmithrilFactory>> = Lazy::new(|| {
-    RwLock::new(solver::SmithrilFactory::new(vec![
-        Converter::Z3,
-        Converter::Bitwuzla,
-    ]))
-});
+static FACTORY: Lazy<solver::SmithrilFactory> =
+    Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Z3, Converter::Bitwuzla]));
 
 type Terms = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Term>>>;
 type Sorts = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Sort>>>;
@@ -670,7 +666,7 @@ pub unsafe extern "C" fn smithril_new_options() -> SmithrilOptions {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_new_context() -> SmithrilContext {
-    let smithril_context = FACTORY.write().unwrap().new_context();
+    let smithril_context = FACTORY.new_context();
     CONTEXTS.write().unwrap().insert(smithril_context.clone());
     let context = Arc::into_raw(smithril_context);
     Arc::decrement_strong_count(context);
@@ -689,10 +685,7 @@ pub unsafe extern "C" fn smithril_new_solver(
     Arc::increment_strong_count(options);
     let smithril_options = Arc::from_raw(options);
     let options = smithril_options.options.read().unwrap();
-    let smithril_solver = FACTORY
-        .write()
-        .unwrap()
-        .new_solver(smithril_context, &options);
+    let smithril_solver = FACTORY.new_solver(smithril_context, &options);
     SOLVERS.write().unwrap().insert(smithril_solver.clone());
     let solver = Arc::into_raw(smithril_solver);
     Arc::decrement_strong_count(solver);
@@ -851,7 +844,7 @@ pub unsafe extern "C" fn smithril_delete_context(context: SmithrilContext) {
     TERMS.write().unwrap().remove(&smithril_context).unwrap();
     SORTS.write().unwrap().remove(&smithril_context).unwrap();
     CONTEXTS.write().unwrap().remove(&smithril_context);
-    FACTORY.write().unwrap().delete_context(smithril_context);
+    FACTORY.delete_context(smithril_context);
 }
 
 #[no_mangle]
@@ -860,5 +853,5 @@ pub unsafe extern "C" fn smithril_delete_solver(solver: SmithrilSolver) {
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     SOLVERS.write().unwrap().remove(&smithril_solver);
-    FACTORY.write().unwrap().delete_solver(smithril_solver);
+    FACTORY.delete_solver(smithril_solver);
 }
