@@ -996,7 +996,7 @@ impl RemoteSolver {
             });
 
             thread::spawn(move || {
-                let _ = rx_cancell.recv().unwrap();
+                let _ = rx_cancell.recv();
                 let _ = tx_check_sat2.send(InterruptionType::Cancell);
             });
         }
