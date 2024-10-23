@@ -119,10 +119,13 @@ fn start<
     {
         let interrupters = interrupters.clone();
         thread::spawn(move || loop {
-            let solver_label = remote_commander.interrupt_receiver.recv().unwrap();
-            let interrupters = interrupters.read().unwrap();
-            if let Some(interrupter) = interrupters.get(&solver_label) {
-                interrupter.interrupt();
+            if let Ok(solver_label) = remote_commander.interrupt_receiver.recv() {
+                let interrupters = interrupters.read().unwrap();
+                if let Some(interrupter) = interrupters.get(&solver_label) {
+                    interrupter.interrupt();
+                }
+            } else {
+                break;
             }
         });
     }
@@ -130,9 +133,12 @@ fn start<
     {
         let state = state.clone();
         thread::spawn(move || loop {
-            remote_commander.check_state_receiver.recv().unwrap();
-            let state = *state.read().unwrap();
-            remote_commander.state_sender.send(state).unwrap();
+            if let Ok(()) = remote_commander.check_state_receiver.recv() {
+                let state = *state.read().unwrap();
+                remote_commander.state_sender.send(state).unwrap();
+            } else {
+                break;
+            }
         });
     }
 

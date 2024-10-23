@@ -990,8 +990,9 @@ impl RemoteSolver {
             let s = s.clone();
 
             thread::spawn(move || {
-                let res = s.check_sat().ok().unwrap();
-                let _ = tx_check_sat.send(InterruptionType::Result(res, id));
+                if let Ok(res) = s.check_sat() {
+                    let _ = tx_check_sat.send(InterruptionType::Result(res, id));
+                }
             });
 
             thread::spawn(move || {
