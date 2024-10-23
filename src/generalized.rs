@@ -60,7 +60,7 @@ where
     C: AsyncContext,
     SL: ResultSolver,
 {
-    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn terminate(&self);
     fn new_context(&self) -> Result<C, Box<dyn std::error::Error + Send + Sync>>;
     fn new_solver(
         &self,
