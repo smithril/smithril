@@ -60,7 +60,6 @@ where
     C: AsyncContext,
     SL: ResultSolver,
 {
-    fn terminate(&self);
     fn new_context(&self) -> Result<C, Box<dyn std::error::Error + Send + Sync>>;
     fn new_solver(
         &self,
@@ -79,7 +78,6 @@ where
     C: AsyncContext,
     SL: AsyncSolver,
 {
-    fn terminate(&self);
     fn new_context(&self) -> Arc<C>;
     fn new_solver(&self, context: Arc<C>, options: &Options) -> Arc<SL>;
     fn delete_context(&self, context: Arc<C>);
