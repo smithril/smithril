@@ -1,25 +1,20 @@
-use futures::channel::oneshot;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::process::{Child, Command};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
-use tokio::process::{Child, Command};
-use tokio::select;
-use tokio_util::sync::CancellationToken;
 
 use crate::converters::Converter;
 use crate::generalized::{
-    AsyncContext, AsyncFactory, AsyncResultFactory, AsyncResultSolver, AsyncSolver, Options,
-    SolverResult,
+    AsyncContext, AsyncFactory, AsyncSolver, Options, ResultFactory, ResultSolver, SolverResult,
 };
 use crate::term::Term;
 
@@ -28,7 +23,7 @@ pub struct RemoteFactory {
 }
 
 impl RemoteFactory {
-    pub async fn new(
+    pub fn new(
         solver_path: &str,
         converter: &Converter,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
@@ -36,33 +31,35 @@ impl RemoteFactory {
         let solver_id = 0u64;
 
         Ok(RemoteFactory {
-            worker: Arc::new(
-                RemoteWorker::new(solver_path, converter, context_id, solver_id).await?,
-            ),
+            worker: Arc::new(RemoteWorker::new(
+                solver_path,
+                converter,
+                context_id,
+                solver_id,
+            )?),
         })
+    }
+
+    fn terminate(&self) {
+        self.worker.terminate();
     }
 }
 
-impl AsyncResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
-    async fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.terminate().await?;
-        Ok(())
-    }
-
-    async fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.new_context().await?;
+impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
+    fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.new_context()?;
         let command_response = RemoteContext {
             label: command_response,
         };
         Ok(command_response)
     }
 
-    async fn new_solver(
+    fn new_solver(
         &self,
         context: &RemoteContext,
         options: &Options,
     ) -> Result<Arc<RemoteSolver>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.new_solver(context.label, options).await?;
+        let command_response = self.worker.new_solver(context.label, options)?;
         let command_response = RemoteSolver {
             label: command_response,
             worker: self.worker.clone(),
@@ -73,21 +70,19 @@ impl AsyncResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         Ok(command_response)
     }
 
-    async fn delete_context(
+    fn delete_context(
         &self,
         context: RemoteContext,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.delete_context(context.label).await?;
+        self.worker.delete_context(context.label)?;
         Ok(())
     }
 
-    async fn delete_solver(
+    fn delete_solver(
         &self,
         solver: Arc<RemoteSolver>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker
-            .delete_solver(solver.context, solver.label)
-            .await?;
+        self.worker.delete_solver(solver.context, solver.label)?;
         Ok(())
     }
 }
@@ -166,52 +161,55 @@ impl fmt::Display for SolverError {
     }
 }
 
-impl AsyncResultSolver for RemoteSolver {
-    async fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.assert(self.label, term).await?;
+impl ResultSolver for RemoteSolver {
+    fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.assert(self.label, term)?;
         Ok(())
     }
 
-    async fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.reset(self.label).await?;
+    fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.reset(self.label)?;
         Ok(())
     }
 
-    async fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.interrupt(self.label).await?;
+    fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.interrupt(self.label)?;
         Ok(())
     }
 
-    async fn check_sat(&self) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.check_sat(self.label).await?;
-        Ok(command_response)
-    }
-
-    async fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.unsat_core(self.label).await?;
-        Ok(command_response)
-    }
-
-    async fn eval(
+    fn receive_check_sat(
         &self,
-        term: &Term,
-    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        let command_response = self.worker.eval(self.label, term).await?;
+        counter: u64,
+    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.receive_check_sat(counter)?;
         Ok(command_response)
     }
 
-    async fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.push(self.label).await?;
+    fn send_check_sat(&self) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.send_check_sat(self.label)?;
+        Ok(command_response)
+    }
+
+    fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.unsat_core(self.label)?;
+        Ok(command_response)
+    }
+
+    fn eval(&self, term: &Term) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.worker.eval(self.label, term)?;
+        Ok(command_response)
+    }
+
+    fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.push(self.label)?;
         Ok(())
     }
 
-    async fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.worker.pop(self.label, size).await?;
+    fn pop(&self, size: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.worker.pop(self.label, size)?;
         Ok(())
     }
 }
-
-impl RemoteSolver {}
 
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub struct RemoteContext {
@@ -224,18 +222,16 @@ impl AsyncContext for RemoteContext {}
 pub struct RemoteWorker {
     solver_path: String,
     converter: Converter,
-    context_id: RwLock<u64>,
-    solver_id: RwLock<u64>,
-    process: RwLock<Child>,
-    count_communication: Mutex<u64>,
-    is_alive: Mutex<bool>,
-    in_resend: Mutex<bool>,
-    active_contexts: RwLock<HashSet<ContextLabel>>,
-    active_solvers: RwLock<HashSet<(ContextLabel, SolverLabel)>>,
-    solver_commands: RwLock<HashMap<SolverLabel, Vec<RemoteSolverCommand>>>,
-    postponed_commands: RwLock<Vec<RemoteCommand>>,
-    solver_options: RwLock<HashMap<SolverLabel, Options>>,
-    communicator: tokio::sync::RwLock<RemoteWorkerLockingCommunicator>,
+    context_id: Mutex<u64>,
+    solver_id: Mutex<u64>,
+    process: Mutex<Child>,
+    state: Mutex<(RemoteState, u64)>,
+    active_contexts: Mutex<HashSet<ContextLabel>>,
+    active_solvers: Mutex<HashSet<(ContextLabel, SolverLabel)>>,
+    solver_commands: Mutex<HashMap<SolverLabel, Vec<RemoteSolverCommand>>>,
+    postponed_commands: Mutex<Vec<RemoteCommand>>,
+    solver_options: Mutex<HashMap<SolverLabel, Options>>,
+    communicator: Mutex<Arc<RemoteWorkerLockingCommunicator>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -256,14 +252,12 @@ pub struct RemoteWorkerCommunicator {
 pub struct RemoteWorkerLockingCommunicator {
     command_sender: Mutex<IpcSender<RemoteCommand>>,
     interrupt_sender: Mutex<IpcSender<SolverLabel>>,
-    check_state_sender: Mutex<IpcSender<()>>,
-    state_receiver: Mutex<IpcReceiver<RemoteState>>,
     new_solver_receiver: Mutex<IpcReceiver<SolverLabel>>,
     new_context_receiver: Mutex<IpcReceiver<ContextLabel>>,
     solver_result_receiver: Mutex<IpcReceiver<SolverResult>>,
     confirmation_receiver: Mutex<IpcReceiver<()>>,
-    pub eval_receiver: Mutex<IpcReceiver<Option<Term>>>,
-    pub unsat_core_receiver: Mutex<IpcReceiver<Vec<Term>>>,
+    eval_receiver: Mutex<IpcReceiver<Option<Term>>>,
+    unsat_core_receiver: Mutex<IpcReceiver<Vec<Term>>>,
 }
 
 impl RemoteWorkerLockingCommunicator {
@@ -271,8 +265,6 @@ impl RemoteWorkerLockingCommunicator {
         Self {
             command_sender: Mutex::new(communicator.command_sender),
             interrupt_sender: Mutex::new(communicator.interrupt_sender),
-            check_state_sender: Mutex::new(communicator.check_state_sender),
-            state_receiver: Mutex::new(communicator.state_receiver),
             new_solver_receiver: Mutex::new(communicator.new_solver_receiver),
             new_context_receiver: Mutex::new(communicator.new_context_receiver),
             solver_result_receiver: Mutex::new(communicator.solver_result_receiver),
@@ -282,7 +274,7 @@ impl RemoteWorkerLockingCommunicator {
         }
     }
 
-    async fn send_factory_command(
+    fn send_factory_command(
         &self,
         command: RemoteFactoryCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -293,7 +285,7 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    async fn send_solver_command(
+    fn send_solver_command(
         &self,
         command: RemoteSolverCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -304,37 +296,32 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    pub async fn new_context(
-        &self,
-    ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::NewContext())
-            .await?;
+    pub fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::NewContext())?;
         let command_response = self.new_context_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn new_solver(
+    pub fn new_solver(
         &self,
         context: ContextLabel,
         options: &Options,
     ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::NewSolver(context, options.clone()))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::NewSolver(context, options.clone()))?;
         let command_response = self.new_solver_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn restore_context(
+    pub fn restore_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::RestoreContext(context))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::RestoreContext(context))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn restore_solver(
+    pub fn restore_solver(
         &self,
         context: ContextLabel,
         solver: SolverLabel,
@@ -344,54 +331,51 @@ impl RemoteWorkerLockingCommunicator {
             context,
             solver,
             options.clone(),
-        ))
-        .await?;
+        ))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn delete_context(
+    pub fn delete_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::DeleteContext(context))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::DeleteContext(context))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn delete_solver(
+    pub fn delete_solver(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.send_factory_command(RemoteFactoryCommand::DeleteSolver(solver))
-            .await?;
+        self.send_factory_command(RemoteFactoryCommand::DeleteSolver(solver))?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn assert(
+    pub fn assert(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Assert(solver, term.clone());
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn reset(
+    pub fn reset(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Reset(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn interrupt(
+    pub fn interrupt(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -399,64 +383,60 @@ impl RemoteWorkerLockingCommunicator {
         Ok(())
     }
 
-    pub async fn check_sat(
+    pub fn send_check_sat(
         &self,
         solver: SolverLabel,
-    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::CheckSat(solver);
-        self.send_solver_command(command).await?;
-        let command_response = self.solver_result_receiver.lock().unwrap().recv()?;
+        self.send_solver_command(command)?;
+        Ok(())
+    }
+
+    pub fn try_receive_check_sat(
+        &self,
+    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.solver_result_receiver.lock().unwrap().try_recv()?;
         Ok(command_response)
     }
 
-    pub async fn eval(
+    pub fn eval(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Eval(solver, term.clone());
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         let command_response = self.eval_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn unsat_core(
+    pub fn unsat_core(
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::UnsatCore(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         let command_response = self.unsat_core_receiver.lock().unwrap().recv()?;
         Ok(command_response)
     }
 
-    pub async fn check_state(
-        &self,
-    ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
-        let state = {
-            self.check_state_sender.lock().unwrap().send(())?;
-            self.state_receiver.lock().unwrap().recv()?
-        };
-        Ok(state)
-    }
-
-    pub async fn push(
+    pub fn push(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Push(solver);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
 
-    pub async fn pop(
+    pub fn pop(
         &self,
         solver: SolverLabel,
         size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Pop(solver, size);
-        self.send_solver_command(command).await?;
+        self.send_solver_command(command)?;
         self.confirmation_receiver.lock().unwrap().recv()?;
         Ok(())
     }
@@ -473,24 +453,23 @@ impl Display for WorkerError {
 impl Error for WorkerError {}
 
 impl RemoteWorker {
-    pub async fn new(
+    pub fn new(
         solver_path: &str,
         converter: &Converter,
         context_id: u64,
         solver_id: u64,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let (process, communicator) =
-            RemoteWorker::start_process(converter, context_id, solver_id, solver_path).await?;
-        let process = RwLock::new(process);
+            RemoteWorker::start_process(converter, context_id, solver_id, solver_path)?;
+        let process = Mutex::new(process);
         let communicator = RemoteWorkerLockingCommunicator::new(communicator);
-        let communicator = tokio::sync::RwLock::new(communicator);
+        let communicator = Arc::new(communicator);
+        let communicator = Mutex::new(communicator);
         let solver_path = solver_path.to_string();
         let converter = converter.clone();
-        let context_id = RwLock::new(context_id);
-        let solver_id = RwLock::new(solver_id);
-        let count_ready = Mutex::new(0);
-        let is_alive = Mutex::new(true);
-        let in_resend = Mutex::new(false);
+        let context_id = Mutex::new(context_id);
+        let solver_id = Mutex::new(solver_id);
+        let check_sat = Mutex::new((RemoteState::Idle, 0u64));
 
         Ok(RemoteWorker {
             process,
@@ -504,13 +483,11 @@ impl RemoteWorker {
             converter,
             context_id,
             solver_id,
-            count_communication: count_ready,
-            is_alive,
-            in_resend,
+            state: check_sat,
         })
     }
 
-    async fn start_process(
+    fn start_process(
         converter: &Converter,
         context_id: u64,
         solver_id: u64,
@@ -528,88 +505,78 @@ impl RemoteWorker {
         Ok((process, communicator))
     }
 
-    async fn resend_command(
+    fn resend_command(
         &self,
         command: RemoteCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match command {
             RemoteCommand::Solver(command) => match command {
                 RemoteSolverCommand::Assert(solver, term) => {
-                    self.communicator().await.assert(solver, &term).await?;
+                    self.communicator().assert(solver, &term)?;
                 }
                 RemoteSolverCommand::Reset(solver) => {
-                    self.communicator().await.reset(solver).await?;
+                    self.communicator().reset(solver)?;
                 }
                 RemoteSolverCommand::CheckSat(solver) => {
-                    let _ = self.communicator().await.check_sat(solver).await?;
+                    self.communicator().send_check_sat(solver)?;
                 }
                 RemoteSolverCommand::UnsatCore(solver) => {
-                    let _ = self.communicator().await.unsat_core(solver).await?;
+                    let _ = self.communicator().unsat_core(solver)?;
                 }
                 RemoteSolverCommand::Eval(solver, term) => {
-                    let _ = self.communicator().await.eval(solver, &term).await?;
+                    let _ = self.communicator().eval(solver, &term)?;
                 }
                 RemoteSolverCommand::Push(solver) => {
-                    self.communicator().await.push(solver).await?;
+                    self.communicator().push(solver)?;
                 }
                 RemoteSolverCommand::Pop(solver, size) => {
-                    self.communicator().await.pop(solver, size).await?;
+                    self.communicator().pop(solver, size)?;
                 }
             },
             RemoteCommand::Factory(command) => match command {
                 RemoteFactoryCommand::DeleteContext(context) => {
-                    self.communicator().await.delete_context(context).await?;
+                    self.communicator().delete_context(context)?;
                 }
                 RemoteFactoryCommand::DeleteSolver(solver) => {
-                    self.communicator().await.delete_solver(solver).await?;
+                    self.communicator().delete_solver(solver)?;
                 }
                 RemoteFactoryCommand::NewContext() => {
-                    let _ = self.communicator().await.new_context().await?;
+                    let _ = self.communicator().new_context()?;
                 }
                 RemoteFactoryCommand::NewSolver(context, options) => {
-                    let _ = self
-                        .communicator()
-                        .await
-                        .new_solver(context, &options)
-                        .await?;
+                    let _ = self.communicator().new_solver(context, &options)?;
                 }
                 RemoteFactoryCommand::RestoreContext(context) => {
-                    self.communicator().await.restore_context(context).await?;
+                    self.communicator().restore_context(context)?;
                 }
                 RemoteFactoryCommand::RestoreSolver(context, solver, options) => {
                     self.communicator()
-                        .await
-                        .restore_solver(context, solver, &options)
-                        .await?;
+                        .restore_solver(context, solver, &options)?;
                 }
             },
         }
         Ok(())
     }
 
-    pub async fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !*self.is_alive.lock().unwrap() {
-            return Ok(());
-        }
-        self.wait_zero_communication_to_lock_is_alive();
-        self.terminate().await?;
-        let context_id = *self.context_id.read().unwrap();
-        let solver_id = *self.solver_id.read().unwrap();
+    pub fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.terminate();
+        let context_id = *self.context_id.lock().unwrap();
+        let solver_id = *self.solver_id.lock().unwrap();
         let (process, communicator) = RemoteWorker::start_process(
             &self.converter,
             context_id,
             solver_id,
             self.solver_path.as_str(),
-        )
-        .await?;
+        )?;
         let communicator = RemoteWorkerLockingCommunicator::new(communicator);
+        let communicator = Arc::new(communicator);
         {
-            *self.process.write().unwrap() = process;
-            *self.communicator.write().await = communicator;
+            *self.process.lock().unwrap() = process;
+            *self.communicator.lock().unwrap() = communicator;
         }
         let contexts: Vec<_> = self
             .active_contexts
-            .read()
+            .lock()
             .unwrap()
             .iter()
             .cloned()
@@ -617,12 +584,11 @@ impl RemoteWorker {
         for context in contexts {
             self.resend_command(RemoteCommand::Factory(
                 RemoteFactoryCommand::RestoreContext(context),
-            ))
-            .await?;
+            ))?;
         }
         let solvers: Vec<_> = self
             .active_solvers
-            .read()
+            .lock()
             .unwrap()
             .iter()
             .cloned()
@@ -630,7 +596,7 @@ impl RemoteWorker {
         for (context, solver) in solvers {
             let option = {
                 self.solver_options
-                    .read()
+                    .lock()
                     .unwrap()
                     .get(&solver)
                     .unwrap()
@@ -639,96 +605,37 @@ impl RemoteWorker {
             let command = RemoteCommand::Factory(RemoteFactoryCommand::RestoreSolver(
                 context, solver, option,
             ));
-            self.resend_command(command).await?;
+            self.resend_command(command)?;
         }
-        let solver_commands = { self.solver_commands.read().unwrap().clone() };
+        let solver_commands = { self.solver_commands.lock().unwrap().clone() };
 
         for (_, commands) in solver_commands {
             for command in commands {
                 let command = RemoteCommand::Solver(command.clone());
-                self.resend_command(command).await?;
+                self.resend_command(command)?;
             }
         }
         {
-            self.postponed_commands.write().unwrap().clear();
-        }
-        {
-            *self.is_alive.lock().unwrap() = true;
+            self.postponed_commands.lock().unwrap().clear();
         }
         Ok(())
     }
 
-    fn wait_zero_communication_to_lock_is_alive(&self) {
-        loop {
-            let lock = self.count_communication.lock().unwrap();
-            if *lock == 0 {
-                *self.is_alive.lock().unwrap() = false;
-                break;
-            }
-        }
+    pub fn terminate(&self) {
+        self.process.lock().unwrap().kill().unwrap();
     }
 
-    fn inc_communication(&self) {
-        loop {
-            let lock = self.is_alive.lock().unwrap();
-            if *lock {
-                *self.count_communication.lock().unwrap() += 1;
-                break;
-            }
-        }
+    fn communicator(&self) -> Arc<RemoteWorkerLockingCommunicator> {
+        self.communicator.lock().unwrap().clone()
     }
 
-    fn dec_communication(&self) {
-        loop {
-            let lock = self.is_alive.lock().unwrap();
-            if *lock {
-                *self.count_communication.lock().unwrap() -= 1;
-                break;
-            }
-        }
-    }
-
-    fn wait_and_lock_in_resend(&self) {
-        loop {
-            let mut lock = self.in_resend.lock().unwrap();
-            if !*lock {
-                *lock = true;
-                break;
-            }
-        }
-    }
-
-    fn free_in_resend(&self) {
-        *self.in_resend.lock().unwrap() = false;
-    }
-
-    pub async fn check_state(
-        &self,
-    ) -> Result<RemoteState, Box<dyn std::error::Error + Send + Sync>> {
-        self.inc_communication();
-        let state = self.communicator().await.check_state().await?;
-        self.dec_communication();
-        Ok(state)
-    }
-
-    pub async fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        {
-            self.process.write().unwrap().start_kill()?;
-        }
-        Ok(())
-    }
-
-    async fn communicator(&self) -> tokio::sync::RwLockReadGuard<RemoteWorkerLockingCommunicator> {
-        self.communicator.read().await
-    }
-
-    async fn save_solver_command(
+    fn save_solver_command(
         &self,
         solver_label: SolverLabel,
         command: RemoteSolverCommand,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.solver_commands
-            .write()
+            .lock()
             .unwrap()
             .entry(solver_label)
             .or_default()
@@ -736,310 +643,350 @@ impl RemoteWorker {
         Ok(())
     }
 
-    async fn try_resend_postponed_commands(
+    fn try_resend_postponed_commands(
         &self,
-    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-        self.wait_and_lock_in_resend();
-        let state = self.check_state().await?;
-        let res = match state {
+        state: RemoteState,
+    ) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        match state {
             RemoteState::Busy => Ok(false),
             RemoteState::Idle => {
-                let postponed_commands = { self.postponed_commands.read().unwrap() }.clone();
-                if !postponed_commands.is_empty() {
-                    for command in postponed_commands.into_iter() {
-                        self.resend_command(command).await?;
-                    }
-                    self.postponed_commands.write().unwrap().clear();
-                }
+                self.resend_postponed_commands()?;
                 Ok(true)
             }
-        };
-        self.free_in_resend();
-        res
+        }
+    }
+
+    fn resend_postponed_commands(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let mut lock = self.postponed_commands.lock().unwrap();
+        let postponed_commands = lock.clone();
+        if !postponed_commands.is_empty() {
+            for command in postponed_commands.into_iter() {
+                self.resend_command(command)?;
+            }
+            lock.clear();
+        }
+        Ok(())
     }
 
     fn postpone_command(&self, command: RemoteCommand) {
-        self.postponed_commands.write().unwrap().push(command);
+        self.postponed_commands.lock().unwrap().push(command);
     }
 
-    pub async fn new_context(
-        &self,
-    ) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
         {
-            *self.context_id.write().unwrap() += 1;
+            *self.context_id.lock().unwrap() += 1;
         }
-        let command_response = if !self.try_resend_postponed_commands().await? {
+        let command_response = if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewContext()));
-            let context_id = { *self.context_id.read().unwrap() };
+            let context_id = { *self.context_id.lock().unwrap() };
             ContextLabel(context_id)
         } else {
-            self.inc_communication();
-            let context = self.communicator().await.new_context().await?;
-            self.dec_communication();
-            context
+            let context = self.communicator().new_context();
+            context?
         };
 
         self.active_contexts
-            .write()
+            .lock()
             .unwrap()
             .insert(command_response);
         Ok(command_response)
     }
 
-    pub async fn new_solver(
+    pub fn new_solver(
         &self,
         context: ContextLabel,
         options: &Options,
     ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
         {
-            *self.solver_id.write().unwrap() += 1;
+            *self.solver_id.lock().unwrap() += 1;
         }
-        let command_response = if !self.try_resend_postponed_commands().await? {
+        let command_response = if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::NewSolver(
                 context,
                 options.clone(),
             )));
-            let solver_id = { *self.solver_id.read().unwrap() };
+            let solver_id = { *self.solver_id.lock().unwrap() };
             SolverLabel(solver_id)
         } else {
-            self.inc_communication();
-            let solver = self
-                .communicator()
-                .await
-                .new_solver(context, options)
-                .await?;
-            self.dec_communication();
-            solver
+            let solver = self.communicator().new_solver(context, options);
+            solver?
         };
         self.active_solvers
-            .write()
+            .lock()
             .unwrap()
             .insert((context, command_response));
         self.solver_options
-            .write()
+            .lock()
             .unwrap()
             .insert(command_response, options.clone());
         Ok(command_response)
     }
 
-    pub async fn delete_context(
+    pub fn delete_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteContext(
                 context,
             )));
         } else {
-            self.inc_communication();
-            self.communicator().await.delete_context(context).await?;
-            self.dec_communication();
+            let command_response = self.communicator().delete_context(context);
+            command_response?;
         };
-        self.active_contexts.write().unwrap().remove(&context);
+        self.active_contexts.lock().unwrap().remove(&context);
         Ok(())
     }
 
-    pub async fn delete_solver(
+    pub fn delete_solver(
         &self,
         context: ContextLabel,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Factory(RemoteFactoryCommand::DeleteSolver(
                 solver,
             )));
         } else {
-            self.inc_communication();
-            self.communicator().await.delete_solver(solver).await?;
-            self.dec_communication();
+            let command_response = self.communicator().delete_solver(solver);
+            command_response?;
         };
         self.active_solvers
-            .write()
+            .lock()
             .unwrap()
             .remove(&(context, solver));
-        self.solver_commands.write().unwrap().remove(&solver);
-        self.solver_options.write().unwrap().remove(&solver);
+        self.solver_commands.lock().unwrap().remove(&solver);
+        self.solver_options.lock().unwrap().remove(&solver);
         Ok(())
     }
 
-    pub async fn assert(
+    pub fn assert(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
         let command = RemoteSolverCommand::Assert(solver, term.clone());
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
-            self.inc_communication();
-            self.communicator().await.assert(solver, term).await?;
-            self.dec_communication();
+            let command_response = self.communicator().assert(solver, term);
+            command_response?;
         };
         Ok(())
     }
 
-    pub async fn reset(
+    pub fn reset(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
         let command = RemoteSolverCommand::Reset(solver);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
-            self.inc_communication();
-            self.communicator().await.reset(solver).await?;
-            self.dec_communication();
+            let command_response = self.communicator().reset(solver);
+            command_response?;
         };
         Ok(())
     }
 
-    pub async fn eval(
+    pub fn eval(
         &self,
         solver: SolverLabel,
         term: &Term,
     ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        if !self.try_resend_postponed_commands(state)? {
             Err(Box::new(WorkerError {}))
         } else {
-            self.inc_communication();
-            let command_response = self.communicator().await.eval(solver, term).await?;
-            self.dec_communication();
-            Ok(command_response)
+            let command_response = self.communicator().eval(solver, term);
+            Ok(command_response?)
         }
     }
 
-    pub async fn unsat_core(
+    pub fn unsat_core(
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        if !self.try_resend_postponed_commands(state)? {
             Err(Box::new(WorkerError {}))
         } else {
-            self.inc_communication();
-            let command_response = self.communicator().await.unsat_core(solver).await?;
-            self.dec_communication();
-            Ok(command_response)
+            let command_response = self.communicator().unsat_core(solver);
+            Ok(command_response?)
         }
     }
 
-    pub async fn interrupt(
+    pub fn interrupt(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if *self.is_alive.lock().unwrap() {
-            self.communicator().await.interrupt(solver).await?;
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        if state != RemoteState::Busy {
+            self.communicator().interrupt(solver)?;
         }
         Ok(())
     }
 
-    pub async fn check_sat(
+    pub fn receive_check_sat(
         &self,
-        solver: SolverLabel,
+        counter: u64,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
-        if !self.try_resend_postponed_commands().await? {
-            self.restart().await?;
-        }
-        let command_response = self.communicator().await.check_sat(solver).await?;
+        let command_response = loop {
+            let mut lock = self.state.lock().unwrap();
+            let (_, current_counter) = *lock;
+            if counter == current_counter {
+                if let Ok(res) = self.communicator().try_receive_check_sat() {
+                    *lock = (RemoteState::Idle, current_counter);
+                    break res;
+                }
+            } else {
+                break SolverResult::Unknown;
+            }
+        };
         Ok(command_response)
     }
 
-    pub async fn push(
+    fn send_check_sat(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let mut lock = self.state.lock().unwrap();
+        let (state, counter) = *lock;
+        let counter = counter + 1;
+        match state {
+            RemoteState::Busy => {
+                self.restart()?;
+            }
+            RemoteState::Idle => {
+                self.resend_postponed_commands()?;
+                *lock = (RemoteState::Busy, counter);
+            }
+        }
+        self.communicator().send_check_sat(solver)?;
+        Ok(counter)
+    }
+
+    pub fn push(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
         let command = RemoteSolverCommand::Push(solver);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
-            self.inc_communication();
-            self.communicator().await.push(solver).await?;
-            self.dec_communication();
+            let command_response = self.communicator().push(solver);
+            command_response?;
         };
         Ok(())
     }
 
-    pub async fn pop(
+    pub fn pop(
         &self,
         solver: SolverLabel,
         size: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Pop(solver, size);
-        self.save_solver_command(solver, command.clone()).await?;
-        if !self.try_resend_postponed_commands().await? {
+        let lock = self.state.lock().unwrap();
+        let state = lock.0;
+        self.save_solver_command(solver, command.clone())?;
+        if !self.try_resend_postponed_commands(state)? {
             self.postpone_command(RemoteCommand::Solver(command));
         } else {
-            self.inc_communication();
-            self.communicator().await.pop(solver, size).await?;
-            self.dec_communication();
+            let command_response = self.communicator().pop(solver, size);
+            command_response?;
         };
         Ok(())
     }
 }
 
+#[derive(Clone)]
+pub enum InterruptionType {
+    Abort,
+    Result(SolverResult, usize),
+}
+
 impl RemoteSolver {
-    pub async fn cancellabel_check_sat(
+    pub fn cancellabel_check_sat(
         s: Arc<Self>,
-        token: CancellationToken,
+        token: Receiver<()>,
+        tx_check_sat: Sender<InterruptionType>,
         id: usize,
-    ) -> Result<(SolverResult, usize), Box<dyn std::error::Error + Send + Sync>> {
-        let (tx_cancell, rx_cancell) = oneshot::channel();
+    ) {
+        let (tx_cancell, rx_cancell) = unbounded();
 
         {
-            let s = s.clone();
-            tokio::spawn(async move {
-                let (tx_token, rx_token) = oneshot::channel();
-                tokio::spawn(async move {
-                    token.cancelled().await;
-                    let _ = tx_token.send(());
-                });
-                if let Some(timeout) = s.timeout {
-                    let (tx_timeout, rx_timeout) = oneshot::channel();
-                    tokio::spawn(async move {
+            let timeout = s.timeout;
+            thread::spawn(move || {
+                if let Some(timeout) = timeout {
+                    let (tx_timeout1, rx_timeout) = unbounded();
+                    let tx_timeout2 = tx_timeout1.clone();
+                    thread::spawn(move || {
                         thread::sleep(timeout);
-                        let _ = tx_timeout.send(());
+                        let _ = tx_timeout1.send(());
                     });
-                    select! {
-                        _  = rx_timeout => {
-                            let _ = tx_cancell.send(());
-                        }
-                        _ = rx_token => {
-                            let _ = tx_cancell.send(());
-                        }
-                    }
+                    thread::spawn(move || {
+                        let _ = token.recv();
+                        let _ = tx_timeout2.send(());
+                    });
+                    let _ = rx_timeout.recv();
+                    let _ = tx_cancell.send(());
                 } else {
-                    rx_token.await.unwrap();
+                    let _ = token.recv();
                     let _ = tx_cancell.send(());
                 }
             });
         }
 
-        let (tx_check_sat, rx_check_sat) = oneshot::channel();
+        let tx_check_sat2 = tx_check_sat.clone();
         {
             let s = s.clone();
+            if let Ok(counter) = s.send_check_sat() {
+                thread::spawn(move || {
+                    let res = s.receive_check_sat(counter);
+                    if let Ok(res) = res {
+                        let _ = tx_check_sat.send(InterruptionType::Result(res, id));
+                    } else {
+                        let _ = tx_check_sat.send(InterruptionType::Abort);
+                    }
+                });
+            }
 
-            tokio::spawn(async move {
-                let res = s.check_sat().await;
-                let _ = tx_check_sat.send(res);
+            thread::spawn(move || {
+                let _ = rx_cancell.recv();
+                let _ = tx_check_sat2.send(InterruptionType::Abort);
             });
-        }
-        select! {
-            _  =  rx_cancell => {
-                s.interrupt().await?;
-                Ok((SolverResult::Unknown, id))
-            }
-            res = rx_check_sat => {
-                let res = res??;
-                Ok((res, id))
-            }
         }
     }
 }
 
 pub struct SmithrilFactory {
     factories: Vec<RemoteFactory>,
+}
+
+impl Drop for SmithrilFactory {
+    fn drop(&mut self) {
+        self.terminate();
+    }
 }
 
 fn get_solver_path(solver_name: &str) -> PathBuf {
@@ -1057,18 +1004,22 @@ fn get_converters_dir() -> PathBuf {
 }
 
 impl SmithrilFactory {
-    pub async fn new(converters: Vec<Converter>) -> Self {
+    pub fn new(converters: Vec<Converter>) -> Self {
         let solver_path = get_solver_path("smithril-runner");
         let solver_path_string = solver_path.to_string_lossy().into_owned();
         let mut factories: Vec<RemoteFactory> = Default::default();
 
         for converter in &converters {
-            let solver_process = RemoteFactory::new(&solver_path_string, converter)
-                .await
-                .unwrap();
+            let solver_process = RemoteFactory::new(&solver_path_string, converter).unwrap();
             factories.push(solver_process);
         }
         Self { factories }
+    }
+
+    fn terminate(&self) {
+        for solver in self.factories.iter() {
+            solver.terminate();
+        }
     }
 }
 
@@ -1082,7 +1033,7 @@ impl AsyncContext for SmithrilContext {}
 #[derive(Debug)]
 pub struct SmithrilSolver {
     solvers: Vec<Arc<RemoteSolver>>,
-    last_fastest_solver_index: RwLock<usize>,
+    last_fastest_solver_index: Mutex<Option<usize>>,
 }
 
 impl PartialEq for SmithrilSolver {
@@ -1100,164 +1051,126 @@ impl Hash for SmithrilSolver {
 }
 
 impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
-    async fn terminate(&self) {
-        for solver in self.factories.iter() {
-            solver.terminate().await.unwrap();
-        }
-    }
-
-    async fn new_context(&self) -> Arc<SmithrilContext> {
-        let mut handles = Vec::new();
-        for factory in self.factories.iter() {
-            let handler = factory.new_context();
-            handles.push(handler);
-        }
+    fn new_context(&self) -> Arc<SmithrilContext> {
         let mut contexts = Vec::new();
-        for handler in handles {
-            contexts.push(handler.await.unwrap());
+        for factory in self.factories.iter() {
+            contexts.push(factory.new_context().unwrap());
         }
         Arc::new(SmithrilContext { contexts })
     }
 
-    async fn delete_context(&self, context: Arc<SmithrilContext>) {
+    fn delete_context(&self, context: Arc<SmithrilContext>) {
         assert_eq!(Arc::strong_count(&context), 1);
         let context = Arc::try_unwrap(context).unwrap();
-        let mut handles = Vec::new();
         for (factory, context) in self.factories.iter().zip(context.contexts.into_iter()) {
-            let handler = factory.delete_context(context);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            factory.delete_context(context).unwrap();
         }
     }
 
-    async fn new_solver(
-        &self,
-        context: Arc<SmithrilContext>,
-        options: &Options,
-    ) -> Arc<SmithrilSolver> {
-        let mut handles = Vec::new();
-        for (factory, context) in self.factories.iter().zip(context.contexts.iter()) {
-            let handler = factory.new_solver(context, options);
-            handles.push(handler);
-        }
+    fn new_solver(&self, context: Arc<SmithrilContext>, options: &Options) -> Arc<SmithrilSolver> {
         let mut solvers = Vec::new();
-        for handler in handles {
-            solvers.push(handler.await.unwrap());
+        for (factory, context) in self.factories.iter().zip(context.contexts.iter()) {
+            solvers.push(factory.new_solver(context, options).unwrap());
         }
         Arc::new(SmithrilSolver {
             solvers,
-            last_fastest_solver_index: RwLock::new(Default::default()),
+            last_fastest_solver_index: Mutex::new(Default::default()),
         })
     }
 
-    async fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
+    fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
         assert_eq!(Arc::strong_count(&solver), 1);
-        let mut handles = Vec::new();
-        {
-            let solver = Arc::try_unwrap(solver).ok().unwrap();
-            let solvers = solver.solvers;
-            for (factory, solver) in self.factories.iter().zip(solvers.into_iter()) {
-                let handler = factory.delete_solver(solver);
-                handles.push(handler);
-            }
-        }
-        for handler in handles {
-            handler.await.unwrap();
+        let solver = Arc::try_unwrap(solver).ok().unwrap();
+        let solvers = solver.solvers;
+        for (factory, solver) in self.factories.iter().zip(solvers.into_iter()) {
+            factory.delete_solver(solver).unwrap()
         }
     }
 }
 
 impl AsyncSolver for SmithrilSolver {
-    async fn assert(&self, term: &Term) {
-        let mut handles = Vec::new();
+    fn assert(&self, term: &Term) {
         for solver in self.solvers.iter() {
-            let handler = solver.assert(term);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            solver.assert(term).unwrap();
         }
     }
 
-    async fn reset(&self) {
-        let mut handles = Vec::new();
+    fn reset(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.reset();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            solver.reset().unwrap();
         }
     }
 
-    async fn interrupt(&self) {
-        let mut handles = Vec::new();
+    fn interrupt(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.interrupt();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            solver.interrupt().unwrap();
         }
     }
 
-    async fn check_sat(&self) -> SolverResult {
-        let mut handles = Vec::new();
-        let token = CancellationToken::new();
+    fn check_sat(&self) -> SolverResult {
+        let (cancell, token) = unbounded();
+        let (s_check_sat, r_check_sat) = unbounded();
         for (count, solver) in self.solvers.iter().enumerate() {
-            let handler = RemoteSolver::cancellabel_check_sat(solver.clone(), token.clone(), count);
-            handles.push(handler);
+            RemoteSolver::cancellabel_check_sat(
+                solver.clone(),
+                token.clone(),
+                s_check_sat.clone(),
+                count,
+            );
         }
-        let mut futs = handles.into_iter().collect::<FuturesUnordered<_>>();
+
+        {
+            *self.last_fastest_solver_index.lock().unwrap() = None;
+        }
 
         let mut result = SolverResult::Unknown;
-        while let Some(res) = futs.next().await {
-            let (res, count) = res.unwrap();
-            if SolverResult::Unknown == res {
-                continue;
+        for _ in 0..self.solvers.len() {
+            match r_check_sat.recv().unwrap() {
+                InterruptionType::Abort => (),
+                InterruptionType::Result(SolverResult::Unknown, _) => (),
+                InterruptionType::Result(res, count) => {
+                    cancell.send(()).unwrap();
+                    *self.last_fastest_solver_index.lock().unwrap() = Some(count);
+                    result = res;
+                    break;
+                }
             }
-            token.cancel();
-            *self.last_fastest_solver_index.write().unwrap() = count;
-            result = res;
-            break;
         }
-        while (futs.next().await).is_some() {}
+        dbg!((
+            "check_sat",
+            "smithril",
+            &result,
+            *self.last_fastest_solver_index.lock().unwrap()
+        ));
+        if result == SolverResult::Unknown {
+            *self.last_fastest_solver_index.lock().unwrap() = None;
+        }
         result
     }
 
-    async fn unsat_core(&self) -> Vec<Term> {
-        let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
+    fn unsat_core(&self) -> Vec<Term> {
+        let last_fastest_solver_index =
+            { *self.last_fastest_solver_index.lock().unwrap() }.unwrap();
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
-        solver.unsat_core().await.unwrap()
+        solver.unsat_core().unwrap()
     }
 
-    async fn eval(&self, term: &Term) -> Option<Term> {
-        let last_fastest_solver_index = { *self.last_fastest_solver_index.read().unwrap() };
+    fn eval(&self, term: &Term) -> Option<Term> {
+        let last_fastest_solver_index =
+            { *self.last_fastest_solver_index.lock().unwrap() }.unwrap();
         let solver = self.solvers.get(last_fastest_solver_index).unwrap();
-        solver.eval(term).await.unwrap()
+        solver.eval(term).unwrap()
     }
 
-    async fn push(&self) {
-        let mut handles = Vec::new();
+    fn push(&self) {
         for solver in self.solvers.iter() {
-            let handler = solver.push();
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            solver.push().unwrap();
         }
     }
 
-    async fn pop(&self, size: u64) {
-        let mut handles = Vec::new();
+    fn pop(&self, size: u64) {
         for solver in self.solvers.iter() {
-            let handler = solver.pop(size);
-            handles.push(handler);
-        }
-        for handler in handles {
-            handler.await.unwrap();
+            solver.pop(size).unwrap();
         }
     }
 }
@@ -1285,65 +1198,59 @@ fn unsat_works() -> Term {
     term::mk_and(&eq, &n)
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_working_test() {
+#[test]
+fn smithril_working_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
-    let context = factory.new_context().await;
-    let solver = factory.new_solver(context, &Options::default()).await;
-    solver.assert(&t).await;
-    let status = solver.check_sat().await;
+    let factory = SmithrilFactory::new(converters.clone());
+    let context = factory.new_context();
+    let solver = factory.new_solver(context, &Options::default());
+    solver.assert(&t);
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Sat, status);
-    solver.reset().await;
+    solver.reset();
 
     let t = unsat_works();
 
-    solver.assert(&t).await;
-    let status = solver.check_sat().await;
+    solver.assert(&t);
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unsat, status);
-    solver.reset().await;
-
-    factory.terminate().await;
+    solver.reset();
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_unsat_core_test() {
+#[test]
+fn smithril_unsat_core_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
-    let context = factory.new_context().await;
+    let factory = SmithrilFactory::new(converters.clone());
+    let context = factory.new_context();
     let mut options = Options::default();
     options.set_produce_unsat_core(true);
-    let solver = factory.new_solver(context, &options).await;
+    let solver = factory.new_solver(context, &options);
 
     let t = unsat_works();
 
-    solver.assert(&t).await;
-    let status = solver.check_sat().await;
+    solver.assert(&t);
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unsat, status);
-    let unsat_core = solver.unsat_core().await;
+    let unsat_core = solver.unsat_core();
     assert_eq!(unsat_core.len(), 1);
-
-    factory.terminate().await;
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn smithril_timeout_test() {
+#[test]
+fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
-    let factory = SmithrilFactory::new(converters.clone()).await;
-    let context = factory.new_context().await;
+    let factory = SmithrilFactory::new(converters.clone());
+    let context = factory.new_context();
     let mut options = Options::default();
     options.set_external_timeout(Some(Duration::from_nanos(1)));
-    let solver = factory.new_solver(context, &options).await;
+    let solver = factory.new_solver(context, &options);
     for i in 0..1000 {
         let t = sat_works(&i.to_string());
-        solver.assert(&t).await;
+        solver.assert(&t);
     }
-    let status = solver.check_sat().await;
+    let status = solver.check_sat();
     assert_eq!(SolverResult::Unknown, status);
-
-    factory.terminate().await;
 }
