@@ -105,7 +105,11 @@ pub trait ResultSolver {
     fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     fn reset(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     fn interrupt(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    fn check_sat(&self) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>;
+    fn receive_check_sat(
+        &self,
+        counter: u64,
+    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>;
+    fn send_check_sat(&self) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
     fn unsat_core(&self) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>;
     fn eval(&self, term: &Term) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>;
     fn push(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
