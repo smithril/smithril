@@ -532,12 +532,11 @@ impl GeneralSolver<Z3Sort, Z3Term, Z3Options, Z3Converter> for Z3Solver {
         let context = self.context.as_ref();
         let res = unsafe { smithril_z3_sys::Z3_solver_check(context.context(), self.solver.0) };
         context.context.check_error();
-        let res = match res {
+        match res {
             smithril_z3_sys::Z3_L_TRUE => SolverResult::Sat,
             smithril_z3_sys::Z3_L_FALSE => SolverResult::Unsat,
             _ => SolverResult::Unknown,
-        };
-        res
+        }
     }
 
     fn push(&self) {

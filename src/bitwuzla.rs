@@ -525,12 +525,11 @@ impl GeneralSolver<BitwuzlaSort, BitwuzlaTerm, BitwuzlaOptions, BitwuzlaConverte
             (*termination_callback_state).start();
         }
         let res = unsafe { smithril_bitwuzla_sys::bitwuzla_check_sat(self.solver()) };
-        let res = match res {
+        match res {
             smithril_bitwuzla_sys::BITWUZLA_SAT => SolverResult::Sat,
             smithril_bitwuzla_sys::BITWUZLA_UNSAT => SolverResult::Unsat,
             _ => SolverResult::Unknown,
-        };
-        res
+        }
     }
 
     fn push(&self) {

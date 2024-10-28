@@ -86,33 +86,15 @@ fn main() {
     match converter_kind {
         Converter::Bitwuzla => {
             let mut factory = converters::mk_bitwuzla_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                converter_kind,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
         Converter::Z3 => {
             let mut factory = converters::mk_z3_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                converter_kind,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
         Converter::Dummy => {
             let mut factory = converters::mk_dummy_factory();
-            start(
-                &mut factory,
-                remote_solver_commander,
-                context_id,
-                solver_id,
-                converter_kind,
-            )
+            start(&mut factory, remote_solver_commander, context_id, solver_id)
         }
     };
 }
@@ -127,7 +109,6 @@ fn start<
     remote_commander: RemoteCommander,
     context_id: u64,
     solver_id: u64,
-    converter: Converter,
 ) {
     let mut context_id = context_id;
     let mut contexts = HashMap::new();
@@ -135,7 +116,6 @@ fn start<
     let mut solvers: HashMap<SolverLabel, Arc<SL>> = HashMap::new();
     let interrupters: Arc<RwLock<HashMap<SolverLabel, Arc<I>>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    let state = Arc::new(RwLock::new(RemoteState::Idle));
 
     {
         let interrupters = interrupters.clone();
@@ -150,20 +130,6 @@ fn start<
                 }
             };
             let _ = interrupter_loop();
-        });
-    }
-
-    {
-        let state = state.clone();
-        thread::spawn(move || {
-            let check_state_loop = || -> Result<(), Box<dyn Error>> {
-                loop {
-                    remote_commander.check_state_receiver.recv()?;
-                    let state = *state.read().unwrap();
-                    remote_commander.state_sender.send(state)?;
-                }
-            };
-            let _ = check_state_loop();
         });
     }
 
@@ -182,25 +148,9 @@ fn start<
                         Solver::reset(solver.as_ref());
                         remote_commander.confirmation_sender.send(())?;
                     }
-                    RemoteSolverCommand::CheckSat(solver_label, counter) => {
-                        {
-                            let mut state = state.write().unwrap();
-                            *state = RemoteState::Busy;
-                        };
-                        dbg!(("check_sat before", &converter, &solver_label, counter));
+                    RemoteSolverCommand::CheckSat(solver_label) => {
                         let result =
                             Solver::check_sat(solvers.get(&solver_label).unwrap().as_ref());
-                        dbg!((
-                            "check_sat after",
-                            &converter,
-                            &solver_label,
-                            &result,
-                            counter
-                        ));
-                        {
-                            let mut state = state.write().unwrap();
-                            *state = RemoteState::Idle;
-                        }
                         remote_commander.solver_result_sender.send(result)?;
                     }
                     RemoteSolverCommand::UnsatCore(solver_label) => {
@@ -237,7 +187,6 @@ fn start<
                         remote_commander.confirmation_sender.send(())?;
                     }
                     RemoteFactoryCommand::DeleteSolver(solver_label) => {
-                        dbg!(("delete solver", &converter, &solver_label));
                         solvers.remove(&solver_label);
                         remote_commander.confirmation_sender.send(())?;
                     }
