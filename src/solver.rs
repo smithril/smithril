@@ -1136,12 +1136,6 @@ impl AsyncSolver for SmithrilSolver {
                 }
             }
         }
-        dbg!((
-            "check_sat",
-            "smithril",
-            &result,
-            *self.last_fastest_solver_index.lock().unwrap()
-        ));
         if result == SolverResult::Unknown {
             *self.last_fastest_solver_index.lock().unwrap() = None;
         }
