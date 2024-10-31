@@ -570,7 +570,6 @@ impl RemoteWorker {
 
     pub fn terminate(&self) {
         self.communicator().terminate_sender.send(()).unwrap();
-        // self.process.lock().unwrap().kill().unwrap();
     }
 
     fn communicator(&self) -> Arc<RemoteWorkerCommunicator> {
