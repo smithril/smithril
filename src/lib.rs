@@ -1,6 +1,7 @@
 mod bitwuzla;
 mod dummy;
 pub mod generalized;
+pub mod runner;
 pub mod solver;
 pub mod term;
 mod utils;
