@@ -25,7 +25,7 @@ use crate::converters::Converter;
 use once_cell::sync::Lazy;
 
 static FACTORY: Lazy<solver::SmithrilFactory> =
-    Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Z3, Converter::Bitwuzla]));
+    Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Bitwuzla, Converter::Z3]));
 
 type Terms = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Term>>>;
 type Sorts = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Sort>>>;
