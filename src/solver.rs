@@ -28,10 +28,6 @@ impl RemoteFactory<RemoteWorkerCommunicator> {
             worker: Arc::new(RemoteWorker::new(converter, context_id, solver_id)?),
         })
     }
-
-    fn terminate(&self) {
-        self.worker.terminate();
-    }
 }
 
 impl<T: WorkerCommunicator> ResultFactory<RemoteContext, RemoteSolver<T>> for RemoteFactory<T> {
@@ -219,6 +215,12 @@ pub struct RemoteWorker<T: WorkerCommunicator> {
     postponed_commands: RwLock<Vec<RemoteCommand>>,
     solver_options: RwLock<HashMap<SolverLabel, Options>>,
     communicator: RwLock<Arc<T>>,
+}
+
+impl<T: WorkerCommunicator> Drop for RemoteWorker<T> {
+    fn drop(&mut self) {
+        self.terminate();
+    }
 }
 
 #[derive(Debug)]
@@ -995,12 +997,6 @@ pub struct SmithrilFactory {
     factories: Vec<RemoteFactory<RemoteWorkerCommunicator>>,
 }
 
-impl Drop for SmithrilFactory {
-    fn drop(&mut self) {
-        self.terminate();
-    }
-}
-
 impl SmithrilFactory {
     pub fn new(converters: Vec<Converter>) -> Self {
         let mut factories: Vec<RemoteFactory<RemoteWorkerCommunicator>> = Default::default();
@@ -1010,12 +1006,6 @@ impl SmithrilFactory {
             factories.push(solver_process);
         }
         Self { factories }
-    }
-
-    fn terminate(&self) {
-        for solver in self.factories.iter() {
-            solver.terminate();
-        }
     }
 }
 
