@@ -28,10 +28,6 @@ impl RemoteFactory {
             worker: Arc::new(RemoteWorker::new(converter, context_id, solver_id)?),
         })
     }
-
-    fn terminate(&self) {
-        self.worker.terminate();
-    }
 }
 
 impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
@@ -219,6 +215,12 @@ pub struct RemoteWorker {
     postponed_commands: Mutex<Vec<RemoteCommand>>,
     solver_options: Mutex<HashMap<SolverLabel, Options>>,
     communicator: Mutex<Arc<RemoteWorkerCommunicator>>,
+}
+
+impl Drop for RemoteWorker {
+    fn drop(&mut self) {
+        self.terminate();
+    }
 }
 
 #[derive(Debug)]
@@ -930,12 +932,6 @@ pub struct SmithrilFactory {
     factories: Vec<RemoteFactory>,
 }
 
-impl Drop for SmithrilFactory {
-    fn drop(&mut self) {
-        self.terminate();
-    }
-}
-
 impl SmithrilFactory {
     pub fn new(converters: Vec<Converter>) -> Self {
         let mut factories: Vec<RemoteFactory> = Default::default();
@@ -945,12 +941,6 @@ impl SmithrilFactory {
             factories.push(solver_process);
         }
         Self { factories }
-    }
-
-    fn terminate(&self) {
-        for solver in self.factories.iter() {
-            solver.terminate();
-        }
     }
 }
 
