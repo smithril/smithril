@@ -15,11 +15,11 @@ use crate::generalized::{
 use crate::runner;
 use crate::term::Term;
 
-pub struct RemoteFactory {
-    worker: Arc<RemoteWorker>,
+pub struct RemoteFactory<T: WorkerCommunicator> {
+    worker: Arc<RemoteWorker<T>>,
 }
 
-impl RemoteFactory {
+impl RemoteFactory<RemoteWorkerCommunicator> {
     pub fn new(converter: &Converter) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let context_id = 0u64;
         let solver_id = 0u64;
@@ -34,7 +34,7 @@ impl RemoteFactory {
     }
 }
 
-impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
+impl<T: WorkerCommunicator> ResultFactory<RemoteContext, RemoteSolver<T>> for RemoteFactory<T> {
     fn new_context(&self) -> Result<RemoteContext, Box<dyn std::error::Error + Send + Sync>> {
         let command_response = self.worker.new_context()?;
         let command_response = RemoteContext {
@@ -47,7 +47,7 @@ impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
         &self,
         context: &RemoteContext,
         options: &Options,
-    ) -> Result<Arc<RemoteSolver>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Arc<RemoteSolver<T>>, Box<dyn std::error::Error + Send + Sync>> {
         let command_response = self.worker.new_solver(context.label, options)?;
         let command_response = RemoteSolver {
             label: command_response,
@@ -69,7 +69,7 @@ impl ResultFactory<RemoteContext, RemoteSolver> for RemoteFactory {
 
     fn delete_solver(
         &self,
-        solver: Arc<RemoteSolver>,
+        solver: Arc<RemoteSolver<T>>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.worker.delete_solver(solver.context, solver.label)?;
         Ok(())
@@ -116,22 +116,22 @@ pub struct SolverLabel(pub u64);
 pub struct ContextLabel(pub u64);
 
 #[derive(Debug)]
-pub struct RemoteSolver {
+pub struct RemoteSolver<T: WorkerCommunicator> {
     context: ContextLabel,
     label: SolverLabel,
     timeout: Option<Duration>,
-    worker: Arc<RemoteWorker>,
+    worker: Arc<RemoteWorker<T>>,
 }
 
-impl PartialEq for RemoteSolver {
+impl<T: WorkerCommunicator> PartialEq for RemoteSolver<T> {
     fn eq(&self, other: &Self) -> bool {
         self.context == other.context && self.label == other.label && self.timeout == other.timeout
     }
 }
 
-impl Eq for RemoteSolver {}
+impl<T: WorkerCommunicator> Eq for RemoteSolver<T> {}
 
-impl Hash for RemoteSolver {
+impl<T: WorkerCommunicator> Hash for RemoteSolver<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.context.hash(state);
         self.label.hash(state);
@@ -150,7 +150,7 @@ impl fmt::Display for SolverError {
     }
 }
 
-impl ResultSolver for RemoteSolver {
+impl<T: WorkerCommunicator> ResultSolver for RemoteSolver<T> {
     fn assert(&self, term: &Term) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.worker.assert(self.label, term)?;
         Ok(())
@@ -208,7 +208,7 @@ pub struct RemoteContext {
 impl AsyncContext for RemoteContext {}
 
 #[derive(Debug)]
-pub struct RemoteWorker {
+pub struct RemoteWorker<T: WorkerCommunicator> {
     converter: Converter,
     context_id: RwLock<u64>,
     solver_id: RwLock<u64>,
@@ -218,7 +218,7 @@ pub struct RemoteWorker {
     solver_commands: RwLock<HashMap<SolverLabel, Vec<RemoteSolverCommand>>>,
     postponed_commands: RwLock<Vec<RemoteCommand>>,
     solver_options: RwLock<HashMap<SolverLabel, Options>>,
-    communicator: RwLock<Arc<RemoteWorkerCommunicator>>,
+    communicator: RwLock<Arc<T>>,
 }
 
 #[derive(Debug)]
@@ -235,7 +235,76 @@ pub struct RemoteWorkerCommunicator {
     pub unsat_core_receiver: Receiver<Vec<Term>>,
 }
 
-impl RemoteWorkerCommunicator {
+pub trait WorkerCommunicator {
+    fn start_process(converter: &Converter, context_id: u64, solver_id: u64) -> Self;
+    fn send_factory_command(
+        &self,
+        command: RemoteFactoryCommand,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn send_solver_command(
+        &self,
+        command: RemoteSolverCommand,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>>;
+    fn new_solver(
+        &self,
+        context: ContextLabel,
+        options: &Options,
+    ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>>;
+    fn restore_context(
+        &self,
+        context: ContextLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn restore_solver(
+        &self,
+        context: ContextLabel,
+        solver: SolverLabel,
+        options: &Options,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn delete_context(
+        &self,
+        context: ContextLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn delete_solver(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn assert(
+        &self,
+        solver: SolverLabel,
+        term: &Term,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn reset(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn interrupt(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn send_check_sat(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn try_receive_check_sat(
+        &self,
+    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>>;
+    fn eval(
+        &self,
+        solver: SolverLabel,
+        term: &Term,
+    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>>;
+    fn unsat_core(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>>;
+    fn push(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn pop(
+        &self,
+        solver: SolverLabel,
+        size: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+}
+
+impl WorkerCommunicator for RemoteWorkerCommunicator {
     fn send_factory_command(
         &self,
         command: RemoteFactoryCommand,
@@ -252,13 +321,13 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+    fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
         self.send_factory_command(RemoteFactoryCommand::NewContext())?;
         let command_response = self.new_context_receiver.recv()?;
         Ok(command_response)
     }
 
-    pub fn new_solver(
+    fn new_solver(
         &self,
         context: ContextLabel,
         options: &Options,
@@ -268,7 +337,7 @@ impl RemoteWorkerCommunicator {
         Ok(command_response)
     }
 
-    pub fn restore_context(
+    fn restore_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -277,7 +346,7 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn restore_solver(
+    fn restore_solver(
         &self,
         context: ContextLabel,
         solver: SolverLabel,
@@ -292,7 +361,7 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn delete_context(
+    fn delete_context(
         &self,
         context: ContextLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -301,7 +370,7 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn delete_solver(
+    fn delete_solver(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -310,7 +379,7 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn assert(
+    fn assert(
         &self,
         solver: SolverLabel,
         term: &Term,
@@ -321,17 +390,14 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn reset(
-        &self,
-        solver: SolverLabel,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    fn reset(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Reset(solver);
         self.send_solver_command(command)?;
         self.confirmation_receiver.recv()?;
         Ok(())
     }
 
-    pub fn interrupt(
+    fn interrupt(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -339,7 +405,7 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn send_check_sat(
+    fn send_check_sat(
         &self,
         solver: SolverLabel,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -348,14 +414,14 @@ impl RemoteWorkerCommunicator {
         Ok(())
     }
 
-    pub fn try_receive_check_sat(
+    fn try_receive_check_sat(
         &self,
     ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
         let command_response = self.solver_result_receiver.try_recv()?;
         Ok(command_response)
     }
 
-    pub fn eval(
+    fn eval(
         &self,
         solver: SolverLabel,
         term: &Term,
@@ -366,7 +432,7 @@ impl RemoteWorkerCommunicator {
         Ok(command_response)
     }
 
-    pub fn unsat_core(
+    fn unsat_core(
         &self,
         solver: SolverLabel,
     ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
@@ -376,17 +442,14 @@ impl RemoteWorkerCommunicator {
         Ok(command_response)
     }
 
-    pub fn push(
-        &self,
-        solver: SolverLabel,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    fn push(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let command = RemoteSolverCommand::Push(solver);
         self.send_solver_command(command)?;
         self.confirmation_receiver.recv()?;
         Ok(())
     }
 
-    pub fn pop(
+    fn pop(
         &self,
         solver: SolverLabel,
         size: u64,
@@ -395,6 +458,29 @@ impl RemoteWorkerCommunicator {
         self.send_solver_command(command)?;
         self.confirmation_receiver.recv()?;
         Ok(())
+    }
+
+    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.terminate_sender.send(())?;
+        Ok(())
+    }
+
+    fn start_process(converter: &Converter, context_id: u64, solver_id: u64) -> Self {
+        let serialized_converter = serde_json::to_string(converter).unwrap();
+        let serialized_context_solver_id = serde_json::to_string(&(context_id, solver_id)).unwrap();
+        let (response_sender, response_receiver) = unbounded();
+        {
+            let serialized_converter = serialized_converter.to_string();
+            let serialized_context_solver_id = serialized_context_solver_id.to_string();
+            thread::spawn(move || {
+                runner::run(
+                    response_sender,
+                    serialized_converter,
+                    serialized_context_solver_id,
+                );
+            });
+        }
+        response_receiver.recv().unwrap()
     }
 }
 
@@ -408,13 +494,13 @@ impl Display for WorkerError {
 
 impl Error for WorkerError {}
 
-impl RemoteWorker {
+impl<T: WorkerCommunicator> RemoteWorker<T> {
     pub fn new(
         converter: &Converter,
         context_id: u64,
         solver_id: u64,
     ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let communicator = RemoteWorker::start_process(converter, context_id, solver_id)?;
+        let communicator = T::start_process(converter, context_id, solver_id);
         let communicator = Arc::new(communicator);
         let communicator = RwLock::new(communicator);
         let converter = converter.clone();
@@ -436,27 +522,60 @@ impl RemoteWorker {
         })
     }
 
-    fn start_process(
-        converter: &Converter,
-        context_id: u64,
-        solver_id: u64,
-    ) -> Result<RemoteWorkerCommunicator, Box<dyn std::error::Error + Send + Sync>> {
-        let serialized_converter = serde_json::to_string(converter).unwrap();
-        let serialized_context_solver_id = serde_json::to_string(&(context_id, solver_id)).unwrap();
-        let (response_sender, response_receiver) = unbounded();
+    pub fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.terminate();
+        let context_id = *self.context_id.read().unwrap();
+        let solver_id = *self.solver_id.read().unwrap();
+        let communicator = T::start_process(&self.converter, context_id, solver_id);
+        let communicator = Arc::new(communicator);
         {
-            let serialized_converter = serialized_converter.to_string();
-            let serialized_context_solver_id = serialized_context_solver_id.to_string();
-            thread::spawn(move || {
-                runner::run(
-                    response_sender,
-                    serialized_converter,
-                    serialized_context_solver_id,
-                );
-            });
+            *self.communicator.write().unwrap() = communicator;
         }
-        let communicator = response_receiver.recv().unwrap();
-        Ok(communicator)
+        let contexts: Vec<_> = self
+            .active_contexts
+            .read()
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect();
+        for context in contexts {
+            self.resend_command(RemoteCommand::Factory(
+                RemoteFactoryCommand::RestoreContext(context),
+            ))?;
+        }
+        let solvers: Vec<_> = self
+            .active_solvers
+            .read()
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect();
+        for (context, solver) in solvers {
+            let option = {
+                self.solver_options
+                    .read()
+                    .unwrap()
+                    .get(&solver)
+                    .unwrap()
+                    .clone()
+            };
+            let command = RemoteCommand::Factory(RemoteFactoryCommand::RestoreSolver(
+                context, solver, option,
+            ));
+            self.resend_command(command)?;
+        }
+        let solver_commands = { self.solver_commands.read().unwrap().clone() };
+
+        for (_, commands) in solver_commands {
+            for command in commands {
+                let command = RemoteCommand::Solver(command.clone());
+                self.resend_command(command)?;
+            }
+        }
+        {
+            self.postponed_commands.write().unwrap().clear();
+        }
+        Ok(())
     }
 
     fn resend_command(
@@ -512,67 +631,11 @@ impl RemoteWorker {
         Ok(())
     }
 
-    pub fn restart(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.terminate();
-        let context_id = *self.context_id.read().unwrap();
-        let solver_id = *self.solver_id.read().unwrap();
-        let communicator = RemoteWorker::start_process(&self.converter, context_id, solver_id)?;
-        let communicator = Arc::new(communicator);
-        {
-            *self.communicator.write().unwrap() = communicator;
-        }
-        let contexts: Vec<_> = self
-            .active_contexts
-            .read()
-            .unwrap()
-            .iter()
-            .cloned()
-            .collect();
-        for context in contexts {
-            self.resend_command(RemoteCommand::Factory(
-                RemoteFactoryCommand::RestoreContext(context),
-            ))?;
-        }
-        let solvers: Vec<_> = self
-            .active_solvers
-            .read()
-            .unwrap()
-            .iter()
-            .cloned()
-            .collect();
-        for (context, solver) in solvers {
-            let option = {
-                self.solver_options
-                    .read()
-                    .unwrap()
-                    .get(&solver)
-                    .unwrap()
-                    .clone()
-            };
-            let command = RemoteCommand::Factory(RemoteFactoryCommand::RestoreSolver(
-                context, solver, option,
-            ));
-            self.resend_command(command)?;
-        }
-        let solver_commands = { self.solver_commands.read().unwrap().clone() };
-
-        for (_, commands) in solver_commands {
-            for command in commands {
-                let command = RemoteCommand::Solver(command.clone());
-                self.resend_command(command)?;
-            }
-        }
-        {
-            self.postponed_commands.write().unwrap().clear();
-        }
-        Ok(())
-    }
-
     pub fn terminate(&self) {
-        self.communicator().terminate_sender.send(()).unwrap();
+        self.communicator().terminate().unwrap();
     }
 
-    fn communicator(&self) -> Arc<RemoteWorkerCommunicator> {
+    fn communicator(&self) -> Arc<T> {
         self.communicator.read().unwrap().clone()
     }
 
@@ -872,7 +935,7 @@ pub enum InterruptionType {
     Result(SolverResult, usize),
 }
 
-impl RemoteSolver {
+impl<T: WorkerCommunicator + Send + Sync + 'static> RemoteSolver<T> {
     pub fn cancellabel_check_sat(
         s: Arc<Self>,
         token: Receiver<()>,
@@ -929,7 +992,7 @@ impl RemoteSolver {
 }
 
 pub struct SmithrilFactory {
-    factories: Vec<RemoteFactory>,
+    factories: Vec<RemoteFactory<RemoteWorkerCommunicator>>,
 }
 
 impl Drop for SmithrilFactory {
@@ -940,7 +1003,7 @@ impl Drop for SmithrilFactory {
 
 impl SmithrilFactory {
     pub fn new(converters: Vec<Converter>) -> Self {
-        let mut factories: Vec<RemoteFactory> = Default::default();
+        let mut factories: Vec<RemoteFactory<RemoteWorkerCommunicator>> = Default::default();
 
         for converter in &converters {
             let solver_process = RemoteFactory::new(converter).unwrap();
@@ -965,7 +1028,7 @@ impl AsyncContext for SmithrilContext {}
 
 #[derive(Debug)]
 pub struct SmithrilSolver {
-    solvers: Vec<Arc<RemoteSolver>>,
+    solvers: Vec<Arc<RemoteSolver<RemoteWorkerCommunicator>>>,
     last_fastest_solver_index: RwLock<Option<usize>>,
 }
 
