@@ -19,7 +19,7 @@ pub struct RemoteFactory<T: WorkerCommunicator> {
     worker: Arc<RemoteWorker<T>>,
 }
 
-impl RemoteFactory<RemoteWorkerCommunicator> {
+impl<T: WorkerCommunicator> RemoteFactory<T> {
     pub fn new(converter: &Converter) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let context_id = 0u64;
         let solver_id = 0u64;
@@ -993,13 +993,13 @@ impl<T: WorkerCommunicator + Send + Sync + 'static> RemoteSolver<T> {
     }
 }
 
-pub struct SmithrilFactory {
-    factories: Vec<RemoteFactory<RemoteWorkerCommunicator>>,
+pub struct SmithrilFactory<T: WorkerCommunicator> {
+    factories: Vec<RemoteFactory<T>>,
 }
 
-impl SmithrilFactory {
+impl<T: WorkerCommunicator> SmithrilFactory<T> {
     pub fn new(converters: Vec<Converter>) -> Self {
-        let mut factories: Vec<RemoteFactory<RemoteWorkerCommunicator>> = Default::default();
+        let mut factories: Vec<RemoteFactory<T>> = Default::default();
 
         for converter in &converters {
             let solver_process = RemoteFactory::new(converter).unwrap();
@@ -1017,26 +1017,28 @@ pub struct SmithrilContext {
 impl AsyncContext for SmithrilContext {}
 
 #[derive(Debug)]
-pub struct SmithrilSolver {
-    solvers: Vec<Arc<RemoteSolver<RemoteWorkerCommunicator>>>,
+pub struct SmithrilSolver<T: WorkerCommunicator> {
+    solvers: Vec<Arc<RemoteSolver<T>>>,
     last_fastest_solver_index: RwLock<Option<usize>>,
 }
 
-impl PartialEq for SmithrilSolver {
+impl<T: WorkerCommunicator> PartialEq for SmithrilSolver<T> {
     fn eq(&self, other: &Self) -> bool {
         self.solvers.eq(&other.solvers)
     }
 }
 
-impl Eq for SmithrilSolver {}
+impl<T: WorkerCommunicator> Eq for SmithrilSolver<T> {}
 
-impl Hash for SmithrilSolver {
+impl<T: WorkerCommunicator> Hash for SmithrilSolver<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.solvers.hash(state);
     }
 }
 
-impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
+impl<T: WorkerCommunicator + Send + Sync + 'static> AsyncFactory<SmithrilContext, SmithrilSolver<T>>
+    for SmithrilFactory<T>
+{
     fn new_context(&self) -> Arc<SmithrilContext> {
         let mut contexts = Vec::new();
         for factory in self.factories.iter() {
@@ -1053,7 +1055,11 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         }
     }
 
-    fn new_solver(&self, context: Arc<SmithrilContext>, options: &Options) -> Arc<SmithrilSolver> {
+    fn new_solver(
+        &self,
+        context: Arc<SmithrilContext>,
+        options: &Options,
+    ) -> Arc<SmithrilSolver<T>> {
         let mut solvers = Vec::new();
         for (factory, context) in self.factories.iter().zip(context.contexts.iter()) {
             solvers.push(factory.new_solver(context, options).unwrap());
@@ -1064,7 +1070,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
         })
     }
 
-    fn delete_solver(&self, solver: Arc<SmithrilSolver>) {
+    fn delete_solver(&self, solver: Arc<SmithrilSolver<T>>) {
         assert_eq!(Arc::strong_count(&solver), 1);
         let solver = Arc::try_unwrap(solver).ok().unwrap();
         let solvers = solver.solvers;
@@ -1074,7 +1080,7 @@ impl AsyncFactory<SmithrilContext, SmithrilSolver> for SmithrilFactory {
     }
 }
 
-impl AsyncSolver for SmithrilSolver {
+impl<T: WorkerCommunicator + Send + Sync + 'static> AsyncSolver for SmithrilSolver<T> {
     fn assert(&self, term: &Term) {
         for solver in self.solvers.iter() {
             solver.assert(term).unwrap();
@@ -1195,7 +1201,7 @@ fn smithril_working_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
-    let factory = SmithrilFactory::new(converters.clone());
+    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let solver = factory.new_solver(context, &Options::default());
     solver.assert(&t);
@@ -1215,7 +1221,7 @@ fn smithril_working_test() {
 fn smithril_unsat_core_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
-    let factory = SmithrilFactory::new(converters.clone());
+    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let mut options = Options::default();
     options.set_produce_unsat_core(true);
@@ -1234,7 +1240,7 @@ fn smithril_unsat_core_test() {
 fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
-    let factory = SmithrilFactory::new(converters.clone());
+    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let mut options = Options::default();
     options.set_external_timeout(Some(Duration::from_nanos(1)));
