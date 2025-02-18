@@ -50,6 +50,9 @@ jobs:
     - name: Lint
       run: cargo clippy --all-targets --all-features --workspace
 
+    - name: Install smithril-runner
+      run: cargo install smithril-runner --path ./smithril-runner
+
     - name: Run tests
       run: cargo test --verbose --workspace
 
