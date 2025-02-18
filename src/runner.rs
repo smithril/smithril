@@ -11,8 +11,8 @@ use crate::{
     converters::{self, Converter},
     generalized::{Context, Factory, Interrupter, Solver},
     solver::{
-        ContextLabel, RemoteCommand, RemoteFactoryCommand, RemoteSolverCommand, RemoteState,
-        RemoteWorkerCommunicator, SolverLabel,
+        ContextLabel, CrossbeamWorkerCommunicator, RemoteCommand, RemoteFactoryCommand,
+        RemoteSolverCommand, RemoteState, SolverLabel,
     },
     term::Term,
 };
@@ -32,7 +32,7 @@ pub struct RemoteCommander {
 }
 
 pub fn run(
-    communicator_sender: Sender<RemoteWorkerCommunicator>,
+    communicator_sender: Sender<CrossbeamWorkerCommunicator>,
     serialized_converter: String,
     context_solver_id: String,
 ) {
@@ -50,7 +50,7 @@ pub fn run(
     let (confirmation_sender, confirmation_receiver) = unbounded();
     let (eval_sender, eval_receiver) = unbounded();
     let (unsat_core_sender, unsat_core_receiver) = unbounded();
-    let remove_solver = RemoteWorkerCommunicator {
+    let remove_solver = CrossbeamWorkerCommunicator {
         solver_result_receiver,
         interrupt_sender,
         new_solver_receiver,

@@ -10,7 +10,6 @@ use std::{
 
 use crate::{
     generalized::Options,
-    solver::RemoteWorkerCommunicator,
     term::{self, Sort, SortKind, Term},
 };
 use crate::{
@@ -25,7 +24,17 @@ pub use crate::term::RoundingMode;
 use crate::converters::Converter;
 use once_cell::sync::Lazy;
 
-type Communicator = RemoteWorkerCommunicator;
+#[cfg(feature = "ipc-runner")]
+use crate::solver::IpcWorkerCommunicator;
+
+#[cfg(feature = "ipc-runner")]
+type Communicator = IpcWorkerCommunicator;
+
+#[cfg(not(feature = "ipc-runner"))]
+use crate::solver::CrossbeamWorkerCommunicator;
+
+#[cfg(not(feature = "ipc-runner"))]
+type Communicator = CrossbeamWorkerCommunicator;
 
 static FACTORY: Lazy<solver::SmithrilFactory<Communicator>> =
     Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Bitwuzla, Converter::Z3]));

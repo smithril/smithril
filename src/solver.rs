@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
@@ -14,6 +15,7 @@ use crate::generalized::{
 };
 use crate::runner;
 use crate::term::Term;
+use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
 
 pub struct RemoteFactory<T: WorkerCommunicator> {
     worker: Arc<RemoteWorker<T>>,
@@ -223,8 +225,37 @@ impl<T: WorkerCommunicator> Drop for RemoteWorker<T> {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct IpcWorkerChannels {
+    pub command_sender: IpcSender<RemoteCommand>,
+    pub interrupt_sender: IpcSender<SolverLabel>,
+    pub check_state_sender: IpcSender<()>,
+    pub state_receiver: IpcReceiver<RemoteState>,
+    pub new_solver_receiver: IpcReceiver<SolverLabel>,
+    pub new_context_receiver: IpcReceiver<ContextLabel>,
+    pub solver_result_receiver: IpcReceiver<SolverResult>,
+    pub confirmation_receiver: IpcReceiver<()>,
+    pub eval_receiver: IpcReceiver<Option<Term>>,
+    pub unsat_core_receiver: IpcReceiver<Vec<Term>>,
+}
+
 #[derive(Debug)]
-pub struct RemoteWorkerCommunicator {
+pub struct IpcWorkerCommunicator {
+    pub process: Mutex<Child>,
+    pub command_sender: Mutex<IpcSender<RemoteCommand>>,
+    pub interrupt_sender: Mutex<IpcSender<SolverLabel>>,
+    pub check_state_sender: Mutex<IpcSender<()>>,
+    pub state_receiver: Mutex<IpcReceiver<RemoteState>>,
+    pub new_solver_receiver: Mutex<IpcReceiver<SolverLabel>>,
+    pub new_context_receiver: Mutex<IpcReceiver<ContextLabel>>,
+    pub solver_result_receiver: Mutex<IpcReceiver<SolverResult>>,
+    pub confirmation_receiver: Mutex<IpcReceiver<()>>,
+    pub eval_receiver: Mutex<IpcReceiver<Option<Term>>>,
+    pub unsat_core_receiver: Mutex<IpcReceiver<Vec<Term>>>,
+}
+
+#[derive(Debug)]
+pub struct CrossbeamWorkerCommunicator {
     pub command_sender: Sender<RemoteCommand>,
     pub interrupt_sender: Sender<SolverLabel>,
     pub terminate_sender: Sender<()>,
@@ -235,6 +266,24 @@ pub struct RemoteWorkerCommunicator {
     pub confirmation_receiver: Receiver<()>,
     pub eval_receiver: Receiver<Option<Term>>,
     pub unsat_core_receiver: Receiver<Vec<Term>>,
+}
+
+impl IpcWorkerCommunicator {
+    pub fn new(communicator: IpcWorkerChannels, process: Child) -> Self {
+        Self {
+            command_sender: Mutex::new(communicator.command_sender),
+            interrupt_sender: Mutex::new(communicator.interrupt_sender),
+            new_solver_receiver: Mutex::new(communicator.new_solver_receiver),
+            new_context_receiver: Mutex::new(communicator.new_context_receiver),
+            solver_result_receiver: Mutex::new(communicator.solver_result_receiver),
+            confirmation_receiver: Mutex::new(communicator.confirmation_receiver),
+            eval_receiver: Mutex::new(communicator.eval_receiver),
+            unsat_core_receiver: Mutex::new(communicator.unsat_core_receiver),
+            check_state_sender: Mutex::new(communicator.check_state_sender),
+            state_receiver: Mutex::new(communicator.state_receiver),
+            process: Mutex::new(process),
+        }
+    }
 }
 
 pub trait WorkerCommunicator {
@@ -306,7 +355,189 @@ pub trait WorkerCommunicator {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
-impl WorkerCommunicator for RemoteWorkerCommunicator {
+impl WorkerCommunicator for IpcWorkerCommunicator {
+    fn send_factory_command(
+        &self,
+        command: RemoteFactoryCommand,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.command_sender
+            .lock()
+            .unwrap()
+            .send(RemoteCommand::Factory(command))?;
+        Ok(())
+    }
+
+    fn send_solver_command(
+        &self,
+        command: RemoteSolverCommand,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.command_sender
+            .lock()
+            .unwrap()
+            .send(RemoteCommand::Solver(command))?;
+        Ok(())
+    }
+
+    fn new_context(&self) -> Result<ContextLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::NewContext())?;
+        let command_response = self.new_context_receiver.lock().unwrap().recv()?;
+        Ok(command_response)
+    }
+
+    fn new_solver(
+        &self,
+        context: ContextLabel,
+        options: &Options,
+    ) -> Result<SolverLabel, Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::NewSolver(context, options.clone()))?;
+        let command_response = self.new_solver_receiver.lock().unwrap().recv()?;
+        Ok(command_response)
+    }
+
+    fn restore_context(
+        &self,
+        context: ContextLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::RestoreContext(context))?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn restore_solver(
+        &self,
+        context: ContextLabel,
+        solver: SolverLabel,
+        options: &Options,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::RestoreSolver(
+            context,
+            solver,
+            options.clone(),
+        ))?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn delete_context(
+        &self,
+        context: ContextLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::DeleteContext(context))?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn delete_solver(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.send_factory_command(RemoteFactoryCommand::DeleteSolver(solver))?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn assert(
+        &self,
+        solver: SolverLabel,
+        term: &Term,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Assert(solver, term.clone());
+        self.send_solver_command(command)?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn reset(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Reset(solver);
+        self.send_solver_command(command)?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn interrupt(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.interrupt_sender.lock().unwrap().send(solver)?;
+        Ok(())
+    }
+
+    fn send_check_sat(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::CheckSat(solver);
+        self.send_solver_command(command)?;
+        Ok(())
+    }
+
+    fn try_receive_check_sat(
+        &self,
+    ) -> Result<SolverResult, Box<dyn std::error::Error + Send + Sync>> {
+        let command_response = self.solver_result_receiver.lock().unwrap().try_recv()?;
+        Ok(command_response)
+    }
+
+    fn eval(
+        &self,
+        solver: SolverLabel,
+        term: &Term,
+    ) -> Result<Option<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Eval(solver, term.clone());
+        self.send_solver_command(command)?;
+        let command_response = self.eval_receiver.lock().unwrap().recv()?;
+        Ok(command_response)
+    }
+
+    fn unsat_core(
+        &self,
+        solver: SolverLabel,
+    ) -> Result<Vec<Term>, Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::UnsatCore(solver);
+        self.send_solver_command(command)?;
+        let command_response = self.unsat_core_receiver.lock().unwrap().recv()?;
+        Ok(command_response)
+    }
+
+    fn push(&self, solver: SolverLabel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Push(solver);
+        self.send_solver_command(command)?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn pop(
+        &self,
+        solver: SolverLabel,
+        size: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let command = RemoteSolverCommand::Pop(solver, size);
+        self.send_solver_command(command)?;
+        self.confirmation_receiver.lock().unwrap().recv()?;
+        Ok(())
+    }
+
+    fn start_process(converter: &Converter, context_id: u64, solver_id: u64) -> Self {
+        let (one_shot_server, one_shot_server_name) = IpcOneShotServer::new().unwrap();
+        let serialized_converter = serde_json::to_string(converter).unwrap();
+        let serialized_context_solver_id = serde_json::to_string(&(context_id, solver_id)).unwrap();
+        let process = Command::new("smithril-runner")
+            .arg(one_shot_server_name)
+            .arg(serialized_converter)
+            .arg(serialized_context_solver_id)
+            .spawn()
+            .expect("smithtil-runner shoud be installed in PATH");
+        let (_, communicator) = one_shot_server.accept().unwrap();
+        Self::new(communicator, process)
+    }
+
+    fn terminate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.process.lock().unwrap().kill()?;
+        Ok(())
+    }
+}
+
+impl WorkerCommunicator for CrossbeamWorkerCommunicator {
     fn send_factory_command(
         &self,
         command: RemoteFactoryCommand,
@@ -1197,11 +1428,11 @@ fn unsat_works() -> Term {
 }
 
 #[test]
-fn smithril_working_test() {
+fn smithril_working_ipc_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
     let t = sat_works("");
 
-    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
+    let factory = SmithrilFactory::<IpcWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let solver = factory.new_solver(context, &Options::default());
     solver.assert(&t);
@@ -1218,10 +1449,10 @@ fn smithril_working_test() {
 }
 
 #[test]
-fn smithril_unsat_core_test() {
+fn smithril_unsat_core_ipc_test() {
     let converters = vec![Converter::Bitwuzla, Converter::Z3];
 
-    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
+    let factory = SmithrilFactory::<IpcWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let mut options = Options::default();
     options.set_produce_unsat_core(true);
@@ -1240,7 +1471,7 @@ fn smithril_unsat_core_test() {
 fn smithril_timeout_test() {
     let converters = vec![Converter::Dummy];
 
-    let factory = SmithrilFactory::<RemoteWorkerCommunicator>::new(converters.clone());
+    let factory = SmithrilFactory::<CrossbeamWorkerCommunicator>::new(converters.clone());
     let context = factory.new_context();
     let mut options = Options::default();
     options.set_external_timeout(Some(Duration::from_nanos(1)));
