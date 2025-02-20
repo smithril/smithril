@@ -229,6 +229,7 @@ impl<T: WorkerCommunicator> Drop for RemoteWorker<T> {
 pub struct IpcWorkerChannels {
     pub command_sender: IpcSender<RemoteCommand>,
     pub interrupt_sender: IpcSender<SolverLabel>,
+    pub terminate_sender: IpcSender<()>,
     pub check_state_sender: IpcSender<()>,
     pub state_receiver: IpcReceiver<RemoteState>,
     pub new_solver_receiver: IpcReceiver<SolverLabel>,
@@ -244,6 +245,7 @@ pub struct IpcWorkerCommunicator {
     pub process: Mutex<Child>,
     pub command_sender: Mutex<IpcSender<RemoteCommand>>,
     pub interrupt_sender: Mutex<IpcSender<SolverLabel>>,
+    pub terminate_sender: Mutex<IpcSender<()>>,
     pub check_state_sender: Mutex<IpcSender<()>>,
     pub state_receiver: Mutex<IpcReceiver<RemoteState>>,
     pub new_solver_receiver: Mutex<IpcReceiver<SolverLabel>>,
@@ -273,6 +275,7 @@ impl IpcWorkerCommunicator {
         Self {
             command_sender: Mutex::new(communicator.command_sender),
             interrupt_sender: Mutex::new(communicator.interrupt_sender),
+            terminate_sender: Mutex::new(communicator.terminate_sender),
             new_solver_receiver: Mutex::new(communicator.new_solver_receiver),
             new_context_receiver: Mutex::new(communicator.new_context_receiver),
             solver_result_receiver: Mutex::new(communicator.solver_result_receiver),
