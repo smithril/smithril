@@ -24,8 +24,20 @@ pub use crate::term::RoundingMode;
 use crate::converters::Converter;
 use once_cell::sync::Lazy;
 
-static FACTORY: Lazy<solver::SmithrilFactory> =
-    Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Z3, Converter::Bitwuzla]));
+#[cfg(feature = "ipc-runner")]
+use crate::solver::IpcWorkerCommunicator;
+
+#[cfg(feature = "ipc-runner")]
+type Communicator = IpcWorkerCommunicator;
+
+#[cfg(not(feature = "ipc-runner"))]
+use crate::solver::CrossbeamWorkerCommunicator;
+
+#[cfg(not(feature = "ipc-runner"))]
+type Communicator = CrossbeamWorkerCommunicator;
+
+static FACTORY: Lazy<solver::SmithrilFactory<Communicator>> =
+    Lazy::new(|| solver::SmithrilFactory::new(vec![Converter::Bitwuzla, Converter::Z3]));
 
 type Terms = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Term>>>;
 type Sorts = HashMap<Arc<solver::SmithrilContext>, HashSet<Arc<Sort>>>;
@@ -43,7 +55,7 @@ impl PartialEq for LockingOptions {
 
 impl Eq for LockingOptions {}
 
-static SOLVERS: Lazy<RwLock<HashSet<Arc<solver::SmithrilSolver>>>> =
+static SOLVERS: Lazy<RwLock<HashSet<Arc<solver::SmithrilSolver<Communicator>>>>> =
     Lazy::new(|| RwLock::new(HashSet::new()));
 static CONTEXTS: Lazy<RwLock<HashSet<Arc<solver::SmithrilContext>>>> =
     Lazy::new(|| RwLock::new(HashSet::new()));
@@ -694,7 +706,7 @@ pub unsafe extern "C" fn smithril_new_solver(
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_check_sat(solver: SmithrilSolver) -> SolverResult {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     smithril_solver.check_sat()
@@ -702,7 +714,7 @@ pub unsafe extern "C" fn smithril_check_sat(solver: SmithrilSolver) -> SolverRes
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_reset(solver: SmithrilSolver) {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     smithril_solver.reset()
@@ -710,7 +722,7 @@ pub unsafe extern "C" fn smithril_reset(solver: SmithrilSolver) {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_push(solver: SmithrilSolver) {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     smithril_solver.push()
@@ -718,7 +730,7 @@ pub unsafe extern "C" fn smithril_push(solver: SmithrilSolver) {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_pop(solver: SmithrilSolver, size: u64) {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     smithril_solver.pop(size)
@@ -726,7 +738,7 @@ pub unsafe extern "C" fn smithril_pop(solver: SmithrilSolver, size: u64) {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_assert(solver: SmithrilSolver, term: SmithrilTerm) {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     let term = term.0 as *const Term;
@@ -740,7 +752,7 @@ pub unsafe extern "C" fn smithril_eval(
     solver: SmithrilSolver,
     term: SmithrilTerm,
 ) -> *const c_char {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     let term = term.0 as *const Term;
@@ -760,7 +772,7 @@ pub unsafe extern "C" fn smithril_eval(
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_unsat_core(solver: SmithrilSolver) -> SmithrilTermVector {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     let unsat_core = smithril_solver.unsat_core();
@@ -849,7 +861,7 @@ pub unsafe extern "C" fn smithril_delete_context(context: SmithrilContext) {
 
 #[no_mangle]
 pub unsafe extern "C" fn smithril_delete_solver(solver: SmithrilSolver) {
-    let solver = solver.0 as *const solver::SmithrilSolver;
+    let solver = solver.0 as *const solver::SmithrilSolver<Communicator>;
     Arc::increment_strong_count(solver);
     let smithril_solver = Arc::from_raw(solver);
     SOLVERS.write().unwrap().remove(&smithril_solver);
